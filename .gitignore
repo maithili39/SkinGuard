@@ -27,3 +27,6 @@ data/test/*.jsonl
 # OS
 .DS_Store
 Thumbs.db
+
+# IDE
+.claude/
