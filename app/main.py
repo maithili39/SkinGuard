@@ -44,19 +44,25 @@ _matcher: Optional[Matcher] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Build the Matcher index once at startup; tear down cleanly on shutdown."""
+    """Build the Matcher index once at startup; tear down cleanly on shutdown.
+    
+    Skips initialization if SKIP_LIFESPAN=1 (used in tests).
+    """
     global _matcher
-    logger.info("Building matcher index from DB aliases...")
-    db = SessionLocal()
-    try:
-        _matcher = Matcher(db)
-        logger.info(
-            "Matcher ready: %d aliases, %d ingredients indexed.",
-            len(_matcher._choices),
-            len(_matcher._id_to_inci),
-        )
-    finally:
-        db.close()
+    
+    if os.environ.get("SKIP_LIFESPAN") != "1":
+        logger.info("Building matcher index from DB aliases...")
+        db = SessionLocal()
+        try:
+            _matcher = Matcher(db)
+            logger.info(
+                "Matcher ready: %d aliases, %d ingredients indexed.",
+                len(_matcher._choices),
+                len(_matcher._id_to_inci),
+            )
+        finally:
+            db.close()
+    
     yield
     _matcher = None
     logger.info("Matcher index cleared.")

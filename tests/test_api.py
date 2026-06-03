@@ -15,9 +15,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
+from app import main  # Import main module to access app and _matcher
 from app.main import app, get_matcher
 from app.matching import Matcher
-from app.models import Ingredient, Alias
+from app.models import Ingredient, Alias, User, Scan  # Import all models to ensure tables are created
 
 CURATED = os.path.join("data", "curated", "ingredient_flags.csv")
 
@@ -25,11 +26,19 @@ CURATED = os.path.join("data", "curated", "ingredient_flags.csv")
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="module")
-def test_db_session():
-    """In-memory SQLite seeded with curated ingredients for all module tests."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+def test_db_engine_and_session():
+    """Create a test database and session that's shared across all tests in the module."""
+    import tempfile
+    from pathlib import Path
+    
+    # Use a temporary file-based SQLite database instead of in-memory
+    # In-memory databases don't work well with FastAPI's thread pool
+    temp_dir = Path(tempfile.gettempdir())
+    db_file = temp_dir / "skinguard_test.db"
+    db_file.unlink(missing_ok=True)  # Remove if exists
+    
+    database_url = f"sqlite:///{db_file}"
+    engine = create_engine(database_url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -57,25 +66,62 @@ def test_db_session():
                     seen.add(key)
                     db.add(Alias(name=name.strip(), ingredient=ing))
     db.commit()
+    
+    yield engine, db
+    
+    # Cleanup - properly close the connection before deleting the file
+    db.close()
+    engine.dispose()  # Close all connections in the pool
+    try:
+        db_file.unlink(missing_ok=True)  # Cleanup
+    except Exception:
+        pass  # Ignore cleanup errors
+
+
+@pytest.fixture(scope="function")
+def test_db_session(test_db_engine_and_session):
+    """Provide a fresh session for each test (but sharing the same test database)."""
+    engine, _ = test_db_engine_and_session
+    Session = sessionmaker(bind=engine)
+    db = Session()
     yield db
+    db.rollback()  # Rollback changes from this test
     db.close()
 
 
 @pytest.fixture(scope="module")
-def client(test_db_session):
+def _setup_module_lifespan():
+    """Setup that runs once per module."""
+    import os
+    # Skip the app lifespan to avoid creating real DB connections
+    os.environ["SKIP_LIFESPAN"] = "1"
+    yield
+    if "SKIP_LIFESPAN" in os.environ:
+        del os.environ["SKIP_LIFESPAN"]
+
+
+@pytest.fixture(scope="function")
+def client(test_db_session, _setup_module_lifespan):
     """TestClient with DB and Matcher dependency overrides."""
     test_matcher = Matcher(test_db_session)
 
     def override_db():
+        """Always return the same test session."""
         yield test_db_session
 
+    # Override the get_db dependency
     app.dependency_overrides[get_db] = override_db
-    app.dependency_overrides[get_matcher] = lambda: test_matcher
+    
+    # Set the global _matcher so health() and get_matcher() work
+    main._matcher = test_matcher
 
-    with TestClient(app) as c:
-        yield c
-
-    app.dependency_overrides.clear()
+    client_instance = TestClient(app)
+    try:
+        yield client_instance
+    finally:
+        # Cleanup
+        app.dependency_overrides.clear()
+        main._matcher = None
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
