@@ -1,0 +1,151 @@
+"""Resolve messy, real-world ingredient strings to canonical DB ingredients.
+
+Real labels (and OCR output) are full of noise: 'Aqua/Water', 'Niacinmide',
+'Parfum (Fragrance)', trailing asterisks, casing. We:
+  1. normalise the raw token,
+  2. try an exact alias hit,
+  3. fall back to fuzzy matching (RapidFuzz) over all known names,
+  4. return a confidence score and NEVER silently drop a token — anything below
+     the threshold is reported as 'unmatched' so the user knows coverage isn't 100%.
+
+Singleton pattern: once built from a DB session, the Matcher holds NO live DB
+connection. All data it needs (alias index + INCI name cache) is copied into
+memory at init time. This lets main.py build it once at startup rather than
+re-querying 24k rows on every /analyze request.
+"""
+
+import re
+from dataclasses import dataclass
+from typing import Optional
+
+from rapidfuzz import process, fuzz
+from sqlalchemy.orm import Session
+
+from app.config import settings
+from app.models import Ingredient, Alias
+
+_NOISE = re.compile(r"\(.*?\)|\*|•|\.|\bmay contain\b|\bci\s*\d+\b", re.IGNORECASE)
+
+# Pre-clean patterns applied to the *full label blob* before splitting.
+# Removes header text and HTML entities that would produce junk tokens.
+_LABEL_HEADER = re.compile(
+    r"^\s*ingredients?\s*:?\s*",
+    re.IGNORECASE | re.MULTILINE,
+)
+_HTML_ENTITIES = re.compile(r"&(?:gt|lt|amp|apos|quot);?", re.IGNORECASE)
+
+# Tokens that are definitely not ingredients — filtered after splitting.
+_JUNK_TOKENS: set[str] = {
+    "dermatologist tested", "hypoallergenic", "fragrance free",
+    "ophthalmologist tested", "clinically tested", "allergy tested",
+    "suitable for vegans", "no added fragrance", "no parabens",
+    "non-comedogenic", "vegan", "cruelty free", "cruelty-free",
+    "paraben free", "paraben-free", "alcohol free", "sulfate free",
+    "preservative free", "ph balanced",
+}
+
+
+def normalize(token: str) -> str:
+    token = token.lower()
+    token = _NOISE.sub(" ", token)
+    token = token.replace("/", " ").replace("+", " ")
+    token = re.sub(r"\s+", " ", token).strip()
+    return token
+
+
+def split_ingredient_list(raw_text: str) -> list[str]:
+    """Split a raw label blob into individual ingredient tokens.
+
+    Pre-clean steps applied before splitting:
+    1. Strip 'Ingredients:' / 'Ingredient:' headers (common on real labels).
+    2. Strip HTML entities (&gt; etc.) that OCR or copy-paste introduces.
+    3. After splitting, filter trivial junk: pure numbers, single chars,
+       known marketing phrases, bare CI colour codes.
+    """
+    # Pre-clean the full blob
+    cleaned = _LABEL_HEADER.sub(" ", raw_text)
+    cleaned = _HTML_ENTITIES.sub(" ", cleaned)
+
+    # Labels separate ingredients with commas; also tolerate newlines/semicolons.
+    parts = re.split(r"[,;\n]", cleaned)
+
+    tokens = []
+    for p in parts:
+        p = p.strip()
+        if not p:
+            continue
+        # Pure numbers (e.g. percentages split off from CAS numbers)
+        if re.fullmatch(r"[\d.]+%?", p):
+            continue
+        # Single characters / empty after stripping
+        if len(p) <= 1:
+            continue
+        # Known marketing / claim phrases (case-insensitive)
+        if p.lower() in _JUNK_TOKENS:
+            continue
+        tokens.append(p)
+    return tokens
+
+
+@dataclass
+class Match:
+    raw: str
+    matched_inci: Optional[str]
+    ingredient_id: Optional[int]
+    confidence: int  # 0-100
+    status: str  # "matched" | "unmatched"
+
+
+class Matcher:
+    """In-memory ingredient resolver.
+
+    Build once at app startup (see main.py lifespan). After __init__ completes,
+    the Matcher holds NO database connection — it is safe to use concurrently
+    from multiple request threads without a DB session.
+    """
+
+    def __init__(self, db: Session):
+        # Alias index: normalized alias name → ingredient_id
+        self._index: dict[str, int] = {}
+        # INCI name cache: ingredient_id → inci_name (avoids DB lookup per match)
+        self._id_to_inci: dict[int, str] = {}
+
+        # Load INCI name cache first
+        for ing in db.query(Ingredient).all():
+            self._id_to_inci[ing.id] = ing.inci_name
+
+        # Build alias index
+        for alias in db.query(Alias).all():
+            self._index[normalize(alias.name)] = alias.ingredient_id
+
+        self._choices = list(self._index.keys())
+        # Note: self.db is intentionally NOT stored — Matcher is DB-free after init.
+
+    def match_token(self, raw: str) -> Match:
+        norm = normalize(raw)
+        if not norm:
+            return Match(raw, None, None, 0, "unmatched")
+
+        # 1. exact alias hit -> full confidence
+        if norm in self._index:
+            ing_id = self._index[norm]
+            return Match(raw, self._inci(ing_id), ing_id, 100, "matched")
+
+        # 2. fuzzy fallback
+        best = process.extractOne(norm, self._choices, scorer=fuzz.WRatio)
+        if best:
+            choice, score, _ = best
+            if score >= settings.match_threshold:
+                ing_id = self._index[choice]
+                return Match(raw, self._inci(ing_id), ing_id, int(score), "matched")
+            return Match(raw, None, None, int(score), "unmatched")
+
+        return Match(raw, None, None, 0, "unmatched")
+
+    def match_list(self, raw_text: str) -> list[Match]:
+        return [self.match_token(t) for t in split_ingredient_list(raw_text)]
+
+    def _inci(self, ingredient_id: int) -> str:
+        """Return the canonical INCI name from the in-memory cache (no DB call)."""
+        return self._id_to_inci.get(ingredient_id, "")
+

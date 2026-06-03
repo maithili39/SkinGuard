@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Frontend build artifacts
+frontend/.next/
+frontend/tsconfig.tsbuildinfo
+frontend/next-env.d.ts
+
+# Env
+.env
+
+# Local DB
+*.db
+*.sqlite3
+
+# Large raw reference data (downloaded, not committed)
+data/reference/*.csv
+
+# Fetched test fixtures (regenerable via scripts/fetch_test_labels.py)
+data/test/*.jsonl
+
+# OS
+.DS_Store
+Thumbs.db

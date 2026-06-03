@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($t = \\(Get-Command tesseract -ErrorAction SilentlyContinue\\); \"tesseract: \" + \\($t ? $t.Source : \"NOT INSTALLED\"\\); $v = Test-Path \".\\\\.venv\\\\Scripts\\\\python.exe\"; \"venv: $v\"; \"db file: \" + \\(Test-Path \".\\\\skinguard.db\"\\))",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m app.ingestion)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -c \"from app.main import app; from app.ocr import extract_text; print\\('OK'\\)\")",
+      "PowerShell(.\\\\frontend\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit -p .\\\\frontend\\\\tsconfig.json 2>&1 | Select-Object -First 20; \"exit: $LASTEXITCODE\")",
+      "PowerShell(winget install --id UB-Mannheim.TesseractOCR -e --accept-source-agreements --accept-package-agreements 2>&1)",
+      "PowerShell($paths = @\\(\"$env:ProgramFiles\\\\Tesseract-OCR\\\\tesseract.exe\",\"${env:ProgramFiles\\(x86\\)}\\\\Tesseract-OCR\\\\tesseract.exe\",\"$env:LOCALAPPDATA\\\\Programs\\\\Tesseract-OCR\\\\tesseract.exe\"\\); $found = $paths | Where-Object { Test-Path $_ }; if \\($found\\) { $found; & $found[0] --version 2>&1 | Select-Object -First 1 } else { \"NOT FOUND in standard locations\" })",
+      "PowerShell(& \"C:\\\\Program Files\\\\Tesseract-OCR\\\\tesseract.exe\" --version 2>&1)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest -q 2>&1)",
+      "PowerShell(.\\\\frontend\\\\node_modules\\\\.bin\\\\tsc.cmd --noEmit --skipLibCheck --jsx preserve --esModuleInterop --moduleResolution node --module esnext --target es2017 .\\\\frontend\\\\app\\\\page.tsx 2>&1 | Select-Object -First 10; \"exit: $LASTEXITCODE\")",
+      "WebFetch(domain:data.europa.eu)",
+      "WebSearch",
+      "PowerShell(Move-Item -Force 'data\\\\reference\\\\cosing_raw.csv' 'data\\\\reference\\\\cosing_ingredients.csv')",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m scripts.coverage_report)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m scripts.coverage_report 2>&1)",
+      "Bash(git config *)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m app.bootstrap)",
+      "PowerShell(docker --version 2>&1)",
+      "PowerShell(docker compose version 2>&1)",
+      "PowerShell(\"--- docker check ---\")",
+      "PowerShell(docker compose build 2>&1)",
+      "PowerShell(docker compose build frontend 2>&1)",
+      "PowerShell(docker compose build backend 2>&1)",
+      "PowerShell(docker compose up -d 2>&1)",
+      "PowerShell(docker compose logs backend 2>&1)",
+      "PowerShell(docker compose logs frontend 2>&1)"
+    ]
+  }
+}

@@ -1,0 +1,376 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  ShieldCheck, Loader2, AlertTriangle, CheckCircle, Scale, History,
+  LogIn, Moon, Sun, LogOut,
+} from 'lucide-react';
+import type { SkinProfile, UserState, AnalysisResult } from '../types';
+import { ProfilePanel } from '../components/ProfilePanel';
+import { UploadCard } from '../components/UploadCard';
+import { LoginModal } from '../components/LoginModal';
+import { HistoryDrawer } from '../components/HistoryDrawer';
+import { ResultsDashboard, FeatureCard } from '../components/ResultsDashboard';
+
+const LS_USER_KEY = 'sg_user';
+
+const DEFAULT_PROFILE: SkinProfile = {
+  pregnant: false,
+  sensitive_skin: false,
+  acne_prone: false,
+  fungal_acne: false,
+};
+
+export default function Home() {
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [user, setUser] = useState<UserState | null>(null);
+  const [profile, setProfile] = useState<SkinProfile>(DEFAULT_PROFILE);
+  const [avoidInput, setAvoidInput] = useState('');
+
+  const [isDark, setIsDark] = useState(false);
+
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractedText, setExtractedText] = useState('');
+
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [results, setResults] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const profileSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Dark mode ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+  }, [isDark]);
+
+  // ── URL.createObjectURL cleanup (prevents memory leak) ────────────────────
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  // ── Load user from localStorage on mount ──────────────────────────────────
+  useEffect(() => {
+    const raw = localStorage.getItem(LS_USER_KEY);
+    if (raw) {
+      try {
+        const saved: UserState = JSON.parse(raw);
+        setUser(saved);
+        setProfile({
+          pregnant: saved.profile.pregnant,
+          sensitive_skin: saved.profile.sensitive_skin,
+          acne_prone: saved.profile.acne_prone,
+          fungal_acne: saved.profile.fungal_acne,
+        });
+        setAvoidInput((saved.profile.avoid_list || []).join(', '));
+      } catch {
+        localStorage.removeItem(LS_USER_KEY);
+      }
+    }
+  }, []);
+
+  // ── Helpers: build auth headers ───────────────────────────────────────────
+  const authHeaders = useCallback((): HeadersInit => {
+    if (user?.token) return { Authorization: `Bearer ${user.token}` };
+    return {};
+  }, [user]);
+
+  // ── Profile auto-save (debounced 800ms) ───────────────────────────────────
+  const saveProfile = useCallback(
+    (email: string, updated: SkinProfile, avoid: string) => {
+      if (!email) return;
+      if (profileSaveTimer.current) clearTimeout(profileSaveTimer.current);
+      profileSaveTimer.current = setTimeout(async () => {
+        try {
+          await fetch(`/api/users/${encodeURIComponent(email)}/profile`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({
+              ...updated,
+              avoid_list: avoid.split(',').map((s) => s.trim()).filter(Boolean),
+            }),
+          });
+        } catch {
+          // best-effort — not a blocking error
+        }
+      }, 800);
+    },
+    [authHeaders],
+  );
+
+  const handleProfileToggle = (key: keyof SkinProfile) => {
+    setProfile((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      if (user) saveProfile(user.email, next, avoidInput);
+      return next;
+    });
+  };
+
+  const handleAvoidChange = (val: string) => {
+    setAvoidInput(val);
+    if (user) saveProfile(user.email, profile, val);
+  };
+
+  // ── File selection (revokes previous blob URL before creating new one) ────
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);   // ← memory leak fix
+    setFile(selected);
+    setPreviewUrl(URL.createObjectURL(selected));
+    setExtractedText('');
+    setResults(null);
+    setError(null);
+  };
+
+  // ── OCR extract ───────────────────────────────────────────────────────────
+  const handleExtract = async () => {
+    if (!file) return;
+    setIsExtracting(true);
+    setError(null);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/extract-text', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: formData,
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.detail || `OCR failed (HTTP ${res.status})`);
+      }
+      const data = await res.json();
+      setExtractedText(data.text || '');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  // ── Analysis ──────────────────────────────────────────────────────────────
+  const handleAnalyze = async () => {
+    if (!extractedText.trim()) return;
+    setIsAnalyzing(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          text: extractedText,
+          profile: {
+            ...profile,
+            avoid_list: avoidInput.split(',').map((s) => s.trim()).filter(Boolean),
+          },
+          user_email: user?.email ?? null,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.detail || 'Analysis failed');
+      }
+      setResults(await res.json());
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // ── Auth callbacks ────────────────────────────────────────────────────────
+  const handleLogin = (newUser: UserState) => {
+    setUser(newUser);
+    localStorage.setItem(LS_USER_KEY, JSON.stringify(newUser));
+    setProfile({
+      pregnant: newUser.profile.pregnant,
+      sensitive_skin: newUser.profile.sensitive_skin,
+      acne_prone: newUser.profile.acne_prone,
+      fungal_acne: newUser.profile.fungal_acne,
+    });
+    setAvoidInput((newUser.profile.avoid_list || []).join(', '));
+    setShowLoginModal(false);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem(LS_USER_KEY);
+    setProfile(DEFAULT_PROFILE);
+    setAvoidInput('');
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <main className="min-h-screen flex flex-col items-center bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/20 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] bg-primary-200/20 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute bottom-[-80px] right-[-80px] w-[400px] h-[400px] bg-emerald-200/20 rounded-full blur-[60px] pointer-events-none" />
+
+      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
+      <header className="w-full px-6 py-4 flex items-center justify-between relative z-10 border-b border-white/50 bg-white/60 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="bg-gradient-to-tr from-primary-600 to-primary-400 p-2 rounded-xl text-white shadow-lg shadow-primary-500/30">
+            <ShieldCheck size={22} />
+          </div>
+          <span className="font-extrabold text-xl text-slate-800">SkinGuard</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Dark mode toggle */}
+          <button
+            onClick={() => setIsDark((d) => !d)}
+            className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors"
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            id="dark-mode-toggle"
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          {user ? (
+            <>
+              <button
+                id="history-btn"
+                onClick={() => setShowHistory(true)}
+                className="flex items-center gap-2 text-sm text-slate-600 hover:text-primary-600 transition-colors px-3 py-2 rounded-full hover:bg-primary-50"
+              >
+                <History size={16} /> History
+              </button>
+              <div className="flex items-center gap-2 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-200">
+                <span className="w-2 h-2 rounded-full bg-primary-500" />
+                <span className="text-sm font-medium text-primary-700 max-w-[140px] truncate">{user.email}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-slate-400 hover:text-rose-500 transition-colors rounded-full hover:bg-rose-50"
+                title="Sign out"
+              >
+                <LogOut size={16} />
+              </button>
+            </>
+          ) : (
+            <button
+              id="login-btn"
+              onClick={() => setShowLoginModal(true)}
+              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-md shadow-primary-500/20"
+            >
+              <LogIn size={15} /> Sign In
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col items-center pt-20 pb-10 px-6 w-full relative z-10">
+        <div className="mb-4 flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-4 py-1.5">
+          <CheckCircle size={14} className="text-primary-500" />
+          <span className="text-xs font-semibold text-primary-700 uppercase tracking-wider">EU CosIng + Curated Risk Database</span>
+        </div>
+        <h1 className="text-5xl md:text-6xl font-black text-center text-slate-900 mb-5 leading-tight">
+          Know What&apos;s In Your <br />
+          <span className="gradient-text">Skincare</span>
+        </h1>
+        <p className="text-xl text-slate-600 text-center max-w-2xl mb-10 leading-relaxed">
+          Upload a product label or paste the ingredient list. We&apos;ll tell you what each ingredient does — and flag what matters for your skin.
+        </p>
+
+        <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
+
+        {/* Avoid list input */}
+        {user && (
+          <div className="w-full max-w-2xl mb-8">
+            <input
+              value={avoidInput}
+              onChange={(e) => handleAvoidChange(e.target.value)}
+              placeholder="Ingredients to avoid (comma-separated, e.g. Fragrance, SLS)"
+              className="w-full border border-slate-300 rounded-full px-5 py-3 text-sm text-slate-700 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition bg-white/80 backdrop-blur-sm"
+              id="avoid-input"
+            />
+          </div>
+        )}
+
+        {/* Upload + Manual entry */}
+        <UploadCard
+          file={file}
+          previewUrl={previewUrl}
+          isExtracting={isExtracting}
+          onFileChange={handleFileChange}
+          onExtract={handleExtract}
+        />
+
+        {/* Editable text area (shown after OCR or for manual entry) */}
+        {(extractedText !== '' || !file) && (
+          <div className="w-full max-w-2xl mt-6 space-y-3">
+            <label className="text-sm font-semibold text-slate-600 ml-1">
+              {extractedText ? 'Extracted ingredients (edit if needed):' : 'Or paste ingredients manually:'}
+            </label>
+            <textarea
+              value={extractedText}
+              onChange={(e) => { setExtractedText(e.target.value); setResults(null); }}
+              rows={5}
+              id="ingredient-textarea"
+              placeholder="Aqua, Glycerin, Niacinamide, Panthenol…"
+              className="w-full border border-slate-300 rounded-2xl p-4 text-sm text-slate-700 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition bg-white/90 shadow-sm resize-none"
+            />
+            <button
+              onClick={handleAnalyze}
+              disabled={isAnalyzing || !extractedText.trim()}
+              id="analyze-btn"
+              className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-4 rounded-full font-semibold text-lg transition-all shadow-xl shadow-primary-500/30 flex items-center justify-center gap-3"
+            >
+              {isAnalyzing ? <Loader2 className="animate-spin" size={22} /> : <ShieldCheck size={22} />}
+              {isAnalyzing ? 'Analysing…' : 'Analyse Ingredients'}
+            </button>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="w-full max-w-2xl mt-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700">
+            <AlertTriangle size={18} />
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Results */}
+        {results && <ResultsDashboard results={results} />}
+
+        {/* Feature highlights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 w-full max-w-5xl">
+          <FeatureCard
+            icon={<CheckCircle className="text-green-500" />}
+            title="Acne Safe"
+            description="Detects pore-clogging and fungal acne triggering ingredients instantly."
+          />
+          <FeatureCard
+            icon={<AlertTriangle className="text-amber-500" />}
+            title="Honest Scoring"
+            description="We distinguish 'assessed safe' from 'unknown' — and withhold scores when we don't have data."
+          />
+          <FeatureCard
+            icon={<Scale className="text-blue-500" />}
+            title="Regulatory Facts"
+            description="EU-banned and restricted ingredients are flagged separately from curated advice."
+          />
+        </div>
+      </div>
+
+      {/* ── Modals ────────────────────────────────────────────────────────── */}
+      {showLoginModal && (
+        <LoginModal onLogin={handleLogin} onClose={() => setShowLoginModal(false)} />
+      )}
+      {showHistory && user && (
+        <HistoryDrawer
+          email={user.email}
+          token={user.token}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+    </main>
+  );
+}
