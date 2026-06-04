@@ -1,4 +1,5 @@
 import pytest
+pytest.importorskip("redis")
 from unittest.mock import patch, MagicMock
 import json
 
