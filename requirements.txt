@@ -37,5 +37,3 @@ google-cloud-vision==3.8.0
 # Redis client — app degrades gracefully when Redis is unavailable.
 redis[hiredis]>=5.0.0
 sentry-sdk==2.8.0
-pytest-cov
-
