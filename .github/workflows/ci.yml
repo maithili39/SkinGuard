@@ -24,7 +24,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run pytest
         run: pytest -q --tb=short
@@ -75,5 +75,5 @@ jobs:
         working-directory: frontend
 
       - name: ESLint
-        run: npx next lint
+        run: npm run lint
         working-directory: frontend

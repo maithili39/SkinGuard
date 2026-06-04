@@ -71,6 +71,12 @@ module.exports = {
           '0%':   { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(360deg)' },
         },
+        'scan-line': {
+          '0%':   { transform: 'translateY(-60px)', opacity: '0' },
+          '10%':  { opacity: '1' },
+          '90%':  { opacity: '1' },
+          '100%': { transform: 'translateY(60px)', opacity: '0' },
+        },
       },
       animation: {
         'fade-in-up':     'fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
@@ -83,6 +89,7 @@ module.exports = {
         'gradient-shift': 'gradient-shift 6s ease infinite',
         'score-fill':     'score-fill 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         'spin-slow':      'spin-slow 8s linear infinite',
+        'scan-line':      'scan-line 1.8s ease-in-out infinite',
       },
       backdropBlur: {
         xs: '2px',

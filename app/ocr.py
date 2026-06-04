@@ -17,11 +17,16 @@ gets an actionable message instead of a generic 500.
 """
 
 import io
+import logging
 import os
 import re
 import shutil
 
 from PIL import Image, ImageOps, ImageFilter  # type: ignore[import-untyped]
+from app.config import settings
+
+logger = logging.getLogger("skinguard.ocr")
+
 
 try:
     import pytesseract  # type: ignore[import-untyped]
@@ -116,6 +121,33 @@ def clean_text(text: str) -> str:
 
 
 def extract_text(image_bytes: bytes) -> str:
+    # ── Google Cloud Vision OCR ──
+    if settings.ocr_provider == "google_cloud":
+        try:
+            from google.cloud import vision
+            
+            # Note: client automatically authenticates using GOOGLE_APPLICATION_CREDENTIALS
+            # or standard GCP environment checks.
+            client = vision.ImageAnnotatorClient()
+            image = vision.Image(content=image_bytes)
+            response = client.text_detection(image=image)
+            
+            if response.error.message:
+                raise Exception(response.error.message)
+                
+            texts = response.text_annotations
+            if texts:
+                return clean_text(texts[0].description)
+            else:
+                logger.info("Google Cloud Vision returned empty text.")
+                return ""
+        except Exception as exc:
+            logger.warning(
+                "Google Cloud Vision OCR failed: %s. Falling back to local Tesseract.",
+                exc
+            )
+
+    # ── Local Tesseract OCR (Fallback or primary) ──
     if pytesseract is None:
         raise OCRUnavailable(
             "pytesseract is not installed. Run: pip install pytesseract"

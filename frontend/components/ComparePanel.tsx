@@ -6,12 +6,11 @@ import type { ScanSummary, AnalysisResult, Finding } from '../types';
 import { scoreColor } from '../types';
 
 interface Props {
-  token?: string;
   currentAnalysis: AnalysisResult | null;
   scans: ScanSummary[];
 }
 
-export function ComparePanel({ token, currentAnalysis, scans }: Props) {
+export function ComparePanel({ currentAnalysis, scans }: Props) {
   const [prodA, setProdA] = useState<string>('current');
   const [prodB, setProdB] = useState<string>('');
   
@@ -59,9 +58,9 @@ export function ComparePanel({ token, currentAnalysis, scans }: Props) {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
           text,

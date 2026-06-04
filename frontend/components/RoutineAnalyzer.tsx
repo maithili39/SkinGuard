@@ -5,7 +5,6 @@ import { ShieldCheck, AlertTriangle, CheckCircle, Plus, Trash2, Loader2, Sparkle
 import type { ScanSummary } from '../types';
 
 interface Props {
-  token?: string;
   scans: ScanSummary[];
 }
 
@@ -31,7 +30,7 @@ interface RoutineAnalysisResult {
   conflicts: Conflict[];
 }
 
-export function RoutineAnalyzer({ token, scans }: Props) {
+export function RoutineAnalyzer({ scans }: Props) {
   const [products, setProducts] = useState<RoutineProduct[]>([
     { name: 'Product 1', text: '' },
     { name: 'Product 2', text: '' }
@@ -81,9 +80,9 @@ export function RoutineAnalyzer({ token, scans }: Props) {
     try {
       const res = await fetch('/api/analyze/routine', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
         body: JSON.stringify({ products: validProducts })
       });

@@ -22,6 +22,9 @@ import os
 
 from app.database import Base, engine, SessionLocal
 from app.models import Ingredient, Alias
+from app.config import settings
+from app.matching import normalize
+
 
 CURATED_CSV = os.path.join("data", "curated", "ingredient_flags.csv")
 COSING_CSV = os.path.join("data", "reference", "cosing_ingredients.csv")
@@ -181,9 +184,55 @@ def load_curated(db, registry: AliasRegistry, existing: dict) -> int:
     return overlaid + inserted
 
 
+def seed_alias_embeddings(db):
+    """Batch encode all aliases and save vectors to database."""
+    print("Pre-computing and seeding alias embeddings...")
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError:
+        print("  (sentence-transformers not installed; skipping embedding seeding.)")
+        return
+
+    # Check if we actually need to seed
+    aliases = db.query(Alias).filter(Alias.embedding == None).all()
+    if not aliases:
+        print("  All aliases already have embeddings.")
+        return
+
+    print(f"  Loading sentence-transformer model for encoding...")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    print(f"  Encoding {len(aliases)} alias names...")
+    names = [normalize(a.name) for a in aliases]
+    embeddings = model.encode(
+        names,
+        batch_size=256,
+        show_progress_bar=False,
+        normalize_embeddings=True,
+        convert_to_numpy=True
+    )
+
+    is_postgres = settings.database_url.startswith("postgresql")
+    print(f"  Saving embeddings to database (is_postgres={is_postgres})...")
+    for alias, emb in zip(aliases, embeddings):
+        if is_postgres:
+            alias.embedding = emb.tolist()
+        else:
+            alias.embedding = emb.tobytes()
+
+    db.flush()
+    print("  Done seeding embeddings.")
+
+
 def main():
     import sys
     bootstrap = "--bootstrap" in sys.argv or os.environ.get("BOOTSTRAP") == "1"
+
+    if settings.database_url.startswith("postgresql"):
+        from sqlalchemy import text
+        print("Ensuring pgvector extension is enabled...")
+        with engine.begin() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
     db = SessionLocal()
     try:
@@ -192,6 +241,9 @@ def main():
             existing_count = db.query(Ingredient).count()
             if existing_count > 0:
                 print(f"Ingredients already seeded ({existing_count}); skipping.")
+                # Still check if embeddings are missing (e.g. if schema was updated but not seeded)
+                seed_alias_embeddings(db)
+                db.commit()
                 return
             print("Empty database — seeding ingredients...")
         else:
@@ -202,6 +254,10 @@ def main():
         registry = AliasRegistry(db)
         existing = load_cosing(db, registry)
         load_curated(db, registry, existing)
+        
+        # Batch seed embeddings
+        seed_alias_embeddings(db)
+        
         db.commit()
 
         print(f"Total ingredients: {db.query(Ingredient).count()}")

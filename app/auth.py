@@ -15,9 +15,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+import jwt
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -28,14 +29,21 @@ logger = logging.getLogger("skinguard.auth")
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
+_ENV = os.environ.get("ENV", "development").lower()
 SECRET_KEY: str = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-IN-PRODUCTION")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
 if SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION":
+    if _ENV == "production":
+        raise RuntimeError(
+            "SECRET_KEY is using the insecure default value. "
+            "Set a cryptographically random SECRET_KEY in your environment before deploying. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
     logger.warning(
         "SECRET_KEY is using the insecure default. "
-        "Set SECRET_KEY in your .env before deploying."
+        "Set SECRET_KEY in your .env before deploying to production."
     )
 
 # ── Password hashing ──────────────────────────────────────────────────────────
@@ -64,7 +72,7 @@ def decode_token(token: str) -> Optional[str]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload.get("sub")
-    except JWTError:
+    except InvalidTokenError:
         return None
 
 
@@ -74,17 +82,21 @@ _bearer = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> Optional[User]:
-    """Optional auth — returns the User if a valid Bearer token is provided, else None.
+    """Optional auth — returns the User if a valid cookie or Bearer token is provided, else None.
 
     Use this for endpoints that work for both authenticated and anonymous users
     (e.g. /analyze can save history when logged in, or just return results when not).
     """
-    if not credentials:
+    token = request.cookies.get("access_token")
+    if not token and credentials:
+        token = credentials.credentials
+    if not token:
         return None
-    email = decode_token(credentials.credentials)
+    email = decode_token(token)
     if not email:
         return None
     return db.query(User).filter_by(email=email.strip().lower()).first()
@@ -95,7 +107,7 @@ def require_user(user: Optional[User] = Depends(get_current_user)) -> User:
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated. Provide a valid Bearer token.",
+            detail="Not authenticated. Provide a valid Bearer token or login cookie.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user

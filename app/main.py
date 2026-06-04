@@ -1,9 +1,10 @@
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -13,20 +14,35 @@ from sqlalchemy.orm import Session
 
 from app.analysis import analyze_text
 from app.auth import create_token, get_current_user, require_user
+from app.cache import cache_info, get_cached, hash_bytes, hash_text, make_key, set_cached
 from app.database import SessionLocal, get_db
 from app.explain import explain_ingredient, explain_ingredient_llm
 from app.matching import Matcher
-from app.models import Ingredient, User
+from app.models import Ingredient, Scan, User
 from app.ocr import OCRUnavailable
 from app.ocr import extract_text as run_ocr
 from app.rules import Profile
-from app.schemas import AnalyzeIn, ChatIn, ChatOut, LoginIn, ProfileUpdate, RegisterIn, TokenOut, UserIn, RoutineAnalyzeIn
+from app.schemas import AnalyzeIn, AuthOut, ChatIn, ChatOut, LoginIn, ProfileUpdate, RegisterIn, TokenOut, UserIn, RoutineAnalyzeIn
 from app import users as users_svc
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
+# ── Logging setup ─────────────────────────────────────────────────────────────
+_ENV = os.environ.get("ENV", "development").lower()
+
+if _ENV == "production":
+    try:
+        from pythonjsonlogger import jsonlogger
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(jsonlogger.JsonFormatter(
+            "%(asctime)s %(levelname)s %(name)s %(message)s",
+            rename_fields={"asctime": "timestamp", "levelname": "level"},
+        ))
+        logging.root.handlers = [handler]
+        logging.root.setLevel(logging.INFO)
+    except ImportError:
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+else:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
 logger = logging.getLogger("skinguard")
 
 # Max upload size for label images (default 8 MB) — protects OCR from huge files.
@@ -37,9 +53,9 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 
 def hybrid_rate_limit_key(request: Request) -> str:
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.lower().startswith("bearer "):
-        token = auth_header[7:].strip()
+    """Key rate limits by user email (from cookie) when logged in, else by IP."""
+    token = request.cookies.get("access_token")
+    if token:
         from app.auth import decode_token
         email = decode_token(token)
         if email:
@@ -58,7 +74,15 @@ async def lifespan(app: FastAPI):
     global _matcher, _embedding_matcher
 
     if os.environ.get("SKIP_LIFESPAN") != "1":
+        from app.llm import is_available as llm_ok
+        if not llm_ok():
+            logger.warning(
+                "GEMINI_API_KEY is not set or invalid. "
+                "LLM-powered features (like grounded explanations and chat Q&A) will be unavailable, "
+                "falling back to template-based replies."
+            )
         logger.info("Building matcher index from DB aliases…")
+
         db = SessionLocal()
         try:
             _matcher = Matcher(db)
@@ -97,7 +121,7 @@ app = FastAPI(
         "AI-powered skincare ingredient analyzer. "
         "Educational use only — not medical advice."
     ),
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
@@ -108,12 +132,20 @@ _origins = os.environ.get(
     "SKINGUARD_CORS_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000",
 )
+_origin_list = [o.strip() for o in _origins.split(",") if o.strip()]
+
+if _ENV == "production" and any("localhost" in o or "127.0.0.1" in o for o in _origin_list):
+    logger.warning(
+        "CORS origins contain localhost addresses in production mode. "
+        "Set SKINGUARD_CORS_ORIGINS to your production domain(s)."
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _origins.split(",") if o.strip()],
+    allow_origins=_origin_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
@@ -141,31 +173,67 @@ def health():
         "matcher_aliases": len(_matcher._choices) if _matcher else 0,
         "embedding_matcher": _embedding_matcher is not None,
         "llm_model": get_model_name() if llm_ok() else "unavailable",
-        "version": "0.3.0",
+        "llm_available": llm_ok(),
+        "cache": cache_info(),
+        "version": "0.4.0",
     }
+
 
 
 # ── Auth endpoints ────────────────────────────────────────────────────────────
 
 @app.post("/auth/register", status_code=201)
-def register(payload: RegisterIn, db: Session = Depends(get_db)):
-    """Register a new account. Returns a JWT token (immediately logged in)."""
+@limiter.limit("5/minute")
+def register(request: Request, payload: RegisterIn, response: Response, db: Session = Depends(get_db)):
+    """Register a new account. Sets an HttpOnly session cookie — JWT is NOT in the body."""
     try:
         user = users_svc.register_user(db, payload.email, payload.password)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     token = create_token(user.email)
-    return TokenOut(access_token=token, email=user.email, profile=users_svc.profile_dict(user))
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=7 * 86400,
+        expires=7 * 86400,
+        samesite="lax",
+        secure=(_ENV == "production"),
+        path="/"
+    )
+    return AuthOut(email=user.email, profile=users_svc.profile_dict(user))
 
 
 @app.post("/auth/login")
-def login(payload: LoginIn, db: Session = Depends(get_db)):
-    """Authenticate with email + password. Returns a JWT Bearer token."""
+@limiter.limit("10/minute")
+def login(request: Request, payload: LoginIn, response: Response, db: Session = Depends(get_db)):
+    """Authenticate with email + password. Sets an HttpOnly session cookie — JWT is NOT in the body."""
     user = users_svc.authenticate_user(db, payload.email, payload.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
     token = create_token(user.email)
-    return TokenOut(access_token=token, email=user.email, profile=users_svc.profile_dict(user))
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=7 * 86400,
+        expires=7 * 86400,
+        samesite="lax",
+        secure=(_ENV == "production"),
+        path="/"
+    )
+    return AuthOut(email=user.email, profile=users_svc.profile_dict(user))
+
+
+@app.post("/auth/logout")
+def logout(response: Response):
+    """Clear session cookie to log out."""
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        samesite="lax",
+    )
+    return {"detail": "Successfully logged out."}
 
 
 @app.get("/auth/me")
@@ -177,12 +245,23 @@ def me(user: User = Depends(require_user)):
 @app.get("/auth/scans")
 def auth_scan_history(
     limit: int = 20,
+    offset: int = 0,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
-    """Return currently authenticated user's scan history."""
+    """Return currently authenticated user's scan history (paginated)."""
+    scans = (
+        db.query(Scan)
+        .filter(Scan.user_id == current_user.id)
+        .order_by(Scan.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return {
         "email": current_user.email,
+        "offset": offset,
+        "limit": limit,
         "scans": [
             {
                 "id": s.id,
@@ -192,7 +271,7 @@ def auth_scan_history(
                 "summary": s.summary,
                 "input_text": s.input_text,
             }
-            for s in current_user.scans[:limit]
+            for s in scans
         ],
     }
 
@@ -229,6 +308,7 @@ def save_profile(
 def scan_history(
     email: str,
     limit: int = 20,
+    offset: int = 0,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user),
 ):
@@ -237,8 +317,18 @@ def scan_history(
     user = db.query(User).filter_by(email=email.strip().lower()).first()
     if not user:
         raise HTTPException(status_code=404, detail="No such user.")
+    scans = (
+        db.query(Scan)
+        .filter(Scan.user_id == user.id)
+        .order_by(Scan.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return {
         "email": user.email,
+        "offset": offset,
+        "limit": limit,
         "scans": [
             {
                 "id": s.id,
@@ -248,7 +338,7 @@ def scan_history(
                 "summary": s.summary,
                 "input_text": s.input_text,
             }
-            for s in user.scans[:limit]
+            for s in scans
         ],
     }
 
@@ -281,6 +371,21 @@ def analyze(
         rosacea=payload.profile.rosacea,
         avoid_list=payload.profile.avoid_list,
     )
+
+    # ── Cache check (skip for authenticated users so scan history is always saved) ──
+    _cache_key: str | None = None
+    if current_user is None and not payload.user_email:
+        profile_sig = hash_text(
+            f"{payload.profile.pregnant}{payload.profile.sensitive_skin}"
+            f"{payload.profile.acne_prone}{payload.profile.fungal_acne}"
+            f"{payload.profile.rosacea}{''.join(sorted(payload.profile.avoid_list or []))}"
+        )
+        _cache_key = make_key("analyze", hash_text(payload.text), profile_sig)
+        cached = get_cached(_cache_key)
+        if cached is not None:
+            logger.debug("Cache HIT for analyze key=%s", _cache_key)
+            return cached
+
     result = analyze_text(db, payload.text, profile, matcher=matcher)
 
     save_user = current_user
@@ -290,12 +395,17 @@ def analyze(
     if save_user:
         users_svc.save_scan(db, save_user, payload.text, result)
         logger.info("Saved scan for %s (score=%s)", save_user.email, result["safety_score"])
+    elif _cache_key:
+        set_cached(_cache_key, result, ttl=300)  # 5-minute TTL for anonymous results
+        logger.debug("Cache SET analyze key=%s", _cache_key)
 
     return result
 
 
 @app.post("/analyze/routine")
+@limiter.limit("10/minute")
 def analyze_routine(
+    request: Request,
     payload: RoutineAnalyzeIn,
     db: Session = Depends(get_db),
     matcher: Matcher = Depends(get_matcher),
@@ -306,7 +416,175 @@ def analyze_routine(
         "BHA": {"salicylic acid", "betaine salicylate"},
         "Retinol": {"retinol", "retinyl palmitate", "retinal", "retinaldehyde", "hydroxypinacolone retinoate", "adapalene", "tretinoin"},
         "Benzoyl Peroxide": {"benzoyl peroxide"},
-        "Vitamin C": {"ascorbic acid", "3-o-ethyl ascorbic acid", "ascorbyl glucoside", "tetrahexyldecyl ascorbate", "sodium ascorbyl phosphate", "magnesium ascorbyl phosphate", "ascorbyl palmitate"}
+        "Vitamin C": {"ascorbic acid", "3-o-ethyl ascorbic acid", "ascorbyl glucoside", "tetrahexyldecyl ascorbate", "sodium ascorbyl phosphate", "magnesium ascorbyl phosphate", "ascorbyl palmitate"},
+        # New categories
+        "Niacinamide": {"niacinamide", "nicotinamide"},
+        "Peptides": {
+            "palmitoyl tripeptide-1", "palmitoyl tetrapeptide-7", "palmitoyl pentapeptide-4",
+            "acetyl hexapeptide-3", "acetyl hexapeptide-8", "sh-oligopeptide-1",
+            "copper tripeptide-1", "dipeptide diaminobutyroyl benzylamide diacetate",
+            "tripeptide-1", "tetrapeptide-21",
+        },
+    }
+
+    product_actives = {}
+    for prod in payload.products:
+        matches = matcher.match_list(prod.text)
+        # Find which categories are in this product
+        actives = {}
+        for m in matches:
+            if m.status == "matched" and m.matched_inci:
+                name_lower = m.matched_inci.lower()
+                for cat, INCI_set in categories_def.items():
+                    if name_lower in INCI_set:
+                        actives[cat] = m.matched_inci
+        product_actives[prod.name] = actives
+
+    conflicts = []
+    prod_names = list(product_actives.keys())
+    for i in range(len(prod_names)):
+        for j in range(i + 1, len(prod_names)):
+            p1 = prod_names[i]
+            p2 = prod_names[j]
+            actives1 = product_actives[p1]
+            actives2 = product_actives[p2]
+
+            # Helper to append a symmetric conflict without duplicating code
+            def _add(a_name, b_name, a_cat, b_cat, ctype, severity, msg_fn):
+                if a_cat in actives1 and b_cat in actives2:
+                    conflicts.append({
+                        "product_a": p1, "product_b": p2,
+                        "ingredient_a": actives1[a_cat], "ingredient_b": actives2[b_cat],
+                        "conflict_type": ctype, "severity": severity,
+                        "message": msg_fn(actives1[a_cat], actives2[b_cat]),
+                    })
+                if b_cat in actives1 and a_cat in actives2:
+                    conflicts.append({
+                        "product_a": p1, "product_b": p2,
+                        "ingredient_a": actives1[b_cat], "ingredient_b": actives2[a_cat],
+                        "conflict_type": ctype, "severity": severity,
+                        "message": msg_fn(actives2[a_cat], actives1[b_cat]),
+                    })
+
+            # 1. AHA + Retinol
+            _add("AHA", "Retinol", "AHA", "Retinol", "AHA + Retinol", "danger",
+                 lambda a, b: (
+                     f"Alpha Hydroxy Acids (AHAs) like {a} and Retinoids like {b} both speed up "
+                     f"skin cell turnover. Layering them can disrupt your skin barrier, causing redness, "
+                     f"dryness, and severe irritation. Tip: Use AHA in the morning (with SPF) and Retinol at night."
+                 ))
+
+            # 2. BHA + Retinol
+            _add("BHA", "Retinol", "BHA", "Retinol", "BHA + Retinol", "danger",
+                 lambda a, b: (
+                     f"Beta Hydroxy Acids (BHAs) like {a} exfoliate deep inside pores while Retinoids like {b} "
+                     f"speed up cell turnover. Combining them can cause severe dryness and over-exfoliation. "
+                     f"Tip: Use BHA in the morning or alternate nights with Retinol."
+                 ))
+
+            # 3. Benzoyl Peroxide + Retinol
+            _add("Benzoyl Peroxide", "Retinol", "Benzoyl Peroxide", "Retinol", "Benzoyl Peroxide + Retinol", "danger",
+                 lambda a, b: (
+                     f"Benzoyl Peroxide oxidizes and deactivates Retinoids like {b} when applied together, "
+                     f"making the Retinol ineffective and increasing irritation. "
+                     f"Tip: Use Benzoyl Peroxide in the morning and Retinol at night."
+                 ))
+
+            # 4. Vitamin C + AHA/BHA
+            for acid_cat in ("AHA", "BHA"):
+                if "Vitamin C" in actives1 and acid_cat in actives2:
+                    acid = actives2[acid_cat]
+                    conflicts.append({
+                        "product_a": p1, "product_b": p2,
+                        "ingredient_a": actives1["Vitamin C"], "ingredient_b": acid,
+                        "conflict_type": f"Vitamin C + {acid_cat}", "severity": "warning",
+                        "message": (
+                            f"Vitamin C like {actives1['Vitamin C']} is highly acidic. Combining it with "
+                            f"{acid} can destabilize the Vitamin C and trigger redness. "
+                            f"Tip: Use Vitamin C in the morning and exfoliating acids in the evening."
+                        ),
+                    })
+                if acid_cat in actives1 and "Vitamin C" in actives2:
+                    acid = actives1[acid_cat]
+                    conflicts.append({
+                        "product_a": p1, "product_b": p2,
+                        "ingredient_a": acid, "ingredient_b": actives2["Vitamin C"],
+                        "conflict_type": f"{acid_cat} + Vitamin C", "severity": "warning",
+                        "message": (
+                            f"Vitamin C like {actives2['Vitamin C']} is highly acidic. Combining it with "
+                            f"{acid} can destabilize the Vitamin C and trigger redness. "
+                            f"Tip: Use Vitamin C in the morning and exfoliating acids in the evening."
+                        ),
+                    })
+
+            # 5. NEW: Niacinamide + Vitamin C (warning — reduces efficacy of Vit C)
+            _add("Niacinamide", "Vitamin C", "Niacinamide", "Vitamin C", "Niacinamide + Vitamin C", "warning",
+                 lambda a, b: (
+                     f"Mixing {a} with {b} (Vitamin C) at high concentrations can form nicotinic acid, "
+                     f"which may cause temporary flushing and reduce the brightening effect of Vitamin C. "
+                     f"Tip: Use them in separate routines (Vitamin C AM, Niacinamide PM) or ensure "
+                     f"the Vitamin C serum is fully absorbed before applying Niacinamide."
+                 ))
+
+            # 6. NEW: Retinol + Vitamin C (warning — pH incompatibility, irritation)
+            _add("Retinol", "Vitamin C", "Retinol", "Vitamin C", "Retinol + Vitamin C", "warning",
+                 lambda a, b: (
+                     f"Retinoids like {a} work best at a neutral pH, while Vitamin C forms like {b} require "
+                     f"a low acidic pH. Layering them can reduce the effectiveness of both and significantly "
+                     f"increase irritation, especially on sensitive skin. "
+                     f"Tip: Use Vitamin C in the morning and Retinol at night."
+                 ))
+
+            # 7. NEW: Peptides + AHA/BHA (warning — acids degrade peptide bonds)
+            for acid_cat in ("AHA", "BHA"):
+                if "Peptides" in actives1 and acid_cat in actives2:
+                    acid = actives2[acid_cat]
+                    conflicts.append({
+                        "product_a": p1, "product_b": p2,
+                        "ingredient_a": actives1["Peptides"], "ingredient_b": acid,
+                        "conflict_type": f"Peptides + {acid_cat}", "severity": "warning",
+                        "message": (
+                            f"The low-pH environment created by {acid} can break down peptide bonds in "
+                            f"{actives1['Peptides']}, significantly reducing its anti-ageing effectiveness. "
+                            f"Tip: Apply peptides and acids in separate routines, or wait 30 min between applications."
+                        ),
+                    })
+                if acid_cat in actives1 and "Peptides" in actives2:
+                    acid = actives1[acid_cat]
+                    conflicts.append({
+                        "product_a": p1, "product_b": p2,
+                        "ingredient_a": acid, "ingredient_b": actives2["Peptides"],
+                        "conflict_type": f"{acid_cat} + Peptides", "severity": "warning",
+                        "message": (
+                            f"The low-pH environment created by {acid} can break down peptide bonds in "
+                            f"{actives2['Peptides']}, significantly reducing its anti-ageing effectiveness. "
+                            f"Tip: Apply peptides and acids in separate routines, or wait 30 min between applications."
+                        ),
+                    })
+
+            # 8. NEW: AHA + Benzoyl Peroxide (danger — oxidation makes AHA less effective)
+            _add("AHA", "Benzoyl Peroxide", "AHA", "Benzoyl Peroxide", "AHA + Benzoyl Peroxide", "danger",
+                 lambda a, b: (
+                     f"Benzoyl Peroxide is an oxidizing agent that can deactivate AHAs like {a} and vice-versa, "
+                     f"making both less effective while dramatically increasing dryness and irritation risk. "
+                     f"Tip: Use AHA at night and Benzoyl Peroxide in the morning, never together."
+                 ))
+
+    # Summary recommendation
+    if not conflicts:
+        summary = "No active ingredient conflicts detected. Your routine layers safely!"
+        compatible = True
+    else:
+        num_danger = sum(1 for c in conflicts if c["severity"] == "danger")
+        num_warning = sum(1 for c in conflicts if c["severity"] == "warning")
+        summary = f"Routine analysis found {num_danger} high-risk (danger) and {num_warning} moderate-risk (warning) layering conflicts."
+        compatible = False
+
+    return {
+        "compatible": compatible,
+        "summary": summary,
+        "product_actives": product_actives,
+        "conflicts": conflicts
     }
 
     product_actives = {}
@@ -469,14 +747,29 @@ def explain(
 @app.get("/barcode/{code}")
 @limiter.limit("20/minute")
 def barcode_lookup(code: str, request: Request):
-    """Look up product details and ingredients by barcode using Open Beauty Facts."""
+    """Look up product details and ingredients by barcode using Open Beauty Facts.
+
+    Results are cached in Redis for 24 hours — barcode data rarely changes.
+    """
     from app.barcode import cached_lookup_barcode, ProductNotFound
+
+    # Check Redis first (24 h TTL — product data is stable)
+    _cache_key = make_key("barcode", code)
+    cached = get_cached(_cache_key)
+    if cached is not None:
+        logger.debug("Cache HIT for barcode=%s", code)
+        return cached
+
     try:
-        return cached_lookup_barcode(code)
+        result = cached_lookup_barcode(code)
     except ProductNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+    set_cached(_cache_key, result, ttl=86400)  # 24 hours
+    logger.debug("Cache SET barcode=%s", code)
+    return result
 
 
 # ── RAG Chat endpoint ─────────────────────────────────────────────────────────
@@ -550,6 +843,29 @@ def chat(
     if summary:
         context = f"Product summary: {summary}\n\n{context}"
 
+    # 4. Prompt-injection guard — block known jailbreak patterns before
+    #    forwarding the question to the model. The question has already been
+    #    length-capped by Pydantic (max_length=500), so we only need to strip
+    #    instruction-override attempts.
+    _INJECTION_PATTERNS = [
+        "ignore previous", "ignore all previous", "ignore above",
+        "disregard previous", "forget previous", "new instruction",
+        "act as", "you are now", "pretend you are", "pretend to be",
+        "your new role", "system prompt", "jailbreak",
+        "do anything now", "dan mode", "developer mode",
+    ]
+    question_lower = payload.question.lower()
+    for pattern in _INJECTION_PATTERNS:
+        if pattern in question_lower:
+            return ChatOut(
+                answer=(
+                    "I can only answer questions about skincare ingredients "
+                    "from the analysed product. Please ask a specific ingredient question."
+                ),
+                grounded_on=grounded_on,
+                source="guard",
+            )
+
     answer, source = ask(payload.question, context)
 
     return ChatOut(answer=answer, grounded_on=grounded_on, source=source)
@@ -562,7 +878,8 @@ def chat(
 async def extract_text(request: Request, file: UploadFile = File(...)):
     """Extract ingredient text from an uploaded label image.
 
-    Rate-limited to 10 req/min — Tesseract is CPU-heavy.
+    Rate-limited to 10 req/min — OCR is CPU-heavy. Identical image bytes
+    are served from the Redis cache for 1 hour.
     """
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image.")
@@ -576,10 +893,21 @@ async def extract_text(request: Request, file: UploadFile = File(...)):
                 f"Max is {MAX_UPLOAD_BYTES // (1024 * 1024)} MB."
             ),
         )
+
+    # Check cache first — OCR on the same image bytes always gives the same result.
+    _cache_key = make_key("ocr", hash_bytes(contents))
+    cached = get_cached(_cache_key)
+    if cached is not None:
+        logger.debug("Cache HIT for OCR hash=%s", _cache_key)
+        return cached
+
     try:
         text = run_ocr(contents)
     except OCRUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {exc}")
-    return {"text": text}
+
+    result = {"text": text}
+    set_cached(_cache_key, result, ttl=3600)  # 1 hour
+    return result

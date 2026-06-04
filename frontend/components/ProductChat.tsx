@@ -17,7 +17,6 @@ interface Message {
 
 interface Props {
   results: AnalysisResult;
-  token?: string;
 }
 
 const STARTER_QUESTIONS = [
@@ -27,7 +26,7 @@ const STARTER_QUESTIONS = [
   "Which ingredients might cause fungal acne?",
 ];
 
-export function ProductChat({ results, token }: Props) {
+export function ProductChat({ results }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -58,9 +57,9 @@ export function ProductChat({ results, token }: Props) {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           question,

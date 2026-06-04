@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import {
   ShieldCheck, Loader2, AlertTriangle, CheckCircle, Scale, History,
   LogIn, Moon, Sun, LogOut, X,
@@ -89,11 +90,11 @@ export default function Home() {
 
   // ── Load scan history on user login ───────────────────────────────────────
   useEffect(() => {
-    if (user?.token) {
+    if (user) {
       (async () => {
         try {
           const res = await fetch('/api/auth/scans', {
-            headers: { Authorization: `Bearer ${user.token}` },
+            credentials: 'include',
           });
           if (res.ok) {
             const data = await res.json();
@@ -108,12 +109,6 @@ export default function Home() {
     }
   }, [user]);
 
-  // ── Helpers: build auth headers ───────────────────────────────────────────
-  const authHeaders = useCallback((): HeadersInit => {
-    if (user?.token) return { Authorization: `Bearer ${user.token}` };
-    return {};
-  }, [user]);
-
   // ── Profile auto-save (debounced 800ms) ───────────────────────────────────
   const saveProfile = useCallback(
     (email: string, updated: SkinProfile, avoid: string) => {
@@ -123,7 +118,8 @@ export default function Home() {
         try {
           await fetch(`/api/users/${encodeURIComponent(email)}/profile`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ...updated,
               avoid_list: avoid.split(',').map((s) => s.trim()).filter(Boolean),
@@ -134,7 +130,7 @@ export default function Home() {
         }
       }, 800);
     },
-    [authHeaders],
+    [],
   );
 
   const handleProfileToggle = (key: keyof SkinProfile) => {
@@ -172,7 +168,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/extract-text', {
         method: 'POST',
-        headers: authHeaders(),
+        credentials: 'include',
         body: formData,
       });
       if (!res.ok) {
@@ -197,7 +193,8 @@ export default function Home() {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: textToAnalyze,
           profile: {
@@ -229,7 +226,9 @@ export default function Home() {
     setError(null);
     setBarcodeProduct(null);
     try {
-      const res = await fetch(`/api/barcode/${barcode}`);
+      const res = await fetch(`/api/barcode/${barcode}`, {
+        credentials: 'include',
+      });
       if (!res.ok) {
         if (res.status === 404) {
           throw new Error('Product not found in Open Beauty Facts database.');
@@ -246,8 +245,6 @@ export default function Home() {
       setResults(null);
       setFile(null);
       setPreviewUrl(null);
-    } catch (err: any) {
-      throw err;
     } finally {
       setIsBarcodeLookingUp(false);
     }
@@ -255,8 +252,10 @@ export default function Home() {
 
   // ── Auth callbacks ────────────────────────────────────────────────────────
   const handleLogin = (newUser: UserState) => {
-    setUser(newUser);
-    localStorage.setItem(LS_USER_KEY, JSON.stringify(newUser));
+    // Strip raw JWT token from localStorage to prevent XSS exposure
+    const safeUser = { ...newUser, token: undefined };
+    setUser(safeUser);
+    localStorage.setItem(LS_USER_KEY, JSON.stringify(safeUser));
     setProfile({
       pregnant: newUser.profile.pregnant,
       sensitive_skin: newUser.profile.sensitive_skin,
@@ -268,7 +267,12 @@ export default function Home() {
     setShowLoginModal(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      console.error('Logout failed:', e);
+    }
     setUser(null);
     localStorage.removeItem(LS_USER_KEY);
     setProfile(DEFAULT_PROFILE);
@@ -379,9 +383,11 @@ export default function Home() {
           <div className="w-full max-w-2xl mt-6 p-4 rounded-2xl bg-gradient-to-r from-primary-50 to-emerald-50 dark:from-primary-950/20 dark:to-emerald-950/20 border border-primary-200 dark:border-primary-800/60 flex items-center justify-between gap-4 animate-fade-in-up">
             <div className="flex items-center gap-3">
               {barcodeProduct.imageUrl && (
-                <img
+                <Image
                   src={barcodeProduct.imageUrl}
                   alt={barcodeProduct.name}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
                 />
               )}
@@ -445,7 +451,7 @@ export default function Home() {
 
         {/* RAG Product Chat — shown after analysis */}
         {results && (
-          <ProductChat results={results} token={user?.token} />
+          <ProductChat results={results} />
         )}
 
         {/* Advanced Tools Section */}
@@ -474,9 +480,9 @@ export default function Home() {
           </div>
           
           {activeTab === 'routine' ? (
-            <RoutineAnalyzer token={user?.token} scans={scans} />
+            <RoutineAnalyzer scans={scans} />
           ) : (
-            <ComparePanel token={user?.token} currentAnalysis={results} scans={scans} />
+            <ComparePanel currentAnalysis={results} scans={scans} />
           )}
         </div>
 
@@ -507,7 +513,6 @@ export default function Home() {
       {showHistory && user && (
         <HistoryDrawer
           email={user.email}
-          token={user.token}
           onClose={() => setShowHistory(false)}
           onSelectScan={handleReanalyze}
         />

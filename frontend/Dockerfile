@@ -2,12 +2,9 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 
-# Install from package.json in the clean image. We intentionally do NOT use the
-# host lockfile / `npm ci` here: the host lockfile was generated in an environment
-# with a corrupted dependency tree. A fresh resolve in the clean container is
-# reliable and reproducible from the pinned ranges in package.json.
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+# Install from lockfile for reproducible builds.
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
 COPY . .
 # Next.js resolves rewrites() at BUILD time, so the backend URL must be present

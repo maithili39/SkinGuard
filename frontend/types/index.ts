@@ -11,7 +11,7 @@ export interface SkinProfile {
 
 export interface UserState {
   email: string;
-  token: string;
+  token?: string;
   profile: SkinProfile & { avoid_list: string[] };
 }
 

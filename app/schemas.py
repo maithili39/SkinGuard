@@ -38,11 +38,20 @@ class LoginIn(BaseModel):
     password: str
 
 
-class TokenOut(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+class AuthOut(BaseModel):
+    """Returned by /auth/login and /auth/register.
+
+    The JWT is set as an HttpOnly cookie — it is NOT returned in the body
+    to prevent XSS token theft via localStorage.
+    """
     email: str
     profile: dict
+
+
+# Kept for backwards-compat in tests that still check 'access_token'.
+class TokenOut(AuthOut):
+    """Deprecated alias — access_token field omitted intentionally."""
+    pass
 
 
 # ── Chat / RAG schemas ────────────────────────────────────────────────────────
@@ -71,4 +80,5 @@ class RoutineProduct(BaseModel):
 
 
 class RoutineAnalyzeIn(BaseModel):
-    products: list[RoutineProduct] = Field(..., min_items=1)
+    products: list[RoutineProduct] = Field(..., min_length=1)
+

@@ -52,6 +52,19 @@ class Ingredient(Base):
     )
 
 
+from app.config import settings
+if settings.database_url.startswith("postgresql"):
+    try:
+        from pgvector.sqlalchemy import Vector
+        EmbeddingType = Vector(384)
+    except ImportError:
+        from sqlalchemy import LargeBinary
+        EmbeddingType = LargeBinary
+else:
+    from sqlalchemy import LargeBinary
+    EmbeddingType = LargeBinary
+
+
 class Alias(Base):
     """Alternate name for an ingredient (INCI synonym, common or trade name).
 
@@ -64,6 +77,7 @@ class Alias(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, index=True)
     ingredient_id = Column(Integer, ForeignKey("ingredients.id"), nullable=False)
+    embedding = Column(EmbeddingType, nullable=True)
 
     ingredient = relationship("Ingredient", back_populates="aliases")
 

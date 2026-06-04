@@ -17,10 +17,25 @@ import app.models  # noqa: E402, F401 — registers all models on Base.metadata
 
 target_metadata = Base.metadata
 
-# ── Use DATABASE_URL from env (overrides alembic.ini sqlalchemy.url) ─────────
-_db_url = os.environ.get("DATABASE_URL")
+from app.config import settings
+_db_url = os.environ.get("DATABASE_URL") or settings.database_url
 if _db_url:
     config.set_main_option("sqlalchemy.url", _db_url)
+else:
+    if not config.get_main_option("sqlalchemy.url"):
+        raise RuntimeError("DATABASE_URL environment variable must be set to run migrations.")
+
+
+
+# Register custom SQLite compilation for pgvector Vector type to allow running migrations on SQLite
+from sqlalchemy.ext.compiler import compiles
+try:
+    from pgvector.sqlalchemy import Vector
+    @compiles(Vector, "sqlite")
+    def compile_vector_sqlite(element, compiler, **kw):
+        return "BLOB"
+except ImportError:
+    pass
 
 
 def run_migrations_offline() -> None:
@@ -46,6 +61,11 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
+        # If running on PostgreSQL, ensure vector extension is created
+        if connection.engine.dialect.name == "postgresql":
+            from sqlalchemy import text
+            connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
@@ -59,3 +79,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+

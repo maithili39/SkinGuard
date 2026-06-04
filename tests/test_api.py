@@ -191,8 +191,11 @@ def test_me_authenticated(client):
 
 
 def test_me_unauthenticated(client):
+    # Clear any session cookie left by previous tests (module-scoped client).
+    client.cookies.clear()
     r = client.get("/auth/me")
     assert r.status_code == 401
+
 
 
 # ── Explain ───────────────────────────────────────────────────────────────────
@@ -331,5 +334,69 @@ def test_analyze_routine_incompatible(client):
     assert conflict["severity"] == "danger"
     assert "Retinol Serum" in [conflict["product_a"], conflict["product_b"]]
     assert "Exfoliating Toner" in [conflict["product_a"], conflict["product_b"]]
+
+
+# ── Chat ──────────────────────────────────────────────────────────────────────
+
+def test_chat_with_ingredient_context(client):
+    """Chat returns a non-empty answer grounded on provided ingredient data."""
+    analysis_context = {
+        "found_ingredients": [
+            {"matched_name": "Niacinamide", "explanation": "A B vitamin that reduces pores."},
+            {"matched_name": "Glycerin", "explanation": "A humectant that attracts water."},
+        ],
+        "summary": "Mostly gentle ingredients.",
+    }
+    r = client.post(
+        "/chat",
+        json={
+            "question": "Is Niacinamide safe for sensitive skin?",
+            "analysis_context": analysis_context,
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "answer" in data
+    assert len(data["answer"]) > 10
+    assert "grounded_on" in data
+    assert "source" in data
+
+
+def test_chat_empty_context_returns_helpful_message(client):
+    """Chat with no found_ingredients returns a useful prompt to run analysis first."""
+    r = client.post(
+        "/chat",
+        json={
+            "question": "Is this product safe?",
+            "analysis_context": {"found_ingredients": []},
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "answer" in data
+    assert "analysis" in data["answer"].lower()
+    assert data["grounded_on"] == []
+
+
+def test_chat_filtered_by_ingredient_names(client):
+    """ingredient_names filter restricts grounding to the specified subset."""
+    analysis_context = {
+        "found_ingredients": [
+            {"matched_name": "Niacinamide", "explanation": "Vitamin B3."},
+            {"matched_name": "Retinol", "explanation": "Vitamin A derivative."},
+        ],
+    }
+    r = client.post(
+        "/chat",
+        json={
+            "question": "Tell me about Niacinamide.",
+            "analysis_context": analysis_context,
+            "ingredient_names": ["Niacinamide"],
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "Niacinamide" in data["grounded_on"]
+    assert "Retinol" not in data["grounded_on"]
 
 

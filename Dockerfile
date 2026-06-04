@@ -13,12 +13,18 @@ WORKDIR /app
 
 # Install Python deps first for better layer caching.
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Pre-bake the sentence-transformer model so startup is fast and offline-capable
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
 
 # Application code. `data/` is bind-mounted via compose (holds the gitignored
 # CosIng CSV), so it is intentionally NOT copied into the image.
 COPY app ./app
 COPY scripts ./scripts
+COPY alembic.ini ./alembic.ini
+COPY alembic ./alembic
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 RUN chmod +x ./docker/entrypoint.sh
 

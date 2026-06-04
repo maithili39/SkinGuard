@@ -1,14 +1,25 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: skinguard
-      POSTGRES_PASSWORD: skinguard
-      POSTGRES_DB: skinguard
+      POSTGRES_USER: ${POSTGRES_USER:-skinguard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-skinguard}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U skinguard"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-skinguard}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -16,8 +27,15 @@ services:
   backend:
     build: .
     environment:
-      DATABASE_URL: postgresql+psycopg2://skinguard:skinguard@db:5432/skinguard
-      SKINGUARD_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-skinguard}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-skinguard}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      SKINGUARD_CORS_ORIGINS: ${SKINGUARD_CORS_ORIGINS:-http://localhost:3000}
+      ENV: ${ENV:-production}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      REDIS_URL: redis://redis:6379/0
+      OCR_PROVIDER: ${OCR_PROVIDER:-tesseract}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
     volumes:
       # Mount data so the gitignored CosIng CSV is available for seeding.
       - ./data:/app/data
@@ -26,6 +44,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 300s
 
   frontend:
     build: ./frontend
@@ -34,7 +60,9 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   pgdata:
+  redisdata:

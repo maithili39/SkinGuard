@@ -13,12 +13,21 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table('users', schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column('rosacea', sa.Boolean(), nullable=True, server_default='0')
-        )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = [c['name'] for c in inspector.get_columns('users')]
+    if 'rosacea' not in columns:
+        with op.batch_alter_table('users', schema=None) as batch_op:
+            batch_op.add_column(
+                sa.Column('rosacea', sa.Boolean(), nullable=True, server_default='0')
+            )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table('users', schema=None) as batch_op:
-        batch_op.drop_column('rosacea')
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = [c['name'] for c in inspector.get_columns('users')]
+    if 'rosacea' in columns:
+        with op.batch_alter_table('users', schema=None) as batch_op:
+            batch_op.drop_column('rosacea')
+

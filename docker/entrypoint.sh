@@ -23,8 +23,22 @@ print("Database did not become ready in time.", file=sys.stderr)
 sys.exit(1)
 PY
 
+# Run Alembic migrations to apply any pending schema changes.
+alembic upgrade head
+
 # Seed ingredient data on first run (idempotent — preserves users/scans).
 python -m app.ingestion --bootstrap
 
-# Start the API.
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+# Start the API with gunicorn for production-grade multi-worker serving.
+# Falls back to uvicorn if gunicorn is not installed (e.g. local dev).
+WORKERS="${GUNICORN_WORKERS:-4}"
+if command -v gunicorn &> /dev/null; then
+    exec gunicorn app.main:app \
+        --worker-class uvicorn.workers.UvicornWorker \
+        --workers "$WORKERS" \
+        --bind 0.0.0.0:8000 \
+        --access-logfile - \
+        --error-logfile -
+else
+    exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+fi

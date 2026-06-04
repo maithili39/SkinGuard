@@ -50,17 +50,18 @@ def _get_client():
     if not _API_KEY:
         return None
     try:
-        import google.generativeai as genai  # type: ignore[import-untyped]
-        genai.configure(api_key=_API_KEY)
-        _client = genai.GenerativeModel(
-            model_name=_GEMINI_MODEL,
+        from google import genai  # type: ignore[import-untyped]
+        from google.genai import types as genai_types  # type: ignore[import-untyped]
+        client = genai.Client(api_key=_API_KEY)
+        # Stash model name and config on client so ask() can use them
+        client._sg_model = _GEMINI_MODEL
+        client._sg_config = genai_types.GenerateContentConfig(
+            temperature=0.2,
+            top_p=0.9,
+            max_output_tokens=1024,
             system_instruction=SYSTEM_INSTRUCTION,
-            generation_config={
-                "temperature": 0.2,          # low temp for factual grounding
-                "top_p": 0.9,
-                "max_output_tokens": 1024,
-            },
         )
+        _client = client
         logger.info("Gemini client initialised with model: %s", _GEMINI_MODEL)
         return _client
     except Exception as exc:
@@ -97,7 +98,11 @@ def ask(prompt: str, context: str = "") -> tuple[str, str]:
         )
     full_prompt = f"{context}\n\n---\nQuestion: {prompt}" if context else prompt
     try:
-        response = client.generate_content(full_prompt)
+        response = client.models.generate_content(
+            model=client._sg_model,
+            contents=full_prompt,
+            config=client._sg_config,
+        )
         text = response.text.strip() if response.text else ""
         if not text:
             return "The model returned an empty response.", _GEMINI_MODEL

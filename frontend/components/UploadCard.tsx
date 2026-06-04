@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Upload, Loader2, X, Camera, Barcode as BarcodeIcon } from 'lucide-react';
+import Image from 'next/image';
+import { Upload, Loader2, X, Camera, Barcode as BarcodeIcon, ScanLine, Image as ImageIcon } from 'lucide-react';
+import { BarcodeScanner } from './BarcodeScanner';
 
 interface Props {
   file: File | null;
@@ -22,11 +24,15 @@ export function UploadCard({
   onBarcodeLookup,
   isBarcodeLookingUp = false,
 }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'image' | 'barcode'>('image');
+  const inputRef        = useRef<HTMLInputElement>(null);
+  const cameraInputRef  = useRef<HTMLInputElement>(null);
+
+  const [activeTab, setActiveTab]       = useState<'image' | 'barcode'>('image');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
+  const [liveScanner, setLiveScanner]   = useState(false);
 
+  // ── Barcode manual submit ──────────────────────────────────────────────────
   const handleBarcodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcodeInput.trim() || !onBarcodeLookup) return;
@@ -39,23 +45,36 @@ export function UploadCard({
     }
   };
 
+  // ── Live scanner result ────────────────────────────────────────────────────
+  const handleLiveScan = async (code: string) => {
+    setLiveScanner(false);
+    if (!onBarcodeLookup) return;
+    setBarcodeError(null);
+    try {
+      await onBarcodeLookup(code);
+    } catch (err: any) {
+      setBarcodeError(err.message || 'Product not found for scanned code');
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl glass-panel rounded-3xl p-3 shadow-glass border border-white/50 dark:border-white/10 transition-all duration-300 hover:shadow-card-hover group relative">
-      {/* Tabs */}
+
+      {/* ── Tabs ── */}
       <div className="flex gap-2 mb-3 p-1 bg-slate-100/80 dark:bg-slate-900/50 rounded-2xl border border-slate-200/50 dark:border-slate-800/40 w-fit">
         <button
-          onClick={() => setActiveTab('image')}
+          onClick={() => { setActiveTab('image'); setLiveScanner(false); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'image'
               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
-          <Camera size={14} />
+          <ImageIcon size={14} />
           Label Image
         </button>
         <button
-          onClick={() => setActiveTab('barcode')}
+          onClick={() => { setActiveTab('barcode'); setLiveScanner(false); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'barcode'
               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
@@ -67,54 +86,81 @@ export function UploadCard({
         </button>
       </div>
 
-      {activeTab === 'image' ? (
+      {/* ════════════════════════════════════════════════════════════════════
+          IMAGE TAB
+         ════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'image' && (
         <div>
           {!file ? (
-            /* ── Empty state: drag-and-drop zone ── */
-            <label
-              htmlFor="file-upload"
-              className="flex flex-col items-center justify-center py-12 px-8 cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 transition-all duration-300 hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 group/drop relative overflow-hidden"
-            >
-              {/* Background glow on hover */}
-              <div className="absolute inset-0 opacity-0 group-hover/drop:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary-100/30 to-emerald-100/20 dark:from-primary-900/20 dark:to-emerald-900/10 rounded-2xl pointer-events-none" />
+            /* ── Empty state: drag-and-drop + camera options ── */
+            <div className="flex flex-col">
+              <label
+                htmlFor="file-upload"
+                className="flex flex-col items-center justify-center py-10 px-8 cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 transition-all duration-300 hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 group/drop relative overflow-hidden"
+              >
+                {/* Background glow on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover/drop:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary-100/30 to-emerald-100/20 dark:from-primary-900/20 dark:to-emerald-900/10 rounded-2xl pointer-events-none" />
 
-              {/* Animated upload icon */}
-              <div className="relative mb-5">
-                <div className="absolute inset-0 bg-primary-400/20 rounded-full animate-pulse-ring" />
-                <div className="bg-gradient-to-br from-primary-500 to-emerald-500 text-white p-5 rounded-2xl shadow-lg shadow-primary-500/30 group-hover/drop:scale-110 transition-transform duration-300 relative z-10 animate-float">
-                  <Camera size={32} />
+                {/* Animated upload icon */}
+                <div className="relative mb-4">
+                  <div className="absolute inset-0 bg-primary-400/20 rounded-full animate-pulse-ring" />
+                  <div className="bg-gradient-to-br from-primary-500 to-emerald-500 text-white p-5 rounded-2xl shadow-lg shadow-primary-500/30 group-hover/drop:scale-110 transition-transform duration-300 relative z-10 animate-float">
+                    <Camera size={32} />
+                  </div>
                 </div>
-              </div>
 
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1.5 relative z-10">
-                Upload Ingredient Label
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mb-5 relative z-10 text-center">
-                Drag & drop an image, or click to browse
-              </p>
-              <div className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary-500/25 transition-all duration-200 relative z-10 btn-lift">
-                <Upload size={16} />
-                Select Image
-              </div>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-4 relative z-10">
-                JPG, PNG, WEBP — max 8 MB
-              </p>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1.5 relative z-10">
+                  Upload Ingredient Label
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-5 relative z-10 text-center">
+                  Drag &amp; drop an image, or choose an option below
+                </p>
+
+                {/* Two CTA buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 relative z-10">
+                  {/* Browse files */}
+                  <div className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary-500/25 transition-all duration-200 btn-lift">
+                    <Upload size={15} />
+                    Select Image
+                  </div>
+
+                  {/* Camera capture (opens native camera on mobile) */}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); cameraInputRef.current?.click(); }}
+                    className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 btn-lift shadow-sm"
+                  >
+                    <Camera size={15} />
+                    Take Photo
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-4 relative z-10">
+                  JPG, PNG, WEBP — max 8 MB
+                </p>
+
+                {/* Hidden inputs */}
+                <input ref={inputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" id="file-upload" />
+              </label>
+
+              {/* Camera capture input — separate so it doesn't interfere with label click */}
               <input
-                ref={inputRef}
+                ref={cameraInputRef}
                 type="file"
                 accept="image/*"
+                capture="environment"
                 onChange={onFileChange}
                 className="hidden"
-                id="file-upload"
+                id="camera-capture"
               />
-            </label>
+            </div>
           ) : (
             /* ── File selected: preview + extract ── */
             <div className="p-5 flex flex-col sm:flex-row items-center gap-6">
               {/* Image preview */}
               <div className="relative flex-shrink-0">
                 <div className="w-28 h-28 rounded-2xl overflow-hidden border-2 border-primary-200 dark:border-primary-800 shadow-lg">
-                  <img src={previewUrl!} alt="Label preview" className="w-full h-full object-cover" />
+                  <Image src={previewUrl!} alt="Label preview" fill className="object-cover" />
                 </div>
                 {/* Re-upload button overlay */}
                 <label
@@ -123,14 +169,7 @@ export function UploadCard({
                   title="Change image"
                 >
                   <X size={12} className="text-slate-500" />
-                  <input
-                    ref={inputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={onFileChange}
-                    className="hidden"
-                    id="file-upload"
-                  />
+                  <input ref={inputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" id="file-upload" />
                 </label>
               </div>
 
@@ -164,52 +203,73 @@ export function UploadCard({
             </div>
           )}
         </div>
-      ) : (
-        /* ── Barcode lookup view ── */
-        <div className="p-6">
-          <div className="flex flex-col items-center">
-            <div className="relative mb-5">
-              <div className="absolute inset-0 bg-primary-400/20 rounded-full animate-pulse-ring" />
-              <div className="bg-gradient-to-br from-primary-500 to-emerald-500 text-white p-5 rounded-2xl shadow-lg shadow-primary-500/30 relative z-10">
-                <BarcodeIcon size={32} />
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════
+          BARCODE TAB
+         ════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'barcode' && (
+        <div className="p-4">
+          {liveScanner ? (
+            /* ── Live camera scanner ── */
+            <BarcodeScanner
+              onScan={handleLiveScan}
+              onClose={() => setLiveScanner(false)}
+            />
+          ) : (
+            /* ── Manual entry + scan button ── */
+            <div className="flex flex-col items-center">
+              <div className="relative mb-5">
+                <div className="absolute inset-0 bg-primary-400/20 rounded-full animate-pulse-ring" />
+                <div className="bg-gradient-to-br from-primary-500 to-emerald-500 text-white p-5 rounded-2xl shadow-lg shadow-primary-500/30 relative z-10">
+                  <BarcodeIcon size={32} />
+                </div>
               </div>
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1.5 text-center">
-              Scan or Enter Barcode
-            </h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-5 text-center max-w-sm">
-              Search Open Beauty Facts database to fetch product ingredients automatically.
-            </p>
-            <form onSubmit={handleBarcodeSubmit} className="flex gap-2 w-full max-w-md">
-              <input
-                type="text"
-                value={barcodeInput}
-                onChange={(e) => {
-                  setBarcodeInput(e.target.value);
-                  setBarcodeError(null);
-                }}
-                placeholder="Enter 13-digit EAN/UPC barcode..."
-                className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm"
-              />
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 text-center">
+                Scan or Enter Barcode
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-5 text-center max-w-sm">
+                Search Open Beauty Facts to fetch product ingredients automatically.
+              </p>
+
+              {/* Manual entry form */}
+              <form onSubmit={handleBarcodeSubmit} className="flex gap-2 w-full max-w-md mb-4">
+                <input
+                  type="text"
+                  value={barcodeInput}
+                  onChange={(e) => { setBarcodeInput(e.target.value); setBarcodeError(null); }}
+                  placeholder="Enter 13-digit EAN / UPC barcode…"
+                  className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={isBarcodeLookingUp || !barcodeInput.trim()}
+                  className="bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-primary-500/25 transition-all flex items-center gap-1.5"
+                >
+                  {isBarcodeLookingUp ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} />
+                      Searching…
+                    </>
+                  ) : 'Search'}
+                </button>
+              </form>
+
+              {/* Live scan button */}
               <button
-                type="submit"
-                disabled={isBarcodeLookingUp || !barcodeInput.trim()}
-                className="bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-primary-500/25 transition-all flex items-center gap-1.5 cursor-pointer"
+                type="button"
+                onClick={() => setLiveScanner(true)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-primary-400 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-sm font-semibold transition-all duration-200 btn-lift"
               >
-                {isBarcodeLookingUp ? (
-                  <>
-                    <Loader2 className="animate-spin" size={16} />
-                    Searching...
-                  </>
-                ) : (
-                  'Search'
-                )}
+                <ScanLine size={16} />
+                Scan with Camera
               </button>
-            </form>
-            {barcodeError && (
-              <p className="text-xs text-rose-500 font-semibold mt-3 text-center">{barcodeError}</p>
-            )}
-          </div>
+
+              {barcodeError && (
+                <p className="text-xs text-rose-500 font-semibold mt-3 text-center">{barcodeError}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

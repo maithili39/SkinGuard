@@ -7,7 +7,6 @@ import { formatDate } from '../types';
 
 interface Props {
   email: string;
-  token: string;
   onClose: () => void;
   onSelectScan: (inputText: string) => void;
 }
@@ -72,7 +71,7 @@ function ScoreSparkline({ scans }: { scans: ScanSummary[] }) {
   );
 }
 
-export function HistoryDrawer({ email, token, onClose, onSelectScan }: Props) {
+export function HistoryDrawer({ email, onClose, onSelectScan }: Props) {
   const [scans, setScans] = useState<ScanSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +80,7 @@ export function HistoryDrawer({ email, token, onClose, onSelectScan }: Props) {
     (async () => {
       try {
         const res = await fetch('/api/auth/scans', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'include',
         });
         if (!res.ok) throw new Error('Failed to load history');
         const data = await res.json();
@@ -92,7 +91,7 @@ export function HistoryDrawer({ email, token, onClose, onSelectScan }: Props) {
         setLoading(false);
       }
     })();
-  }, [token]);
+  }, []);
 
   return (
     <>
