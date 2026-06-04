@@ -488,4 +488,67 @@ def test_forgot_and_reset_password_flow(client):
     assert r.status_code == 401
 
 
+def test_scan_history_pagination(client, test_db_session):
+    # 1. Register a new user
+    email = f"page_{uuid.uuid4().hex[:8]}@example.com"
+    reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
+    assert reg.status_code == 201
+    
+    # 2. Get JWT token
+    from app.auth import create_token
+    token = create_token(email)
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Get user object from DB to associate scans
+    user = test_db_session.query(User).filter_by(email=email).first()
+    assert user is not None
+    
+    # 3. Create 5 scans manually in DB for this user
+    for i in range(5):
+        scan = Scan(
+            user_id=user.id,
+            input_text=f"IngredientList {i}",
+            summary=f"Summary {i}",
+            safety_score=8.5,
+            coverage_percent=100.0,
+        )
+        test_db_session.add(scan)
+    test_db_session.commit()
+    
+    # 4. Test default pagination (limit=20, offset=0)
+    r = client.get("/auth/scans", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["scans"]) == 5
+    assert data["limit"] == 20
+    assert data["offset"] == 0
+    
+    # 5. Test limit=2, offset=1
+    r = client.get("/auth/scans?limit=2&offset=1", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["scans"]) == 2
+    assert data["limit"] == 2
+    assert data["offset"] == 1
+    
+    # 6. Test invalid query parameters (limit <= 0, limit > 100, offset < 0)
+    r = client.get("/auth/scans?limit=0", headers=headers)
+    assert r.status_code == 422
+    
+    r = client.get("/auth/scans?limit=101", headers=headers)
+    assert r.status_code == 422
+    
+    r = client.get("/auth/scans?offset=-1", headers=headers)
+    assert r.status_code == 422
+    
+    # 7. Test user-specific route /users/{email}/scans pagination
+    r = client.get(f"/users/{email}/scans?limit=3&offset=2", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["scans"]) == 3
+    assert data["limit"] == 3
+    assert data["offset"] == 2
+
+
+
 

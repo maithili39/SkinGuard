@@ -1,7 +1,7 @@
 import logging
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
 from app.auth import create_reset_token, create_token, decode_reset_token, get_current_user, hash_password, require_user
@@ -134,8 +134,8 @@ def reset_password(request: Request, payload: ResetPasswordIn, db: Session = Dep
 
 @router.get("/scans")
 def auth_scan_history(
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user),
 ):

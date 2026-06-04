@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.auth import require_user
@@ -8,6 +8,7 @@ from app.schemas import ProfileUpdate, UserIn
 from app import users as users_svc
 
 router = APIRouter(prefix="/users", tags=["users"])
+
 
 
 @router.post("", deprecated=True)
@@ -35,8 +36,8 @@ def save_profile(
 @router.get("/{email}/scans")
 def scan_history(
     email: str,
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user),
 ):

@@ -48,3 +48,13 @@ Thumbs.db
 .idea/
 .vscode/
 .mypy_cache/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# Nginx TLS certificates
+nginx/certs/*.pem
+
+
