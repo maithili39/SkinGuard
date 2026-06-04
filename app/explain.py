@@ -110,16 +110,117 @@ def explain_ingredient_llm(ing: Ingredient) -> str:
     set, transparently falls back to the offline template — callers don't need to
     know which path was taken.
     """
+    if not ing or not ing.inci_name:
+        return ""
+
     try:
-        from app.llm import ask, is_available  # lazy import avoids circular deps
-        if not is_available():
-            return explain_ingredient(ing)
-        context, question = _build_llm_prompt(ing)
-        answer, model = ask(question, context)
-        if model in ("template", "error"):
-            return explain_ingredient(ing)
-        logger.debug("LLM explain for %s via %s", ing.inci_name, model)
-        return answer
+        from app.cache import get_cached, make_key
+        norm_name = ing.inci_name.strip().upper()
+        cache_key = make_key("explain", norm_name)
+        cached = get_cached(cache_key)
+        if cached is not None:
+            return cached
     except Exception as exc:
-        logger.warning("LLM explain failed for %s: %s — using template", ing.inci_name, exc)
-        return explain_ingredient(ing)
+        logger.warning("Cache access failed in explain_ingredient_llm: %s", exc)
+
+    res_dict = explain_ingredients_llm_batch([ing])
+    return res_dict.get(ing.inci_name.strip().upper(), explain_ingredient(ing))
+
+
+def _build_batch_prompt(ingredients: list[Ingredient]) -> str:
+    """Build a combined prompt for a batch of ingredients to explain."""
+    lines = ["Explain the following ingredients using ONLY their structured records below:"]
+    for ing in ingredients:
+        flags = []
+        if ing.comedogenic is not None:
+            flags.append(f"comedogenic rating: {ing.comedogenic}/5")
+        if ing.fungal_acne_safe:
+            flags.append(f"fungal-acne safe: {ing.fungal_acne_safe}")
+        if ing.pregnancy_safe:
+            flags.append(f"pregnancy safe: {ing.pregnancy_safe}")
+        if ing.irritant:
+            flags.append(f"irritant: {ing.irritant}")
+        if ing.regulatory_status and ing.regulatory_status != "allowed":
+            flags.append(f"regulatory status: {ing.regulatory_status}")
+
+        lines.append(f"INCI Name: {ing.inci_name.strip().upper()}")
+        lines.append(f"Function: {ing.function or 'unknown'}")
+        if flags:
+            lines.append(f"Flags: {', '.join(flags)}")
+        if ing.notes:
+            lines.append(f"Notes: {ing.notes}")
+        if ing.source:
+            lines.append(f"Source: {ing.source}")
+        lines.append("---")
+    return "\n".join(lines)
+
+
+def explain_ingredients_llm_batch(ingredients: list[Ingredient]) -> dict[str, str]:
+    """Get plain-language explanations for a list of ingredients.
+
+    Uses Redis caching to avoid API calls for already-explained ingredients.
+    Any cache misses are grouped into batches of up to 15, sent to Gemini,
+    and then saved back to the cache. Falls back to offline templates for
+    any ingredient that cannot be explained via LLM.
+    """
+    from app.cache import get_cached, set_cached, make_key
+    from app.llm import is_available, ask_batch_explanations
+
+    results: dict[str, str] = {}
+    if not ingredients:
+        return results
+
+    # Get unique non-None ingredients
+    unique_ingredients = []
+    seen = set()
+    for ing in ingredients:
+        if ing and ing.inci_name:
+            norm_name = ing.inci_name.strip().upper()
+            if norm_name not in seen:
+                unique_ingredients.append(ing)
+                seen.add(norm_name)
+
+    # Check cache first
+    miss_ingredients = []
+    for ing in unique_ingredients:
+        norm_name = ing.inci_name.strip().upper()
+        cache_key = make_key("explain", norm_name)
+        cached = get_cached(cache_key)
+        if cached is not None:
+            results[norm_name] = cached
+        else:
+            miss_ingredients.append(ing)
+
+    if not miss_ingredients:
+        return results
+
+    # If LLM is not available, fall back to offline template for all misses
+    if not is_available():
+        for ing in miss_ingredients:
+            norm_name = ing.inci_name.strip().upper()
+            results[norm_name] = explain_ingredient(ing)
+        return results
+
+    # Process misses in batches of 15
+    batch_size = 15
+    for i in range(0, len(miss_ingredients), batch_size):
+        batch = miss_ingredients[i : i + batch_size]
+        prompt = _build_batch_prompt(batch)
+
+        # Call batch endpoint
+        batch_explanations = ask_batch_explanations(prompt)
+
+        # Cache successful results and update output dict
+        for ing in batch:
+            norm_name = ing.inci_name.strip().upper()
+            explanation = batch_explanations.get(norm_name)
+
+            if explanation:
+                cache_key = make_key("explain", norm_name)
+                set_cached(cache_key, explanation, ttl=86400 * 30)
+                results[norm_name] = explanation
+            else:
+                fallback = explain_ingredient(ing)
+                results[norm_name] = fallback
+
+    return results

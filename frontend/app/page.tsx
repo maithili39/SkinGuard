@@ -276,6 +276,8 @@ export default function Home() {
       setResults(null);
       setFile(null);
       setPreviewUrl(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Barcode lookup failed');
     } finally {
       setIsBarcodeLookingUp(false);
     }

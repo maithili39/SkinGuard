@@ -142,3 +142,64 @@ def build_ingredient_context(ingredients: list[dict]) -> str:
             lines.append(f"  Summary: {ing_data['explanation']}")
         lines.append("")
     return "\n".join(lines)
+
+
+def get_client():
+    """Return the client instance (if available). Used for batch queries."""
+    return _get_client()
+
+
+def ask_batch_explanations(prompt: str) -> dict[str, str]:
+    """Send a batch of ingredient explanation prompts to Gemini with a JSON schema.
+
+    Returns:
+        dict[str, str] mapping INCI Name -> explanation.
+    """
+    client = _get_client()
+    if client is None:
+        return {}
+
+    import json
+    try:
+        from google.genai import types as genai_types
+        from pydantic import BaseModel
+
+        class IngredientExplanation(BaseModel):
+            inci_name: str
+            explanation: str
+
+        class BatchExplanations(BaseModel):
+            explanations: list[IngredientExplanation]
+
+        config = genai_types.GenerateContentConfig(
+            temperature=0.2,
+            top_p=0.9,
+            max_output_tokens=2048,
+            system_instruction=SYSTEM_INSTRUCTION,
+            response_mime_type="application/json",
+            response_schema=BatchExplanations,
+        )
+
+        response = client.models.generate_content(
+            model=client._sg_model,
+            contents=prompt,
+            config=config,
+        )
+
+        text = response.text.strip() if response.text else ""
+        if not text:
+            logger.warning("Empty response received in batch explanation")
+            return {}
+
+        parsed = json.loads(text)
+        res_dict = {}
+        for item in parsed.get("explanations", []):
+            name = item.get("inci_name")
+            expl = item.get("explanation")
+            if name and expl:
+                res_dict[name.strip().upper()] = expl.strip()
+        return res_dict
+
+    except Exception as exc:
+        logger.error("Gemini API batch explanation error: %s", exc)
+        return {}

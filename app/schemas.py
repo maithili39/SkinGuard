@@ -11,8 +11,8 @@ class ProfileIn(BaseModel):
 
 
 class AnalyzeIn(BaseModel):
-    # Raw ingredient text — capped at 15,000 chars (~300 ingredients).
-    text: str = Field(..., max_length=15_000)
+    # Raw ingredient text — capped at 50,000 chars.
+    text: str = Field(..., max_length=50_000)
     profile: ProfileIn = ProfileIn()
     # If provided, the result is saved to this user's scan history.
     user_email: str | None = None
@@ -76,7 +76,7 @@ class ChatOut(BaseModel):
 
 class RoutineProduct(BaseModel):
     name: str = Field(..., max_length=100)
-    text: str = Field(..., max_length=15_000)
+    text: str = Field(..., max_length=50_000)
 
 
 class RoutineAnalyzeIn(BaseModel):

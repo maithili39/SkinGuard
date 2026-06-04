@@ -123,7 +123,7 @@ class Scan(Base):
     created_at = Column(DateTime, default=_utcnow)
 
     input_text = Column(String, nullable=False)
-    safety_score = Column(Integer, nullable=False)
+    safety_score = Column(Integer, nullable=True)
     coverage_percent = Column(Integer, nullable=False)
     summary = Column(String, nullable=True)
     result = Column(JSON, nullable=True)  # full analysis payload snapshot

@@ -40,6 +40,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      - name: Run Alembic autogenerate check
+        run: alembic check
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:test@localhost:5432/test
+
       - name: Run pytest
         run: pytest -q --tb=short
         env:

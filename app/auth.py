@@ -30,19 +30,19 @@ logger = logging.getLogger("skinguard.auth")
 # ── Config ────────────────────────────────────────────────────────────────────
 
 _ENV = os.environ.get("ENV", "development").lower()
-SECRET_KEY: str = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-IN-PRODUCTION")
+SECRET_KEY: str = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-IN-PRODUCTION!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
 if _ENV == "production":
-    if not SECRET_KEY or len(SECRET_KEY) < 32 or SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION":
+    if not SECRET_KEY or len(SECRET_KEY) < 32 or SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION!":
         raise RuntimeError(
             "SECRET_KEY must be set and at least 32 characters in production mode. "
             "Set a cryptographically random SECRET_KEY in your environment before deploying. "
             "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
         )
 else:
-    if not SECRET_KEY or len(SECRET_KEY) < 32 or SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION":
+    if not SECRET_KEY or len(SECRET_KEY) < 32 or SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION!":
         logger.warning(
             "SECRET_KEY is insecure or missing. For local development, this is fine, "
             "but you MUST set a cryptographically secure SECRET_KEY (min 32 chars) in production."

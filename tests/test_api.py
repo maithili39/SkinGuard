@@ -135,7 +135,7 @@ def test_analyze_null_score_when_no_risk_data(client):
 
 
 def test_analyze_text_too_long(client):
-    r = client.post("/analyze", json={"text": "A" * 15_001})
+    r = client.post("/analyze", json={"text": "A" * 50_001})
     assert r.status_code == 422  # pydantic validation error
 
 
@@ -271,6 +271,56 @@ def test_scan_history_and_profile_jwt_authorized(client):
     r = client.get("/auth/scans", headers=headers)
     assert r.status_code == 200
     assert r.json()["email"] == email
+
+
+def test_scan_saving_null_safety_score(client, test_db_session):
+    # Add a custom matched ingredient that has NO curated risk flags
+    ing = Ingredient(
+        # INCI names are matched by upper/lowercase depending on matching engine,
+        # but the database INCI is always uppercase in the seed data.
+        inci_name="NORISKDATAING",
+        function="emollient",
+        comedogenic=None,
+        fungal_acne_safe=None,
+        pregnancy_safe=None,
+        irritant=None,
+        regulatory_status="allowed",
+    )
+    test_db_session.add(ing)
+    test_db_session.add(Alias(name="NoRiskDataIng", ingredient=ing))
+    test_db_session.commit()
+
+    # Rebuild matcher so it picks up the new ingredient
+    from app.matching import Matcher
+    from app.main import app, get_matcher
+    new_matcher = Matcher(test_db_session)
+    app.dependency_overrides[get_matcher] = lambda: new_matcher
+
+    email = f"jwt_{uuid.uuid4().hex[:8]}@example.com"
+    reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
+    assert reg.status_code == 201
+
+    r = client.post(
+        "/analyze",
+        json={
+            "text": "NoRiskDataIng",
+            "user_email": email,
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["safety_score"] is None
+
+    from app.auth import create_token
+    token = create_token(email)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    r_history = client.get(f"/users/{email}/scans", headers=headers)
+    assert r_history.status_code == 200
+    scans = r_history.json()["scans"]
+    assert len(scans) == 1
+    assert scans[0]["safety_score"] is None
+    assert scans[0]["input_text"] == "NoRiskDataIng"
 
 
 def test_barcode_returns_graceful_404(client, monkeypatch):

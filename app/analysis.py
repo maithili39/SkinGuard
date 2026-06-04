@@ -59,13 +59,12 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
 
     # Build per-ingredient detail (reusing the already-fetched `ingredients` list,
     # which is parallel to `matched`) including a plain-language explanation.
-    from app.explain import explain_ingredient_llm  # lazy import to avoid circular
     found_ingredients = [
         {
             "matched_name": m.matched_inci,
             "confidence": m.confidence,
             "match_method": getattr(m, "match_method", "fuzzy"),
-            "explanation": explain_ingredient_llm(ing) if ing else None,
+            "explanation": None,  # lazy loading: fetched on-demand by frontend
             "ingredient": {
                 "function": ing.function if ing else None,
                 "comedogenic": bool(ing.comedogenic) if ing else False,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck, CheckCircle, AlertTriangle, XCircle, Scale, Lightbulb,
   Info, ChevronDown, ChevronUp, Sparkles,
@@ -19,6 +19,66 @@ interface Props {
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+function IngredientRow({ ing, idx }: { ing: any; idx: number }) {
+  const [explanation, setExplanation] = useState<string | null>(ing.explanation);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!ing.explanation && ing.matched_name) {
+      setLoading(true);
+      fetch(`/api/explain/${encodeURIComponent(ing.matched_name)}?llm=true`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.explanation) {
+            setExplanation(data.explanation);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      setExplanation(ing.explanation);
+    }
+  }, [ing.explanation, ing.matched_name]);
+
+  return (
+    <div
+      className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 flex items-start justify-between gap-2 card-hover animate-fade-in-up"
+      style={{ animationDelay: `${idx * 40}ms` }}
+    >
+      <div className="pr-2 min-w-0 flex-1">
+        <p className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-1.5">
+          {ing.matched_name}
+          {loading && <span className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-ping" />}
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+          {explanation || ing.ingredient?.function || 'Skincare ingredient'}
+        </p>
+      </div>
+      <div className="flex flex-col gap-1 flex-shrink-0 items-end">
+        {ing.ingredient?.comedogenic && (
+          <span className="bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-amber-200/60 dark:border-amber-700/40">
+            Pore-clogging
+          </span>
+        )}
+        {ing.ingredient?.irritant === 'yes' && (
+          <span className="bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-rose-200/60 dark:border-rose-700/40">
+            Irritant
+          </span>
+        )}
+        {!ing.ingredient?.comedogenic && ing.ingredient?.irritant !== 'yes' && (
+          <span className="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-emerald-200/60 dark:border-emerald-700/40">
+            Safe
+          </span>
+        )}
+        <span className="text-[9px] text-slate-400 text-right mt-1">
+          {ing.confidence}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
 
 export function ResultsDashboard({ results, onReanalyze }: Props) {
   const [showAllIngredients, setShowAllIngredients] = useState(false);
@@ -249,38 +309,7 @@ export function ResultsDashboard({ results, onReanalyze }: Props) {
 
             <div className="space-y-2">
               {ingredientsToShow?.map((ing, idx) => (
-                <div
-                  key={idx}
-                  className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 flex items-start justify-between gap-2 card-hover animate-fade-in-up"
-                  style={{ animationDelay: `${idx * 40}ms` }}
-                >
-                  <div className="pr-2 min-w-0">
-                    <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{ing.matched_name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                      {ing.explanation || ing.ingredient?.function || 'Skincare ingredient'}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
-                    {ing.ingredient?.comedogenic && (
-                      <span className="bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-amber-200/60 dark:border-amber-700/40">
-                        Pore-clogging
-                      </span>
-                    )}
-                    {ing.ingredient?.irritant === 'yes' && (
-                      <span className="bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-rose-200/60 dark:border-rose-700/40">
-                        Irritant
-                      </span>
-                    )}
-                    {!ing.ingredient?.comedogenic && ing.ingredient?.irritant !== 'yes' && (
-                      <span className="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-emerald-200/60 dark:border-emerald-700/40">
-                        Safe
-                      </span>
-                    )}
-                    <span className="text-[9px] text-slate-400 text-right">
-                      {ing.confidence}%
-                    </span>
-                  </div>
-                </div>
+                <IngredientRow key={idx} ing={ing} idx={idx} />
               ))}
             </div>
 

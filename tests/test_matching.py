@@ -94,8 +94,8 @@ def test_end_to_end_analysis(db):
     assert res["safety_score"] < 100
     concerns = {f["concern"] for f in res["findings"]}
     assert "pregnancy" in concerns and "acne" in concerns
-    # every found ingredient carries a plain-language explanation
-    assert all(fi["explanation"] for fi in res["found_ingredients"])
+    # under lazy loading, the initial analysis result has null explanations
+    assert all(fi["explanation"] is None for fi in res["found_ingredients"])
 
 
 # ── match_method field ────────────────────────────────────────────────────────
