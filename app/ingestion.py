@@ -182,12 +182,23 @@ def load_curated(db, registry: AliasRegistry, existing: dict) -> int:
 
 
 def main():
-    print("Creating tables...")
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    import sys
+    bootstrap = "--bootstrap" in sys.argv or os.environ.get("BOOTSTRAP") == "1"
 
     db = SessionLocal()
     try:
+        if bootstrap:
+            Base.metadata.create_all(bind=engine)
+            existing_count = db.query(Ingredient).count()
+            if existing_count > 0:
+                print(f"Ingredients already seeded ({existing_count}); skipping.")
+                return
+            print("Empty database — seeding ingredients...")
+        else:
+            print("Creating tables (dropping existing)...")
+            Base.metadata.drop_all(bind=engine)
+            Base.metadata.create_all(bind=engine)
+
         registry = AliasRegistry(db)
         existing = load_cosing(db, registry)
         load_curated(db, registry, existing)

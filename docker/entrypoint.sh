@@ -24,7 +24,7 @@ sys.exit(1)
 PY
 
 # Seed ingredient data on first run (idempotent — preserves users/scans).
-python -m app.bootstrap
+python -m app.ingestion --bootstrap
 
 # Start the API.
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000

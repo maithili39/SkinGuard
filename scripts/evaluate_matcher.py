@@ -1,26 +1,12 @@
-"""Matcher Precision / Recall / F1 Evaluation Harness.
+"""Unified Matcher Evaluation Harness.
 
-Evaluates both the RapidFuzz-only Matcher and the hybrid EmbeddingMatcher
-against the curated ingredient dataset (data/curated/ingredient_flags.csv),
-which serves as the gold-standard test set.
-
-Methodology:
-  For each curated ingredient + all its aliases:
-    - Feed the INCI name / alias to the matcher as if it appeared on a label.
-    - A match is a TRUE POSITIVE if the resolved ingredient_id matches the
-      gold ingredient_id from the curated CSV.
-    - An unmatched token is a FALSE NEGATIVE.
-    - A match to the wrong ingredient is a FALSE POSITIVE.
-
-Reports:
-  - Precision, Recall, F1 at confidence thresholds: 80, 85, 90, 95
-  - Breakdown by match_method (exact / embedding / fuzzy)
-  - Saves results to data/evaluation/matcher_results.json
-  - Prints a markdown table suitable for copy-paste into the project report.
+Evaluates both the RapidFuzz-only Matcher and the hybrid EmbeddingMatcher against:
+  1. The canonical curated ingredient dataset (data/curated/ingredient_flags.csv) -> Precision/Recall/F1 metrics.
+  2. Messy real-world labels from Open Beauty Facts (data/test/obf_products.jsonl) -> Token resolution rates.
 
 Run:
     python -m scripts.evaluate_matcher
-    python -m scripts.evaluate_matcher --fuzzy-only   # skip embedding matcher
+    python -m scripts.evaluate_matcher --fuzzy-only
 """
 
 import argparse
@@ -28,13 +14,21 @@ import csv
 import json
 import os
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # Allow running from repo root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from app.database import Base
+from app.models import Ingredient, Alias
+from app.matching import Matcher
+
 CURATED_CSV = os.path.join("data", "curated", "ingredient_flags.csv")
+TEST_JSONL = os.path.join("data", "test", "obf_products.jsonl")
 OUTPUT_DIR  = os.path.join("data", "evaluation")
 OUTPUT_JSON = os.path.join(OUTPUT_DIR, "matcher_results.json")
 
@@ -51,6 +45,8 @@ class GoldEntry:
 
 def load_gold_set() -> list[GoldEntry]:
     entries = []
+    if not os.path.exists(CURATED_CSV):
+        return entries
     with open(CURATED_CSV, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             inci = row["inci_name"].strip()
@@ -61,7 +57,7 @@ def load_gold_set() -> list[GoldEntry]:
     return entries
 
 
-# ── Metrics ────────────────────────────────────────────────────────────────────
+# ── Canonical Evaluation Metrics ───────────────────────────────────────────────
 
 @dataclass
 class MatchResult:
@@ -74,7 +70,7 @@ class MatchResult:
     correct: bool
 
 
-def evaluate_matcher(matcher, gold: list[GoldEntry], label: str) -> dict:
+def evaluate_canonical(matcher, gold: list[GoldEntry], label: str) -> dict:
     """Run the gold set through `matcher` and compute metrics at each threshold."""
     all_results: list[MatchResult] = []
 
@@ -97,7 +93,7 @@ def evaluate_matcher(matcher, gold: list[GoldEntry], label: str) -> dict:
                 correct=correct,
             ))
 
-    # Method breakdown (over all results, confidence-agnostic)
+    # Method breakdown
     by_method: dict[str, dict] = {}
     for r in all_results:
         meth = r.match_method
@@ -110,7 +106,6 @@ def evaluate_matcher(matcher, gold: list[GoldEntry], label: str) -> dict:
     # Per-threshold metrics
     threshold_metrics: list[dict] = []
     for thresh in THRESHOLDS:
-        # At this threshold: "predicted positive" = confidence >= thresh
         tp = sum(1 for r in all_results if r.confidence >= thresh and r.correct)
         fp = sum(1 for r in all_results if r.confidence >= thresh and not r.correct)
         fn = sum(1 for r in all_results if r.confidence < thresh and r.correct)
@@ -135,10 +130,8 @@ def evaluate_matcher(matcher, gold: list[GoldEntry], label: str) -> dict:
     }
 
 
-# ── Report printer ─────────────────────────────────────────────────────────────
-
-def print_markdown_table(results: list[dict]) -> None:
-    print("\n## SkinGuard Matcher Evaluation Results\n")
+def print_canonical_table(results: list[dict]) -> None:
+    print("\n## Matcher Performance on Canonical Curated Set\n")
     print("| Matcher | Threshold | Precision | Recall | F1 | TP | FP | FN |")
     print("|---------|-----------|-----------|--------|----|----|----|----|")
     for r in results:
@@ -149,98 +142,154 @@ def print_markdown_table(results: list[dict]) -> None:
                 f"| {m['f1']:>6.3f} | {m['tp']:>4} | {m['fp']:>4} | {m['fn']:>4} |"
             )
 
-    print("\n### Match Method Breakdown\n")
-    print("| Matcher | Method | Queries | Correct | Accuracy |")
-    print("|---------|--------|---------|---------|----------|")
-    for r in results:
-        for method, stats in r["by_method"].items():
-            acc = stats["correct"] / stats["total"] if stats["total"] else 0
-            print(
-                f"| {r['matcher']:<20} | {method:<10} "
-                f"| {stats['total']:>7} | {stats['correct']:>7} | {acc:>8.3f} |"
-            )
+
+# ── Real Messy Label Evaluation ────────────────────────────────────────────────
+
+def evaluate_real(fuzzy_matcher, embed_matcher, has_embed: bool) -> None:
+    """Evaluate matchers against messy real-world labels from OBF."""
+    if not os.path.exists(TEST_JSONL):
+        print(f"\n  (Real OBF messy labels file not found at {TEST_JSONL} — skipping.)")
+        return
+
+    products = []
+    with open(TEST_JSONL, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                products.append(json.loads(line))
+
+    eval_sample = products[:50]
+    print(f"\nEvaluating on {len(eval_sample)} real-world messy OBF products...")
+
+    fuzzy_stats = {"total_tokens": 0, "matched": 0, "unmatched": 0, "methods": {}}
+    embed_stats = {"total_tokens": 0, "matched": 0, "unmatched": 0, "methods": {}}
+
+    for prod in eval_sample:
+        text = prod["ingredients_text"]
+        if not text:
+            continue
+
+        # Baseline
+        fuzzy_matches = fuzzy_matcher.match_list(text)
+        for m in fuzzy_matches:
+            fuzzy_stats["total_tokens"] += 1
+            if m.status == "matched":
+                fuzzy_stats["matched"] += 1
+            else:
+                fuzzy_stats["unmatched"] += 1
+            method = getattr(m, "match_method", "fuzzy")
+            fuzzy_stats["methods"][method] = fuzzy_stats["methods"].get(method, 0) + 1
+
+        # Hybrid embedding
+        if has_embed and embed_matcher:
+            embed_matches = embed_matcher.match_list(text)
+            for m in embed_matches:
+                embed_stats["total_tokens"] += 1
+                if m.status == "matched":
+                    embed_stats["matched"] += 1
+                else:
+                    embed_stats["unmatched"] += 1
+                method = getattr(m, "match_method", "embedding")
+                embed_stats["methods"][method] = embed_stats["methods"].get(method, 0) + 1
+
+    print("\n## Matcher Performance on Real-World Labels\n")
+    print("| Matcher | Total Tokens | Matched | Unmatched | Match Rate |")
+    print("|---------|--------------|---------|-----------|------------|")
+
+    f_rate = fuzzy_stats["matched"] / fuzzy_stats["total_tokens"] if fuzzy_stats["total_tokens"] else 0
+    print(f"| RapidFuzz (baseline) | {fuzzy_stats['total_tokens']:>12} | {fuzzy_stats['matched']:>7} | {fuzzy_stats['unmatched']:>9} | {f_rate:>10.2%} |")
+
+    if has_embed:
+        e_rate = embed_stats["matched"] / embed_stats["total_tokens"] if embed_stats["total_tokens"] else 0
+        print(f"| Embedding+Fuzzy (hybrid) | {embed_stats['total_tokens']:>12} | {embed_stats['matched']:>7} | {embed_stats['unmatched']:>9} | {e_rate:>10.2%} |")
+
+    print("\n### Resolution Method Breakdown (Real Labels)\n")
+    print("| Matcher | Method | Count | Percentage |")
+    print("|---------|--------|-------|------------|")
+    for method, count in fuzzy_stats["methods"].items():
+        pct = count / fuzzy_stats["total_tokens"] if fuzzy_stats["total_tokens"] else 0
+        print(f"| RapidFuzz | {method:<10} | {count:>5} | {pct:>10.2%} |")
+
+    if has_embed:
+        for method, count in embed_stats["methods"].items():
+            pct = count / embed_stats["total_tokens"] if embed_stats["total_tokens"] else 0
+            print(f"| Embedding+Fuzzy | {method:<10} | {count:>5} | {pct:>10.2%} |")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate SkinGuard matcher accuracy.")
-    parser.add_argument("--fuzzy-only", action="store_true",
-                        help="Skip EmbeddingMatcher (faster, no model download).")
+    parser.add_argument("--fuzzy-only", action="store_true", help="Skip EmbeddingMatcher.")
     args = parser.parse_args()
-
-    # Bootstrap DB in-memory from curated CSV (same as tests)
-    import tempfile
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    from app.database import Base
-    from app.models import Ingredient, Alias
-    from app.matching import Matcher
 
     print("Loading gold set from curated CSV...")
     gold = load_gold_set()
+    if not gold:
+        print("Curated CSV dataset is empty or not found.")
+        return
+
     print(f"  {len(gold)} gold ingredients, "
           f"{sum(len(e.aliases) for e in gold)} aliases -> "
           f"{sum(1 + len(e.aliases) for e in gold)} total queries")
 
-    # Spin up a temp DB seeded with the curated CSV
+    # Spin up temp DB seeded with curated CSV
     tmp = tempfile.mktemp(suffix=".db")
     engine = create_engine(f"sqlite:///{tmp}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     db = Session()
 
-    seen: set[str] = set()
-    for entry in gold:
-        ing = Ingredient(inci_name=entry.inci_name)
-        db.add(ing)
-        db.flush()
-        for name in [entry.inci_name] + entry.aliases:
-            key = name.strip().lower()
-            if key and key not in seen:
-                seen.add(key)
-                db.add(Alias(name=name.strip(), ingredient=ing))
-    db.commit()
-
-    all_eval_results = []
-
-    # Evaluate RapidFuzz matcher
-    print("\nEvaluating RapidFuzz (baseline) matcher...")
-    fuzzy_matcher = Matcher(db)
-    fuzzy_results = evaluate_matcher(fuzzy_matcher, gold, "RapidFuzz")
-    all_eval_results.append(fuzzy_results)
-
-    # Evaluate EmbeddingMatcher (optional)
-    if not args.fuzzy_only:
-        print("\nEvaluating EmbeddingMatcher (sentence-transformers)...")
-        print("  Note: first run downloads ~80 MB model. Subsequent runs use cache.")
-        try:
-            from app.embedding_matcher import EmbeddingMatcher
-            embed_matcher = EmbeddingMatcher.build(db, fuzzy_matcher)
-            embed_results = evaluate_matcher(embed_matcher, gold, "Embedding+Fuzzy")
-            all_eval_results.append(embed_results)
-        except ImportError:
-            print("  sentence-transformers not installed — skipping embedding evaluation.")
-            print("  Install with: pip install sentence-transformers")
-        except Exception as exc:
-            print(f"  EmbeddingMatcher build failed: {exc} — skipping.")
-
-    # Print results
-    print_markdown_table(all_eval_results)
-
-    # Save JSON
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
-        json.dump(all_eval_results, f, indent=2)
-    print(f"\nResults saved to: {OUTPUT_JSON}")
-
-    # Cleanup
-    db.close()
-    engine.dispose()
     try:
-        os.unlink(tmp)
-    except Exception:
-        pass
+        seen = set()
+        for entry in gold:
+            ing = Ingredient(inci_name=entry.inci_name)
+            db.add(ing)
+            db.flush()
+            for name in [entry.inci_name] + entry.aliases:
+                key = name.strip().lower()
+                if key and key not in seen:
+                    seen.add(key)
+                    db.add(Alias(name=name.strip(), ingredient=ing))
+        db.commit()
+
+        # 1. Evaluate on Canonical Curated Set
+        fuzzy_matcher = Matcher(db)
+        fuzzy_results = evaluate_canonical(fuzzy_matcher, gold, "RapidFuzz")
+        
+        all_eval_results = [fuzzy_results]
+        embed_matcher = None
+        has_embed = False
+
+        if not args.fuzzy_only:
+            print("\nEvaluating EmbeddingMatcher (sentence-transformers)...")
+            try:
+                from app.embedding_matcher import EmbeddingMatcher
+                embed_matcher = EmbeddingMatcher.build(db, fuzzy_matcher)
+                embed_results = evaluate_canonical(embed_matcher, gold, "Embedding+Fuzzy")
+                all_eval_results.append(embed_results)
+                has_embed = True
+            except ImportError:
+                print("  sentence-transformers not installed — skipping embedding evaluation.")
+            except Exception as exc:
+                print(f"  EmbeddingMatcher build failed: {exc} — skipping.")
+
+        print_canonical_table(all_eval_results)
+
+        # Save JSON
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
+            json.dump(all_eval_results, f, indent=2)
+
+        # 2. Evaluate on Real Messy Labels
+        evaluate_real(fuzzy_matcher, embed_matcher, has_embed)
+
+    finally:
+        db.close()
+        engine.dispose()
+        try:
+            os.unlink(tmp)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
