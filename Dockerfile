@@ -20,6 +20,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 
 
 # Application code.
+COPY VERSION ./VERSION
 COPY data ./data
 COPY app ./app
 COPY scripts ./scripts

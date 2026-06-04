@@ -200,7 +200,13 @@ python -m scripts.evaluate_rag
 ```
 SkinGuard/
 ├── app/
-│   ├── main.py              # FastAPI app, routes, startup (matcher index build)
+│   ├── main.py              # FastAPI app, lifespan, middleware, router registration
+│   ├── deps.py              # Shared singletons: matcher, limiter, rate-limit helpers
+│   ├── routers/
+│   │   ├── auth.py          # /auth/* — register, login, logout, me, password reset
+│   │   ├── users.py         # /users/* — profile update, scan history
+│   │   ├── analyze.py       # /analyze, /analyze/routine
+│   │   └── misc.py          # /health, /ingredients/count, /explain, /barcode, /chat, /extract-text
 │   ├── analysis.py          # Core pipeline: text → findings → score
 │   ├── matching.py          # RapidFuzz fuzzy matcher + label pre-cleaning
 │   ├── embedding_matcher.py # MiniLM semantic matcher (pgvector / numpy fallback)
@@ -221,6 +227,7 @@ SkinGuard/
 ├── alembic/                 # DB migrations (3 versions)
 ├── frontend/
 │   ├── app/page.tsx         # Main page — imports all components
+│   ├── app/reset-password/  # Password reset page (token from email link)
 │   └── components/          # 13 components (Auth, Upload, Results, Chat, Compare…)
 ├── data/
 │   ├── curated/             # ingredient_flags.csv (275 rows) + SOURCES.md
@@ -236,8 +243,18 @@ SkinGuard/
 
 ---
 
+## Password reset
+
+The forgot-password flow is fully wired end-to-end:
+
+1. Click **Forgot your password?** on the sign-in modal → enter email → `POST /auth/forgot-password`
+2. Backend creates a signed 1-hour JWT and either sends it via [Resend](https://resend.com) (when `RESEND_API_KEY` is set) or logs the link to stdout for local development.
+3. The reset link points to `/reset-password?token=…` — a dedicated page that calls `POST /auth/reset-password` and redirects back to the app on success.
+
+To enable email delivery, set `RESEND_API_KEY` in your `.env`. Without it the link is logged at `WARNING` level — fine for development, not for production.
+
+---
+
 ## Known gaps before production
 
-- **Docker end-to-end** — verify `docker compose up --build` succeeds after the pgvector + Redis service additions
 - **OCR on real photos** — tested on synthetic images; needs validation on actual phone photos of glossy labels
-- **Password reset** — no forgot-password flow; requires an email provider (SendGrid, Resend, etc.)

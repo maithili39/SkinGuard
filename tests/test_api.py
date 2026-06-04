@@ -459,3 +459,33 @@ def test_chat_filtered_by_ingredient_names(client):
     assert "Retinol" not in data["grounded_on"]
 
 
+def test_forgot_and_reset_password_flow(client):
+    email = f"reset_{uuid.uuid4().hex[:8]}@example.com"
+    
+    # 1. Register new user
+    client.post("/auth/register", json={"email": email, "password": "oldpassword123"})
+    
+    # 2. Call forgot password
+    r = client.post("/auth/forgot-password", json={"email": email})
+    assert r.status_code == 200
+    assert "link has been sent" in r.json()["detail"]
+    
+    # 3. Create a token directly to use for reset (since we mock emailing)
+    from app.auth import create_reset_token
+    token = create_reset_token(email)
+    
+    # 4. Reset password using valid token
+    r = client.post("/auth/reset-password", json={"token": token, "new_password": "newpassword123"})
+    assert r.status_code == 200
+    assert "has been reset successfully" in r.json()["detail"]
+    
+    # 5. Verify we can log in with new password
+    r = client.post("/auth/login", json={"email": email, "password": "newpassword123"})
+    assert r.status_code == 200
+    
+    # 6. Verify we cannot log in with old password
+    r = client.post("/auth/login", json={"email": email, "password": "oldpassword123"})
+    assert r.status_code == 401
+
+
+
