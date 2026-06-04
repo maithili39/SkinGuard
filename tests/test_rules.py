@@ -75,3 +75,47 @@ def test_position_weighting_front_costs_more_than_back():
     front = evaluate([bad] + filler, Profile(acne_prone=True))["score"]
     back = evaluate(filler + [bad], Profile(acne_prone=True))["score"]
     assert front < back  # a problem near the top hurts more
+
+
+# ── Rosacea rules ─────────────────────────────────────────────────────────────
+
+def test_rosacea_triggers_for_alcohol_denat():
+    """Alcohol Denat should fire a rosacea warning only when profile.rosacea=True."""
+    alcohol = _ing("Alcohol Denat", irritant="yes", function="solvent")
+
+    res_rosacea = evaluate([alcohol], Profile(rosacea=True))
+    concerns = {f.concern for f in res_rosacea["findings"]}
+    assert "rosacea" in concerns, "Expected rosacea finding for Alcohol Denat"
+
+    res_no_rosacea = evaluate([alcohol], Profile(rosacea=False))
+    assert not any(f.concern == "rosacea" for f in res_no_rosacea["findings"]), (
+        "Rosacea rule should not fire when profile.rosacea=False"
+    )
+
+
+def test_rosacea_triggers_for_fragrance_allergen():
+    """Fragrance allergens (irritant=yes, function=fragrance) should fire rosacea warning."""
+    fragrance = _ing("Limonene", irritant="yes", function="fragrance")
+
+    res = evaluate([fragrance], Profile(rosacea=True))
+    assert any(f.concern == "rosacea" for f in res["findings"])
+
+
+def test_rosacea_triggers_for_acid_exfoliant():
+    """Acid exfoliants (irritant=yes, function=exfoliant) should warn rosacea users."""
+    glycolic = _ing("Glycolic Acid", irritant="yes", function="exfoliant")
+
+    res = evaluate([glycolic], Profile(rosacea=True))
+    assert any(f.concern == "rosacea" for f in res["findings"])
+
+    # Should NOT fire for non-rosacea users (the sensitivity rule is separate)
+    res_normal = evaluate([glycolic], Profile(rosacea=False, sensitive_skin=False))
+    assert not any(f.concern == "rosacea" for f in res_normal["findings"])
+
+
+def test_rosacea_rule_does_not_fire_for_safe_ingredients():
+    """A benign humectant should not trigger any rosacea warning."""
+    glycerin = _ing("Glycerin", irritant="no", function="humectant")
+    res = evaluate([glycerin], Profile(rosacea=True))
+    assert not any(f.concern == "rosacea" for f in res["findings"])
+

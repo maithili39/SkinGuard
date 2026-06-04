@@ -9,16 +9,20 @@ import csv
 import os
 import uuid
 
+# pyrefly: ignore [missing-import]
 import pytest
+# pyrefly: ignore [missing-import]
 from fastapi.testclient import TestClient
+# pyrefly: ignore [missing-import]
 from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
-from app import main  # Import main module to access app and _matcher
 from app.main import app, get_matcher
 from app.matching import Matcher
-from app.models import Ingredient, Alias, User, Scan  # Import all models to ensure tables are created
+from app.models import Ingredient, Alias, User, Scan
 
 CURATED = os.path.join("data", "curated", "ingredient_flags.csv")
 
@@ -26,19 +30,13 @@ CURATED = os.path.join("data", "curated", "ingredient_flags.csv")
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture(scope="module")
-def test_db_engine_and_session():
-    """Create a test database and session that's shared across all tests in the module."""
-    import tempfile
-    from pathlib import Path
-    
-    # Use a temporary file-based SQLite database instead of in-memory
-    # In-memory databases don't work well with FastAPI's thread pool
-    temp_dir = Path(tempfile.gettempdir())
-    db_file = temp_dir / "skinguard_test.db"
-    db_file.unlink(missing_ok=True)  # Remove if exists
-    
-    database_url = f"sqlite:///{db_file}"
-    engine = create_engine(database_url, connect_args={"check_same_thread": False})
+def test_db_session():
+    """In-memory SQLite seeded with curated ingredients for all module tests."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -66,62 +64,25 @@ def test_db_engine_and_session():
                     seen.add(key)
                     db.add(Alias(name=name.strip(), ingredient=ing))
     db.commit()
-    
-    yield engine, db
-    
-    # Cleanup - properly close the connection before deleting the file
-    db.close()
-    engine.dispose()  # Close all connections in the pool
-    try:
-        db_file.unlink(missing_ok=True)  # Cleanup
-    except Exception:
-        pass  # Ignore cleanup errors
-
-
-@pytest.fixture(scope="function")
-def test_db_session(test_db_engine_and_session):
-    """Provide a fresh session for each test (but sharing the same test database)."""
-    engine, _ = test_db_engine_and_session
-    Session = sessionmaker(bind=engine)
-    db = Session()
     yield db
-    db.rollback()  # Rollback changes from this test
     db.close()
 
 
 @pytest.fixture(scope="module")
-def _setup_module_lifespan():
-    """Setup that runs once per module."""
-    import os
-    # Skip the app lifespan to avoid creating real DB connections
-    os.environ["SKIP_LIFESPAN"] = "1"
-    yield
-    if "SKIP_LIFESPAN" in os.environ:
-        del os.environ["SKIP_LIFESPAN"]
-
-
-@pytest.fixture(scope="function")
-def client(test_db_session, _setup_module_lifespan):
+def client(test_db_session):
     """TestClient with DB and Matcher dependency overrides."""
     test_matcher = Matcher(test_db_session)
 
     def override_db():
-        """Always return the same test session."""
         yield test_db_session
 
-    # Override the get_db dependency
     app.dependency_overrides[get_db] = override_db
-    
-    # Set the global _matcher so health() and get_matcher() work
-    main._matcher = test_matcher
+    app.dependency_overrides[get_matcher] = lambda: test_matcher
 
-    client_instance = TestClient(app)
-    try:
-        yield client_instance
-    finally:
-        # Cleanup
-        app.dependency_overrides.clear()
-        main._matcher = None
+    with TestClient(app) as c:
+        yield c
+
+    app.dependency_overrides.clear()
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -245,3 +206,130 @@ def test_explain_known_ingredient(client):
 def test_explain_unknown_ingredient(client):
     r = client.get("/explain/Zxqwerty9999Unobtanium")
     assert r.status_code == 404
+
+
+# ── New Group 1 & Group 3 & Group 6 tests ─────────────────────────────────────
+
+def test_legacy_users_returns_410(client):
+    r = client.post("/users", json={"email": "legacy@example.com"})
+    assert r.status_code == 410
+    assert "legacy endpoint is gone" in r.json()["detail"].lower()
+
+
+def test_scan_history_requires_auth(client):
+    r = client.get("/users/somebody@example.com/scans")
+    assert r.status_code == 401
+    
+    r = client.get("/auth/scans")
+    assert r.status_code == 401
+
+
+def test_profile_update_requires_auth(client):
+    r = client.put("/users/somebody@example.com/profile", json={"pregnant": True})
+    assert r.status_code == 401
+
+
+def test_scan_history_and_profile_jwt_authorized(client):
+    email = f"jwt_{uuid.uuid4().hex[:8]}@example.com"
+    # Register
+    reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
+    assert reg.status_code == 201
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Access own scans
+    r = client.get(f"/users/{email}/scans", headers=headers)
+    assert r.status_code == 200
+    assert r.json()["email"] == email
+
+    # Try accessing someone else's scans -> 403 Forbidden
+    r = client.get("/users/other@example.com/scans", headers=headers)
+    assert r.status_code == 403
+
+    # Try updating own profile
+    r = client.put(f"/users/{email}/profile", json={"sensitive_skin": True}, headers=headers)
+    assert r.status_code == 200
+    assert r.json()["profile"]["sensitive_skin"] is True
+
+    # Try updating someone else's profile -> 403 Forbidden
+    r = client.put("/users/other@example.com/profile", json={"sensitive_skin": True}, headers=headers)
+    assert r.status_code == 403
+
+    # Test /auth/scans JWT endpoint
+    r = client.get("/auth/scans", headers=headers)
+    assert r.status_code == 200
+    assert r.json()["email"] == email
+
+
+def test_barcode_returns_graceful_404(client, monkeypatch):
+    from app import barcode
+    
+    def mock_lookup(barcode_str):
+        raise barcode.ProductNotFound("Product not found in Open Beauty Facts database.")
+    
+    monkeypatch.setattr(barcode, "lookup_barcode", mock_lookup)
+    barcode.cached_lookup_barcode.cache_clear()
+
+    r = client.get("/barcode/1234567890123")
+    assert r.status_code == 404
+    assert "not found" in r.json()["detail"].lower()
+
+
+def test_alternatives_in_findings(client):
+    r = client.post(
+        "/analyze",
+        json={
+            "text": "Coconut Oil",
+            "profile": {"acne_prone": True},
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    findings = data["findings"]
+    assert len(findings) > 0
+    coconut_finding = next((f for f in findings if "coconut" in f["message"].lower()), None)
+    assert coconut_finding is not None
+    assert "alternatives" in coconut_finding
+    assert coconut_finding["alternatives"] == ["Squalane", "Argan Oil", "Jojoba Oil"]
+
+
+def test_analyze_routine_compatible(client):
+    r = client.post(
+        "/analyze/routine",
+        json={
+            "products": [
+                {"name": "Hydrating Cleanser", "text": "Water, Glycerin"},
+                {"name": "Barrier Serum", "text": "Niacinamide, Ceramide NP"}
+            ]
+        }
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["compatible"] is True
+    assert "no active ingredient conflicts" in data["summary"].lower()
+    assert len(data["conflicts"]) == 0
+    assert "Hydrating Cleanser" in data["product_actives"]
+
+
+def test_analyze_routine_incompatible(client):
+    r = client.post(
+        "/analyze/routine",
+        json={
+            "products": [
+                {"name": "Retinol Serum", "text": "Retinol, Glycerin"},
+                {"name": "Exfoliating Toner", "text": "Glycolic Acid, Water"}
+            ]
+        }
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["compatible"] is False
+    assert "layering conflicts" in data["summary"].lower()
+    assert len(data["conflicts"]) == 1
+    conflict = data["conflicts"][0]
+    assert conflict["conflict_type"] == "AHA + Retinol"
+    assert conflict["severity"] == "danger"
+    assert "Retinol Serum" in [conflict["product_a"], conflict["product_b"]]
+    assert "Exfoliating Toner" in [conflict["product_a"], conflict["product_b"]]
+
+

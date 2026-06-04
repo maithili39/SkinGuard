@@ -93,7 +93,9 @@ class Match:
     matched_inci: Optional[str]
     ingredient_id: Optional[int]
     confidence: int  # 0-100
-    status: str  # "matched" | "unmatched"
+    status: str       # "matched" | "unmatched"
+    match_method: str = "fuzzy"  # "exact" | "embedding" | "fuzzy" | "none"
+    best_candidate: Optional[str] = None  # best guess name for unmatched tokens ("Did you mean?")
 
 
 class Matcher:
@@ -124,23 +126,25 @@ class Matcher:
     def match_token(self, raw: str) -> Match:
         norm = normalize(raw)
         if not norm:
-            return Match(raw, None, None, 0, "unmatched")
+            return Match(raw, None, None, 0, "unmatched", "none", None)
 
         # 1. exact alias hit -> full confidence
         if norm in self._index:
             ing_id = self._index[norm]
-            return Match(raw, self._inci(ing_id), ing_id, 100, "matched")
+            return Match(raw, self._inci(ing_id), ing_id, 100, "matched", "exact", None)
 
         # 2. fuzzy fallback
         best = process.extractOne(norm, self._choices, scorer=fuzz.WRatio)
         if best:
             choice, score, _ = best
+            best_name = self._inci(self._index[choice])  # canonical name of best candidate
             if score >= settings.match_threshold:
                 ing_id = self._index[choice]
-                return Match(raw, self._inci(ing_id), ing_id, int(score), "matched")
-            return Match(raw, None, None, int(score), "unmatched")
+                return Match(raw, best_name, ing_id, int(score), "matched", "fuzzy", None)
+            # Below threshold: unmatched but expose best_candidate for "Did you mean?"
+            return Match(raw, None, None, int(score), "unmatched", "fuzzy", best_name)
 
-        return Match(raw, None, None, 0, "unmatched")
+        return Match(raw, None, None, 0, "unmatched", "none", None)
 
     def match_list(self, raw_text: str) -> list[Match]:
         return [self.match_token(t) for t in split_ingredient_list(raw_text)]

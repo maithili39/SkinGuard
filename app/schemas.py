@@ -6,6 +6,7 @@ class ProfileIn(BaseModel):
     sensitive_skin: bool = False
     acne_prone: bool = False
     fungal_acne: bool = False
+    rosacea: bool = False
     avoid_list: list[str] = Field(default_factory=list)
 
 
@@ -42,3 +43,32 @@ class TokenOut(BaseModel):
     token_type: str = "bearer"
     email: str
     profile: dict
+
+
+# ── Chat / RAG schemas ────────────────────────────────────────────────────────
+
+class ChatIn(BaseModel):
+    """Request body for the /chat endpoint (RAG Q&A grounded on analysis results)."""
+    question: str = Field(..., min_length=3, max_length=500)
+    # Full analysis result dict from a prior /analyze call — used as grounding context.
+    analysis_context: dict
+    # Explicit list of ingredient names to focus on (taken from found_ingredients).
+    ingredient_names: list[str] = Field(default_factory=list)
+
+
+class ChatOut(BaseModel):
+    """Response from the /chat RAG endpoint."""
+    answer: str
+    # Which ingredients' data was used as grounding context for this answer.
+    grounded_on: list[str]
+    # LLM model used (or "template" if LLM unavailable).
+    source: str
+
+
+class RoutineProduct(BaseModel):
+    name: str = Field(..., max_length=100)
+    text: str = Field(..., max_length=15_000)
+
+
+class RoutineAnalyzeIn(BaseModel):
+    products: list[RoutineProduct] = Field(..., min_items=1)

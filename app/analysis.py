@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.explain import explain_ingredient
 from app.matching import Matcher
 from app.models import Ingredient
-from app.rules import Profile, evaluate, has_risk_data
+from app.rules import Profile, evaluate, get_alternatives, has_risk_data
 
 DISCLAIMER = (
     "SkinGuard provides ingredient information for educational purposes only and "
@@ -59,11 +59,13 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
 
     # Build per-ingredient detail (reusing the already-fetched `ingredients` list,
     # which is parallel to `matched`) including a plain-language explanation.
+    from app.explain import explain_ingredient_llm  # lazy import to avoid circular
     found_ingredients = [
         {
             "matched_name": m.matched_inci,
             "confidence": m.confidence,
-            "explanation": explain_ingredient(ing) if ing else None,
+            "match_method": getattr(m, "match_method", "fuzzy"),
+            "explanation": explain_ingredient_llm(ing) if ing else None,
             "ingredient": {
                 "function": ing.function if ing else None,
                 "comedogenic": bool(ing.comedogenic) if ing else False,
@@ -92,6 +94,15 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
                 "message": f.message,
                 "source": f.source,
                 "kind": f.kind,  # 'regulatory' = EU fact, 'advice' = curated guidance
+                # Look up alternatives from the matched ingredient's function field.
+                "alternatives": get_alternatives(
+                    next(
+                        (ing.function for ing in ingredients
+                         if ing and ing.inci_name == f.inci_name),
+                        None,
+                    ),
+                    f.concern,
+                ),
             }
             for f in result["findings"]
         ],
@@ -100,7 +111,12 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
             for m in matched
         ],
         "unmatched": [
-            {"raw": m.raw, "best_confidence": m.confidence} for m in unmatched
+            {
+                "raw": m.raw,
+                "best_confidence": m.confidence,
+                "best_candidate": m.best_candidate,  # "Did you mean?" hint
+            }
+            for m in unmatched
         ],
         "disclaimer": DISCLAIMER,
         "original_text": raw_text,

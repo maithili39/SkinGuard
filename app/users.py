@@ -63,6 +63,7 @@ def update_profile(db: Session, user: User, profile: dict) -> User:
     user.sensitive_skin = profile.get("sensitive_skin", user.sensitive_skin)
     user.acne_prone = profile.get("acne_prone", user.acne_prone)
     user.fungal_acne = profile.get("fungal_acne", user.fungal_acne)
+    user.rosacea = profile.get("rosacea", user.rosacea)
     user.avoid_list = profile.get("avoid_list", user.avoid_list)
     db.commit()
     db.refresh(user)
@@ -90,6 +91,7 @@ def profile_dict(user: User) -> dict:
         "sensitive_skin": user.sensitive_skin,
         "acne_prone": user.acne_prone,
         "fungal_acne": user.fungal_acne,
+        "rosacea": getattr(user, "rosacea", False),
         "avoid_list": user.avoid_list or [],
     }
 

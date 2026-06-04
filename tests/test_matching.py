@@ -96,3 +96,47 @@ def test_end_to_end_analysis(db):
     assert "pregnancy" in concerns and "acne" in concerns
     # every found ingredient carries a plain-language explanation
     assert all(fi["explanation"] for fi in res["found_ingredients"])
+
+
+# ── match_method field ────────────────────────────────────────────────────────
+
+def test_exact_match_reports_method_exact(db):
+    """Direct alias hits must carry match_method='exact'."""
+    m = Matcher(db).match_token("Niacinamide")
+    assert m.match_method == "exact"
+
+
+def test_fuzzy_match_reports_method_fuzzy(db):
+    """Fuzzy matches (typos, partial names) must carry match_method='fuzzy'."""
+    m = Matcher(db).match_token("Niacinmide")  # deliberate typo
+    assert m.status == "matched"
+    assert m.match_method == "fuzzy"
+
+
+def test_unmatched_reports_method_none_or_fuzzy(db):
+    """Completely unrecognised tokens should still have a match_method set."""
+    m = Matcher(db).match_token("Zxqwerty9999Unobtanium")
+    assert m.status == "unmatched"
+    assert m.match_method in ("none", "fuzzy")
+
+
+# ── Rosacea integration through analyze_text ─────────────────────────────────
+
+def test_rosacea_concern_in_analysis(db):
+    """Alcohol Denat on a label with rosacea profile should produce a rosacea finding."""
+    # 'Alcohol Denat' is in the curated CSV with irritant=yes, function=solvent
+    text = "Aqua, Glycerin, Alcohol Denat"
+    res = analyze_text(db, text, Profile(rosacea=True))
+    concerns = {f["concern"] for f in res["findings"]}
+    assert "rosacea" in concerns, (
+        f"Expected 'rosacea' in findings, got: {concerns!r}\n"
+        f"Findings: {res['findings']}"
+    )
+
+
+def test_rosacea_not_triggered_without_profile(db):
+    """Same label without rosacea profile should NOT show rosacea findings."""
+    text = "Aqua, Glycerin, Alcohol Denat"
+    res = analyze_text(db, text, Profile(rosacea=False))
+    assert not any(f["concern"] == "rosacea" for f in res["findings"])
+

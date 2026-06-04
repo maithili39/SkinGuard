@@ -1,12 +1,19 @@
 """OCR pipeline: image bytes -> cleaned ingredient text.
 
 Real skincare labels are glossy, low-contrast and small-font, so raw
-image_to_string does poorly. We preprocess with Pillow (no OpenCV dependency):
-grayscale -> autocontrast -> upscale -> binarize. This is the single biggest
-lever on real-world accuracy.
+image_to_string does poorly. Preprocessing pipeline (Pillow — no OpenCV):
 
-We also fail *clearly*: if the Tesseract binary isn't installed, the caller gets
-an actionable message instead of a generic 500.
+  1. Grayscale conversion
+  2. Autocontrast normalisation
+  3. Upscaling to ≥ 1600px on the longest edge (Tesseract loves large fonts)
+  4. Median blur (radius 1) — removes salt-and-pepper noise from glossy reflections
+  5. Sharpening — enhances edges so Tesseract can separate glyphs
+  6. Adaptive binarization — tries the simple threshold first; if the result
+     is trivially white or black (a glare patch), falls back to a softer
+     threshold. This handles the common problem of shiny label reflections.
+
+We also fail *clearly*: if the Tesseract binary isn't installed, the caller
+gets an actionable message instead of a generic 500.
 """
 
 import io
@@ -30,8 +37,7 @@ def _locate_tesseract() -> None:
     """Point pytesseract at the engine.
 
     Prefer an explicit TESSERACT_CMD env var, then PATH, then the standard
-    Windows install location. This means the app works right after a `winget`
-    install without the user having to edit their PATH.
+    Windows install location.
     """
     if pytesseract is None:
         return
@@ -40,7 +46,7 @@ def _locate_tesseract() -> None:
         pytesseract.pytesseract.tesseract_cmd = explicit
         return
     if shutil.which("tesseract"):
-        return  # already on PATH
+        return
     for candidate in (
         r"C:\Program Files\Tesseract-OCR\tesseract.exe",
         r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
@@ -58,29 +64,51 @@ class OCRUnavailable(Exception):
     """Raised when the Tesseract engine binary is not installed."""
 
 
+def _binarize_adaptive(img: Image.Image, primary_threshold: int = 150) -> Image.Image:
+    """Binarize with a simple threshold; fall back to a softer one if the
+    result is trivially all-white or all-black (indicates glare/deep shadow).
+
+    This handles the common case of a shiny label where a single threshold
+    turns an entire region to pure white, losing all text detail.
+    """
+    result = img.point(lambda p: 255 if p > primary_threshold else 0)
+    pixels = result.getdata()
+    white_frac = sum(1 for p in pixels if p == 255) / len(pixels)
+
+    if white_frac > 0.97 or white_frac < 0.03:
+        # Glare or shadow: use a softer mid-point threshold
+        result = img.point(lambda p: 255 if p > 128 else 0)
+
+    return result
+
+
 def preprocess(image: Image.Image) -> Image.Image:
-    # Convert to grayscale and normalise contrast.
+    """Full preprocessing pipeline for ingredient label images."""
+    # 1. Grayscale + auto-contrast
     img = ImageOps.grayscale(image)
     img = ImageOps.autocontrast(img)
 
-    # Upscale small images so small label fonts become legible to Tesseract.
+    # 2. Upscale small images — Tesseract accuracy degrades below ~150 DPI
     w, h = img.size
     if max(w, h) < 1600:
         scale = 1600 / max(w, h)
         img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
 
-    # Light sharpen then binarize (Otsu-like simple threshold).
+    # 3. Median blur (1px radius equivalent via MedianFilter 3×3) — removes
+    #    salt-and-pepper noise typical of glossy label photos without blurring edges.
+    img = img.filter(ImageFilter.MedianFilter(size=3))
+
+    # 4. Sharpen — recovers edge definition after median blur
     img = img.filter(ImageFilter.SHARPEN)
-    img = img.point(lambda p: 255 if p > 150 else 0)
+
+    # 5. Adaptive binarization — handles glare patches
+    img = _binarize_adaptive(img)
+
     return img
 
 
 def clean_text(text: str) -> str:
-    """Normalise OCR output into a single comma-separated-ish line.
-
-    Many labels read 'Ingredients: a, b, c'. We strip that prefix and collapse
-    whitespace; ingredient splitting itself happens later in the matcher.
-    """
+    """Normalise OCR output into a single comma-separated-ish line."""
     text = re.sub(r"(?i)\bingredients?\b\s*[:\-]?", " ", text)
     text = text.replace("\n", " ")
     text = re.sub(r"\s+", " ", text).strip()
@@ -95,7 +123,8 @@ def extract_text(image_bytes: bytes) -> str:
     try:
         image = Image.open(io.BytesIO(image_bytes))
         processed = preprocess(image)
-        raw = pytesseract.image_to_string(processed)
+        # PSM 6: assume a uniform block of text (typical for ingredient lists)
+        raw = pytesseract.image_to_string(processed, config="--psm 6")
     except TesseractNotFoundError as exc:
         raise OCRUnavailable(
             "The Tesseract OCR engine is not installed on this machine. "

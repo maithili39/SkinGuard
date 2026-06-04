@@ -90,6 +90,7 @@ class User(Base):
     sensitive_skin = Column(Boolean, default=False)
     acne_prone = Column(Boolean, default=False)
     fungal_acne = Column(Boolean, default=False)
+    rosacea = Column(Boolean, default=False)
     avoid_list = Column(JSON, default=list)
 
     scans = relationship(

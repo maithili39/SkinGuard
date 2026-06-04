@@ -24,6 +24,7 @@ class Profile:
     sensitive_skin: bool = False
     acne_prone: bool = False
     fungal_acne: bool = False
+    rosacea: bool = False
     avoid_list: list[str] = field(default_factory=list)  # lowercased inci names
 
 
@@ -68,7 +69,7 @@ RULES: list[Rule] = [
         kind="advice",
         profile_gate=lambda p: p.pregnant,
         predicate=lambda i: i.pregnancy_safe == "caution",
-        message=lambda i: f"{i.inci_name}: use with caution during pregnancy — check with your doctor.",
+        message=lambda i: f"{i.inci_name}: use with caution during pregnancy - check with your doctor.",
     ),
     Rule(
         concern="fungal_acne",
@@ -84,7 +85,7 @@ RULES: list[Rule] = [
         kind="advice",
         profile_gate=lambda p: p.acne_prone,
         predicate=lambda i: _comedo(i, 3),
-        message=lambda i: f"{i.inci_name} is comedogenic (rating {i.comedogenic}/5) — may clog pores.",
+        message=lambda i: f"{i.inci_name} is comedogenic (rating {i.comedogenic}/5) - may clog pores.",
     ),
     Rule(
         concern="sensitivity",
@@ -92,7 +93,7 @@ RULES: list[Rule] = [
         kind="advice",
         profile_gate=lambda p: p.sensitive_skin,
         predicate=lambda i: i.irritant == "yes",
-        message=lambda i: f"{i.inci_name} is a known irritant/allergen — may bother sensitive skin.",
+        message=lambda i: f"{i.inci_name} is a known irritant/allergen - may bother sensitive skin.",
     ),
     # Regulatory facts apply to everyone regardless of profile.
     Rule(
@@ -110,6 +111,42 @@ RULES: list[Rule] = [
         profile_gate=None,
         predicate=lambda i: i.regulatory_status == "restricted",
         message=lambda i: f"{i.inci_name} is restricted in the EU (concentration limits apply).",
+    ),
+    # ── Rosacea rules - active when profile.rosacea is True ──────────────────
+    Rule(
+        concern="rosacea",
+        level="warning",
+        kind="advice",
+        profile_gate=lambda p: p.rosacea,
+        predicate=lambda i: i.inci_name.lower() in (
+            "alcohol denat", "ethanol", "sd alcohol", "denatured alcohol"
+        ) or (i.irritant == "yes" and i.function == "solvent"),
+        message=lambda i: (
+            f"{i.inci_name} is a drying solvent/alcohol - can worsen rosacea by "
+            f"disrupting barrier function and triggering vascular flushing."
+        ),
+    ),
+    Rule(
+        concern="rosacea",
+        level="warning",
+        kind="advice",
+        profile_gate=lambda p: p.rosacea,
+        predicate=lambda i: i.function == "fragrance" and i.irritant == "yes",
+        message=lambda i: (
+            f"{i.inci_name} is a fragrance allergen - a common rosacea trigger that "
+            f"can cause flushing and inflammation."
+        ),
+    ),
+    Rule(
+        concern="rosacea",
+        level="warning",
+        kind="advice",
+        profile_gate=lambda p: p.rosacea,
+        predicate=lambda i: i.function == "exfoliant" and i.irritant == "yes",
+        message=lambda i: (
+            f"{i.inci_name} is an acid exfoliant - at high concentrations or low pH "
+            f"these can aggravate rosacea; use only in low-strength formulas."
+        ),
     ),
 ]
 
@@ -141,9 +178,40 @@ BENEFITS = {
     "Azelaic Acid": "good for acne and redness",
     "Zinc Oxide": "broad-spectrum mineral sun protection",
     "Bakuchiol": "plant-based retinol alternative; pregnancy-friendlier",
-    "Ascorbic Acid": "Vitamin C — brightens and protects against free-radical damage",
+    "Ascorbic Acid": "Vitamin C - brightens and protects against free-radical damage",
     "Squalane": "lightweight non-comedogenic hydration",
 }
+
+# Alternatives: maps (function, concern) → safer swap suggestions.
+# Shown in the UI as "💡 Try instead: X, Y" on flagged findings.
+ALTERNATIVES: dict[tuple[str, str], list[str]] = {
+    # Acne-prone: swap comedogenic oils/emollients
+    ("emollient", "acne"):      ["Squalane", "Argan Oil", "Jojoba Oil"],
+    ("occlusive", "acne"):      ["Squalane", "Dimethicone"],
+    # Fungal acne: swap fatty-acid-heavy emollients/emulsifiers
+    ("emollient", "fungal_acne"):  ["Squalane", "Caprylic/Capric Triglyceride"],
+    ("emulsifier", "fungal_acne"): ["Cetearyl Olivate", "Glyceryl Stearate Citrate"],
+    # Pregnancy: swap retinoids
+    ("anti-ageing", "pregnancy"):  ["Bakuchiol", "Niacinamide", "Vitamin C"],
+    # Sensitive/Rosacea: swap irritants and fragrance
+    ("fragrance", "sensitivity"):  ["Fragrance-free alternatives"],
+    ("fragrance", "rosacea"):      ["Fragrance-free alternatives"],
+    ("solvent", "sensitivity"):    ["Glycerin", "Panthenol"],
+    ("solvent", "rosacea"):        ["Glycerin", "Niacinamide"],
+    ("exfoliant", "sensitivity"):  ["Mandelic Acid", "Polyglutamic Acid"],
+    ("exfoliant", "rosacea"):      ["Azelaic Acid", "Mandelic Acid"],
+    # Sunscreens: swap chemical for mineral
+    ("UV filter", "sensitivity"):  ["Zinc Oxide", "Titanium Dioxide"],
+    ("UV filter", "pregnancy"):    ["Zinc Oxide", "Titanium Dioxide"],
+}
+
+
+def get_alternatives(function: str | None, concern: str) -> list[str]:
+    """Return alternative ingredient suggestions for a given (function, concern) pair."""
+    if not function:
+        return []
+    return ALTERNATIVES.get((function, concern), [])
+
 
 # Base penalty per finding level (before position weighting).
 PENALTY = {"danger": 30, "warning": 10, "good": 0}
@@ -202,7 +270,7 @@ def evaluate(ingredients: list[Ingredient], profile: Profile) -> dict:
         if ing.inci_name in BENEFITS:
             findings.append(
                 Finding(ing.inci_name, "good", "benefit",
-                        f"{ing.inci_name} — {BENEFITS[ing.inci_name]}.",
+                        f"{ing.inci_name} - {BENEFITS[ing.inci_name]}.",
                         ing.source, "advice")
             )
             bonus += GOOD_BONUS
