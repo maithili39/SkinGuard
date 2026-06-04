@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import {
   ShieldCheck, Loader2, AlertTriangle, CheckCircle, Scale, History,
-  LogIn, Moon, Sun, LogOut, X,
+  LogIn, Moon, Sun, LogOut, X, Info,
 } from 'lucide-react';
 import type { SkinProfile, UserState, AnalysisResult } from '../types';
 import { ProfilePanel } from '../components/ProfilePanel';
@@ -48,6 +48,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [barcodeProduct, setBarcodeProduct] = useState<{name: string; brand: string; imageUrl?: string} | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('');
+  const [llmModel, setLlmModel] = useState<string>('');
   const [isBarcodeLookingUp, setIsBarcodeLookingUp] = useState(false);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -66,6 +68,19 @@ export default function Home() {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  // ── Fetch app version + LLM model from /health ───────────────────────────
+  useEffect(() => {
+    fetch('/api/health')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setAppVersion(d.version || '');
+          setLlmModel(d.llm_model || '');
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // ── Load user from localStorage on mount ──────────────────────────────────
   useEffect(() => {
@@ -505,6 +520,23 @@ export default function Home() {
           />
         </div>
       </div>
+
+      {/* ── Medical disclaimer + version footer ──────────────────────────── */}
+      <footer className="w-full max-w-5xl mt-16 mb-8 px-4">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl text-xs text-amber-800 dark:text-amber-300">
+          <Info size={14} className="flex-shrink-0 mt-0.5" />
+          <p>
+            <span className="font-bold">Not medical advice.</span> SkinGuard provides educational ingredient information only.
+            Always consult a dermatologist or healthcare professional, especially if you are pregnant, have a medical condition,
+            or are considering significant changes to your skincare routine.
+          </p>
+        </div>
+        {(appVersion || llmModel) && (
+          <p className="text-center text-[10px] text-slate-400 dark:text-slate-600 mt-3">
+            SkinGuard {appVersion && `v${appVersion}`}{appVersion && llmModel && ' · '}{llmModel && llmModel !== 'unavailable' && `AI: ${llmModel}`}
+          </p>
+        )}
+      </footer>
 
       {/* ── Modals ────────────────────────────────────────────────────────── */}
       {showLoginModal && (

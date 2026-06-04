@@ -49,6 +49,18 @@ else:
 
 logger = logging.getLogger("skinguard")
 
+# ── Sentry Error Tracking ─────────────────────────────────────────────────────
+_SENTRY_DSN = os.environ.get("SENTRY_DSN")
+if _SENTRY_DSN:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(dsn=_SENTRY_DSN, traces_sample_rate=0.1)
+        logger.info("Sentry SDK initialized successfully.")
+    except ImportError:
+        logger.warning("Sentry DSN set but sentry-sdk package is not installed.")
+    except Exception as exc:
+        logger.error("Failed to initialize Sentry SDK: %s", exc)
+
 # Max upload size for label images (default 8 MB) — protects OCR from huge files.
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 8 * 1024 * 1024))
 
@@ -132,7 +144,7 @@ app = FastAPI(
         "AI-powered skincare ingredient analyzer. "
         "Educational use only — not medical advice."
     ),
-    version="0.4.0",
+    version=_VERSION,
     lifespan=lifespan,
 )
 
@@ -797,12 +809,13 @@ def chat(
     #    instruction-override attempts.
     _INJECTION_PATTERNS = [
         "ignore previous", "ignore all previous", "ignore above",
-        "disregard previous", "forget previous", "new instruction",
+        "disregard previous", "forget previous", "forget", "new instruction",
         "act as", "you are now", "pretend you are", "pretend to be",
         "your new role", "system prompt", "jailbreak",
         "do anything now", "dan mode", "developer mode",
     ]
-    question_lower = payload.question.lower()
+    question_clean = payload.question.strip()[:500]
+    question_lower = question_clean.lower()
     for pattern in _INJECTION_PATTERNS:
         if pattern in question_lower:
             return ChatOut(
@@ -814,7 +827,7 @@ def chat(
                 source="guard",
             )
 
-    answer, source = ask(payload.question, context)
+    answer, source = ask(question_clean, context)
 
     return ChatOut(answer=answer, grounded_on=grounded_on, source=source)
 

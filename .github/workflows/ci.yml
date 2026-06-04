@@ -14,11 +14,25 @@ jobs:
       matrix:
         python-version: ["3.12"]
 
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+          uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -29,7 +43,7 @@ jobs:
       - name: Run pytest
         run: pytest -q --tb=short
         env:
-          DATABASE_URL: sqlite:///./ci_test.db
+          DATABASE_URL: postgresql+psycopg2://postgres:test@localhost:5432/test
           SECRET_KEY: ci-test-secret-key-not-for-production
           # LLM disabled in CI — tests mock/skip the Gemini call
           GEMINI_API_KEY: ""
@@ -41,7 +55,7 @@ jobs:
       - name: Check imports are clean
         run: python -c "from app.main import app; print('imports OK')"
         env:
-          DATABASE_URL: sqlite:///./ci_test.db
+          DATABASE_URL: postgresql+psycopg2://postgres:test@localhost:5432/test
           SECRET_KEY: ci-test-secret
           GEMINI_API_KEY: ""
           SKIP_LIFESPAN: "1"
@@ -49,7 +63,7 @@ jobs:
       - name: Verify evaluation script is importable
         run: python -c "import scripts.evaluate_matcher; print('evaluate_matcher OK')"
         env:
-          DATABASE_URL: sqlite:///./ci_test.db
+          DATABASE_URL: postgresql+psycopg2://postgres:test@localhost:5432/test
           GEMINI_API_KEY: ""
 
   frontend:

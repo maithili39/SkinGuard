@@ -93,8 +93,8 @@ export function RoutineAnalyzer({ scans }: Props) {
 
       const data = await res.json();
       setResult(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Routine analysis failed.');
     } finally {
       setAnalyzing(false);
     }

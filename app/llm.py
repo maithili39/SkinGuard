@@ -89,6 +89,14 @@ def ask(prompt: str, context: str = "") -> tuple[str, str]:
     Returns:
         (answer_text, model_name) — model_name is "template" if LLM unavailable.
     """
+    prompt = prompt.strip()[:500]
+    if any(kw in prompt.lower() for kw in ["ignore previous", "system prompt", "forget"]):
+        return (
+            "I can only answer questions about skincare ingredients "
+            "from the analysed product. Please ask a specific ingredient question.",
+            "guard",
+        )
+
     client = _get_client()
     if client is None:
         return (

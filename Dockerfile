@@ -19,8 +19,8 @@ RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt --extra
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 
-# Application code. `data/` is bind-mounted via compose (holds the gitignored
-# CosIng CSV), so it is intentionally NOT copied into the image.
+# Application code.
+COPY data ./data
 COPY app ./app
 COPY scripts ./scripts
 COPY alembic.ini ./alembic.ini
