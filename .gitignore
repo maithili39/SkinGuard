@@ -5,11 +5,15 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
+*.pyo
 
-# Frontend build artifacts
+# Node / Frontend
+node_modules/
+frontend/node_modules/
 frontend/.next/
 frontend/tsconfig.tsbuildinfo
 frontend/next-env.d.ts
+frontend/package-lock.json
 
 # Env
 .env
@@ -23,6 +27,17 @@ data/reference/*.csv
 
 # Fetched test fixtures (regenerable via scripts/fetch_test_labels.py)
 data/test/*.jsonl
+data/test/*.json
+
+# ML artefacts — sentence-transformer model cache + embedding index
+*.embed
+*.npy
+*.pt
+data/embeddings/
+
+# Evaluation outputs
+data/evaluation/*.json
+data/evaluation/*.md
 
 # OS
 .DS_Store
@@ -30,3 +45,5 @@ Thumbs.db
 
 # IDE
 .claude/
+.idea/
+.vscode/

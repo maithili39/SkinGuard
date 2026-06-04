@@ -21,3 +21,12 @@ bcrypt==4.1.2
 python-jose[cryptography]==3.3.0
 # Email validation in pydantic
 email-validator==2.2.0
+# ── AI / ML components ────────────────────────────────────────────────────────
+# Tier 1-A: RAG grounded explanations + Q&A via Gemini 2.5 Pro
+google-generativeai>=0.8.0
+# Tier 1-B: Sentence-embedding semantic matcher (local, no API key required)
+# CPU-only torch avoids the large GPU bundle; model downloads ~80 MB on first run.
+sentence-transformers>=3.0.0
+torch>=2.2.0
+# numpy is already a transitive dep of sentence-transformers; pinned for safety
+numpy>=1.26.0

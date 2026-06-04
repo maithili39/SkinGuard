@@ -29,15 +29,28 @@ jobs:
       - name: Run pytest
         run: pytest -q --tb=short
         env:
-          # Use in-memory SQLite for all tests — no DB server needed.
           DATABASE_URL: sqlite:///./ci_test.db
           SECRET_KEY: ci-test-secret-key-not-for-production
+          # LLM disabled in CI — tests mock/skip the Gemini call
+          GEMINI_API_KEY: ""
+          # Skip the embedding model download in CI to keep build fast;
+          # EmbeddingMatcher gracefully falls back to RapidFuzz.
+          SKIP_LIFESPAN: "1"
+          EMBED_MODEL: all-MiniLM-L6-v2
 
       - name: Check imports are clean
         run: python -c "from app.main import app; print('imports OK')"
         env:
           DATABASE_URL: sqlite:///./ci_test.db
           SECRET_KEY: ci-test-secret
+          GEMINI_API_KEY: ""
+          SKIP_LIFESPAN: "1"
+
+      - name: Verify evaluation script is importable
+        run: python -c "import scripts.evaluate_matcher; print('evaluate_matcher OK')"
+        env:
+          DATABASE_URL: sqlite:///./ci_test.db
+          GEMINI_API_KEY: ""
 
   frontend:
     name: Frontend (TypeScript)
