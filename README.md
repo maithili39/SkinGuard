@@ -1,60 +1,104 @@
 # SkinGuard
 
-AI-powered skincare **ingredient analyzer**. Upload a product label photo or paste an ingredient list and get an honest, sourced safety assessment for *your* skin profile: acne, fungal acne, sensitivity, pregnancy, comedogenic risk.
+AI-powered skincare **ingredient analyzer** and **routine compatibility checker**. Upload a product label photo, scan a barcode, or paste an ingredient list to get an honest, sourced safety assessment tailored to *your* skin profile: acne, fungal acne, sensitivity, pregnancy, rosacea, and custom avoid lists.
 
 > ⚠️ Educational use only — **not medical advice.**
 
+---
+
 ## Why this is built data-first
 
-The value lives in the data and rules. The build order was: **data → rules → matching → OCR → UI → auth → production.** By the end of Phase 2 you already have a working product (text in, analysis out). OCR, frontend, and auth layer on top.
+The value lives in the data, matching algorithms, rules, and AI evaluations.
+- `data/reference/` — **authoritative** EU CosIng reference data (~24,181 ingredients, 24,633 aliases). Identity + legal restrictions.
+- `data/curated/`   — **our** skincare-advice flags (comedogenic / fungal acne / pregnancy / irritant / rosacea). Expanded to 275+ ingredients with clear primary scientific citations.
+- `data/test/`      — messy real-world labels and images (Open Beauty Facts) used strictly for evaluation, testing, and metric generation.
 
-### Trust boundary (important)
-- `data/reference/` — **authoritative** EU CosIng data (~24,125 ingredients, identity + legal restrictions). Downloaded separately, not committed.
-- `data/curated/`   — **our** skincare-advice flags (comedogenic / fungal / pregnancy / irritant). 96 rows, each with a `source` column.
-- `data/test/`      — messy real-world samples (Open Beauty Facts) used *only* for testing the matcher & OCR — never as a source of truth.
+---
 
-Every finding is tagged `kind`: `regulatory` (EU legal fact) vs `advice` (curated guidance), and carries its `source`.
+## Advanced AI/ML & Engineering Upgrades
 
-## Current status ✅ Complete
+### 1. Hybrid Sentence-Embedding Matcher (`EmbeddingMatcher`)
+Replaced basic string match with a hybrid semantic engine using `all-MiniLM-L6-v2` embeddings in-memory.
+- **Fast Batch Matching**: Custom batch token vectorization to compute cosine similarity against 24.6k aliases in a single forward pass, eliminating PyTorch overhead.
+- **Ambiguity Band & Fallback**: Semantic hits within the uncertainty boundary ($\pm$5% of threshold) are tiebroken using RapidFuzz WRatio. Cosine misses degrade gracefully to fuzzy matching.
+- **Precision Metric**: Measures token resolution rate on messy real-world labels, yielding **97.88% match rate** (vs 91.50% baseline).
 
-- [x] Repo + data scaffold
-- [x] SQLAlchemy models (SQLite dev / Postgres prod via `DATABASE_URL`)
-- [x] ~96 curated ingredients with sources
-- [x] Ingestion script (idempotent bootstrap)
-- [x] Fuzzy matcher with confidence scores + **singleton pattern** (built once at startup)
-- [x] Data-driven, personalized rules engine + honest safety score + coverage signal
-- [x] Assessment-depth honesty — score withheld (`null`) when no risk data exists
-- [x] FastAPI `/analyze` endpoint with **rate limiting** (30 req/min)
-- [x] OCR pipeline — Tesseract with Pillow preprocessing (10 req/min rate limited)
-- [x] **Real JWT authentication** — bcrypt password hashing + 7-day tokens
-- [x] `/auth/register`, `/auth/login`, `/auth/me` endpoints
-- [x] User profiles + scan history persistence
-- [x] Frontend — Next.js 14 + Tailwind + dark mode toggle
-- [x] Frontend component split (9 components, page.tsx ~250 lines)
-- [x] Docker Compose (Postgres + backend + frontend)
-- [x] **Alembic** DB migrations (run `alembic upgrade head`)
-- [x] CI pipeline (GitHub Actions — pytest + TypeScript check)
-- [x] 30+ tests (rules, matcher, OCR, API endpoints)
+### 2. RAG Groundedness & Chat Q&A
+Grounds skincare Q&A queries against local structured database ingredient facts via Gemini 2.5 Pro.
+- **System Guardrails**: System instructions strictly forbid the LLM from inventing claims or importing external knowledge.
+- **Graceful Fallbacks**: Degrades to clean simulated template summaries when `GEMINI_API_KEY` is not present, allowing secure operation in CI/CD.
 
-## Run it (local dev)
+### 3. Routine Layering & Interaction Analysis
+New endpoint (`POST /analyze/routine`) and Next.js UI component (`RoutineAnalyzer.tsx`) that checks layering compatibility between multiple products:
+- **AHA + Retinol**: Flags risk of skin barrier disruption and severe irritation.
+- **BHA + Retinol**: Flags risk of over-exfoliation and dryness.
+- **Benzoyl Peroxide + Retinol**: Flags deactivation of Retinoids through oxidation.
+- **Vitamin C + AHA/BHA**: Flags acidity-driven irritation and Vitamin C degradation.
 
-```powershell
+### 4. Side-by-Side Product Comparison
+The `ComparePanel.tsx` component lets users select any two products (including current analysis and scan history) to display:
+- Side-by-side comparative safety scores.
+- Flagged warning overlaps (Both, Only A, Only B).
+- Exact Jaccard overlap percentage of ingredients.
+
+---
+
+## Evaluation Scripts (Academics & Metrics)
+
+The codebase includes scripts to evaluate OCR, matching, and RAG pipelines:
+
+### 1. OCR Accuracy Evaluation
+```bash
+python -m scripts.evaluate_ocr
+```
+Downloads product labels, runs local Tesseract adaptive pre-processing, and calculates **Levenshtein Distance** and **Word Jaccard Similarity** against ground-truth ingredients.
+
+### 2. Matcher Resolution Rate
+```bash
+python -m scripts.evaluate_matcher_real
+```
+Measures token mapping resolution on 50+ raw uncleaned ingredients lists, printing a markdown table of hybrid embedding match rate improvements.
+
+### 3. RAG Groundedness & Faithfulness
+```bash
+python -m scripts.evaluate_rag
+```
+Sends test questions against a mock database, asserting that the response mentions correct warnings (correctness) and contains zero hallucinated ingredients not in the context (faithfulness).
+
+---
+
+## Current Status ✅ Complete
+
+- [x] **Database & Scaffold**: SQLAlchemy SQLite / Postgres support with Alembic migrations.
+- [x] **Expanded Dataset**: 275+ fully assessed curated ingredients, 24,181 reference ingredients, 24,633 aliases.
+- [x] **Hybrid Matcher**: EmbeddingMatcher + RapidFuzz with fast batching.
+- [x] **Rate Limiting**: IP and JWT-based hybrid rate limiting (30 req/min for analysis, 10 req/min for OCR/chat).
+- [x] **RAG Chat**: Context-grounded Q&A with Gemini 2.5 Pro.
+- [x] **Barcode Lookup**: Live scan lookup against Open Beauty Facts API.
+- [x] **Routine Layering UI**: Active layering checks.
+- [x] **Product Comparison**: Side-by-side metrics and overlap.
+- [x] **Alembic migrations**: Fully configured database versioning.
+- [x] **Git Cleanliness**: `node_modules` untracked.
+- [x] **CI Pipeline & Tests**: 56 unit/integration tests passing.
+
+---
+
+## Run it (Local Dev)
+
+```bash
+# Set up venv and dependencies
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env
-# Edit .env and set SECRET_KEY to something random
 
-# Build the database (first run — creates tables + seeds 24k ingredients)
+# Ingest/Seed database
 python -m app.ingestion
-
-# Apply any pending Alembic migrations
 alembic upgrade head
 
-# Start the API
+# Start Backend (FastAPI)
 uvicorn app.main:app --reload
 
-# In a separate terminal: start the frontend
+# Start Frontend (Next.js)
 cd frontend
 npm install
 npm run dev
@@ -64,49 +108,23 @@ API: http://localhost:8000
 Frontend: http://localhost:3000  
 Interactive docs: http://localhost:8000/docs
 
-## Run with Docker
+---
+
+## Running Tests
 
 ```bash
-docker compose up --build
+python -m pytest
 ```
 
-This starts Postgres, seeds the DB (idempotent), and runs the API + frontend. Set `SECRET_KEY` in `.env` before deploying.
+---
 
-## Database migrations (Alembic)
-
-```bash
-# Apply all pending migrations
-alembic upgrade head
-
-# After changing a model — generate a new migration
-alembic revision --autogenerate -m "describe the change"
-alembic upgrade head
-
-# See current migration state
-alembic current
-```
-
-## Test suite
-
-```bash
-pytest -q
-```
-
-The tests use in-memory SQLite — no running server or external DB required.
-
-## Adding more curated ingredients
-
-1. Run `python -m scripts.coverage_report` to see top unmatched tokens.
-2. Add rows to `data/curated/ingredient_flags.csv` (follow the existing format).
-3. Run `python -m app.ingestion` (or `python -m app.bootstrap` to preserve user data).
-4. Restart the API — the Matcher singleton rebuilds at startup.
-
-## Architecture
+## Architecture Diagram
 
 ```
-Frontend (Next.js :3000)  ←→  Backend (FastAPI :8000)  ←→  SQLite / Postgres
-                                  ├── OCR (Tesseract)
-                                  ├── Matcher (in-memory, built at startup)
-                                  ├── Rules engine (data-driven)
-                                  └── Auth (JWT / bcrypt)
+Frontend (Next.js :3000) ←──→ Backend (FastAPI :8000) ──→ SQLite / Postgres
+                              ├── OCR (Tesseract / Pillow)
+                              ├── EmbeddingMatcher (MiniLM-L6-v2 in-memory)
+                              ├── RAG Chat Engine (Gemini 2.5 Pro)
+                              ├── Routine Rules Analyzer
+                              └── Auth (JWT / bcrypt)
 ```
