@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ShieldCheck, Loader2, AlertTriangle, CheckCircle, Scale, History,
-  LogIn, Moon, Sun, LogOut,
+  LogIn, Moon, Sun, LogOut, X,
 } from 'lucide-react';
 import type { SkinProfile, UserState, AnalysisResult } from '../types';
 import { ProfilePanel } from '../components/ProfilePanel';
@@ -11,6 +11,11 @@ import { UploadCard } from '../components/UploadCard';
 import { LoginModal } from '../components/LoginModal';
 import { HistoryDrawer } from '../components/HistoryDrawer';
 import { ResultsDashboard, FeatureCard } from '../components/ResultsDashboard';
+import { ProductChat } from '../components/ProductChat';
+import { ComparePanel } from '../components/ComparePanel';
+import { RoutineAnalyzer } from '../components/RoutineAnalyzer';
+import type { ScanSummary } from '../types';
+
 
 const LS_USER_KEY = 'sg_user';
 
@@ -19,6 +24,7 @@ const DEFAULT_PROFILE: SkinProfile = {
   sensitive_skin: false,
   acne_prone: false,
   fungal_acne: false,
+  rosacea: false,
 };
 
 export default function Home() {
@@ -26,6 +32,8 @@ export default function Home() {
   const [user, setUser] = useState<UserState | null>(null);
   const [profile, setProfile] = useState<SkinProfile>(DEFAULT_PROFILE);
   const [avoidInput, setAvoidInput] = useState('');
+  const [scans, setScans] = useState<ScanSummary[]>([]);
+  const [activeTab, setActiveTab] = useState<'routine' | 'compare'>('routine');
 
   const [isDark, setIsDark] = useState(false);
 
@@ -37,6 +45,9 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [barcodeProduct, setBarcodeProduct] = useState<{name: string; brand: string; imageUrl?: string} | null>(null);
+  const [isBarcodeLookingUp, setIsBarcodeLookingUp] = useState(false);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -67,6 +78,7 @@ export default function Home() {
           sensitive_skin: saved.profile.sensitive_skin,
           acne_prone: saved.profile.acne_prone,
           fungal_acne: saved.profile.fungal_acne,
+          rosacea: saved.profile.rosacea ?? false,
         });
         setAvoidInput((saved.profile.avoid_list || []).join(', '));
       } catch {
@@ -74,6 +86,27 @@ export default function Home() {
       }
     }
   }, []);
+
+  // ── Load scan history on user login ───────────────────────────────────────
+  useEffect(() => {
+    if (user?.token) {
+      (async () => {
+        try {
+          const res = await fetch('/api/auth/scans', {
+            headers: { Authorization: `Bearer ${user.token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setScans(data.scans || []);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      })();
+    } else {
+      setScans([]);
+    }
+  }, [user]);
 
   // ── Helpers: build auth headers ───────────────────────────────────────────
   const authHeaders = useCallback((): HeadersInit => {
@@ -156,8 +189,9 @@ export default function Home() {
   };
 
   // ── Analysis ──────────────────────────────────────────────────────────────
-  const handleAnalyze = async () => {
-    if (!extractedText.trim()) return;
+  const handleAnalyze = async (overrideText?: string) => {
+    const textToAnalyze = typeof overrideText === 'string' ? overrideText : extractedText;
+    if (!textToAnalyze.trim()) return;
     setIsAnalyzing(true);
     setError(null);
     try {
@@ -165,7 +199,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
-          text: extractedText,
+          text: textToAnalyze,
           profile: {
             ...profile,
             avoid_list: avoidInput.split(',').map((s) => s.trim()).filter(Boolean),
@@ -185,6 +219,40 @@ export default function Home() {
     }
   };
 
+  const handleReanalyze = (newText: string) => {
+    setExtractedText(newText);
+    handleAnalyze(newText);
+  };
+
+  const handleBarcodeLookup = async (barcode: string) => {
+    setIsBarcodeLookingUp(true);
+    setError(null);
+    setBarcodeProduct(null);
+    try {
+      const res = await fetch(`/api/barcode/${barcode}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error('Product not found in Open Beauty Facts database.');
+        }
+        throw new Error(`Barcode lookup failed (HTTP ${res.status})`);
+      }
+      const data = await res.json();
+      setBarcodeProduct({
+        name: data.product_name,
+        brand: data.brands,
+        imageUrl: data.image_url || undefined,
+      });
+      setExtractedText(data.ingredients_text || '');
+      setResults(null);
+      setFile(null);
+      setPreviewUrl(null);
+    } catch (err: any) {
+      throw err;
+    } finally {
+      setIsBarcodeLookingUp(false);
+    }
+  };
+
   // ── Auth callbacks ────────────────────────────────────────────────────────
   const handleLogin = (newUser: UserState) => {
     setUser(newUser);
@@ -194,6 +262,7 @@ export default function Home() {
       sensitive_skin: newUser.profile.sensitive_skin,
       acne_prone: newUser.profile.acne_prone,
       fungal_acne: newUser.profile.fungal_acne,
+      rosacea: newUser.profile.rosacea ?? false,
     });
     setAvoidInput((newUser.profile.avoid_list || []).join(', '));
     setShowLoginModal(false);
@@ -208,7 +277,7 @@ export default function Home() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <main className="min-h-screen flex flex-col items-center bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/20 relative overflow-hidden">
+    <main id="main-content" className="min-h-screen flex flex-col items-center bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/20 relative overflow-hidden">
       {/* Decorative blobs */}
       <div className="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] bg-primary-200/20 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute bottom-[-80px] right-[-80px] w-[400px] h-[400px] bg-emerald-200/20 rounded-full blur-[60px] pointer-events-none" />
@@ -301,7 +370,41 @@ export default function Home() {
           isExtracting={isExtracting}
           onFileChange={handleFileChange}
           onExtract={handleExtract}
+          onBarcodeLookup={handleBarcodeLookup}
+          isBarcodeLookingUp={isBarcodeLookingUp}
         />
+
+        {/* Barcode product match banner */}
+        {barcodeProduct && (
+          <div className="w-full max-w-2xl mt-6 p-4 rounded-2xl bg-gradient-to-r from-primary-50 to-emerald-50 dark:from-primary-950/20 dark:to-emerald-950/20 border border-primary-200 dark:border-primary-800/60 flex items-center justify-between gap-4 animate-fade-in-up">
+            <div className="flex items-center gap-3">
+              {barcodeProduct.imageUrl && (
+                <img
+                  src={barcodeProduct.imageUrl}
+                  alt={barcodeProduct.name}
+                  className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
+                />
+              )}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">Barcode Match</p>
+                <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm leading-tight">
+                  {barcodeProduct.name}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{barcodeProduct.brand}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setBarcodeProduct(null);
+                setExtractedText('');
+              }}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Clear product"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
         {/* Editable text area (shown after OCR or for manual entry) */}
         {(extractedText !== '' || !file) && (
@@ -318,7 +421,7 @@ export default function Home() {
               className="w-full border border-slate-300 rounded-2xl p-4 text-sm text-slate-700 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition bg-white/90 shadow-sm resize-none"
             />
             <button
-              onClick={handleAnalyze}
+              onClick={() => handleAnalyze()}
               disabled={isAnalyzing || !extractedText.trim()}
               id="analyze-btn"
               className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-4 rounded-full font-semibold text-lg transition-all shadow-xl shadow-primary-500/30 flex items-center justify-center gap-3"
@@ -338,7 +441,44 @@ export default function Home() {
         )}
 
         {/* Results */}
-        {results && <ResultsDashboard results={results} />}
+        {results && <ResultsDashboard results={results} onReanalyze={handleReanalyze} />}
+
+        {/* RAG Product Chat — shown after analysis */}
+        {results && (
+          <ProductChat results={results} token={user?.token} />
+        )}
+
+        {/* Advanced Tools Section */}
+        <div className="w-full max-w-4xl mt-12 space-y-6">
+          <div className="flex border-b border-slate-200 dark:border-slate-850">
+            <button
+              onClick={() => setActiveTab('routine')}
+              className={`px-6 py-3 font-bold text-sm border-b-2 transition-all duration-200 ${
+                activeTab === 'routine'
+                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                  : 'border-transparent text-slate-550 hover:text-slate-700'
+              }`}
+            >
+              🔄 Routine Layering Check
+            </button>
+            <button
+              onClick={() => setActiveTab('compare')}
+              className={`px-6 py-3 font-bold text-sm border-b-2 transition-all duration-200 ${
+                activeTab === 'compare'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-slate-550 hover:text-slate-700'
+              }`}
+            >
+              ⚖️ Product Comparison
+            </button>
+          </div>
+          
+          {activeTab === 'routine' ? (
+            <RoutineAnalyzer token={user?.token} scans={scans} />
+          ) : (
+            <ComparePanel token={user?.token} currentAnalysis={results} scans={scans} />
+          )}
+        </div>
 
         {/* Feature highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 w-full max-w-5xl">
@@ -369,6 +509,7 @@ export default function Home() {
           email={user.email}
           token={user.token}
           onClose={() => setShowHistory(false)}
+          onSelectScan={handleReanalyze}
         />
       )}
     </main>

@@ -6,6 +6,7 @@ export interface SkinProfile {
   sensitive_skin: boolean;
   acne_prone: boolean;
   fungal_acne: boolean;
+  rosacea: boolean;
 }
 
 export interface UserState {
@@ -21,6 +22,7 @@ export interface Finding {
   message: string;
   source: string | null;
   kind: 'regulatory' | 'advice';
+  alternatives?: string[];
 }
 
 export interface ScanSummary {
@@ -29,6 +31,7 @@ export interface ScanSummary {
   safety_score: number | null;
   coverage_percent: number;
   summary: string | null;
+  input_text?: string;
 }
 
 export interface AnalysisResult {
@@ -41,7 +44,7 @@ export interface AnalysisResult {
   summary: string;
   findings: Finding[];
   matched: { raw: string; ingredient: string; confidence: number }[];
-  unmatched: { raw: string; best_confidence: number }[];
+  unmatched: { raw: string; best_confidence: number; best_candidate?: string }[];
   found_ingredients: {
     matched_name: string;
     confidence: number;
@@ -55,13 +58,20 @@ export interface AnalysisResult {
   original_text: string;
 }
 
-// ── Helper functions ──────────────────────────────────────────────────────────
+// ── Helper functions ───────────────────────────────────────────────────────────
 
 export function scoreColor(score: number | null): string {
   if (score === null) return 'from-slate-400 to-slate-500';
   if (score >= 80) return 'from-emerald-500 to-green-400';
   if (score >= 50) return 'from-amber-500 to-yellow-400';
   return 'from-rose-600 to-red-500';
+}
+
+export function scoreRingColor(score: number | null): string {
+  if (score === null) return '#94a3b8';
+  if (score >= 80) return '#22c55e';
+  if (score >= 50) return '#f59e0b';
+  return '#f43f5e';
 }
 
 export function depthColor(pct: number): string {
