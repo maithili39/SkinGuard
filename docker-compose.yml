@@ -1,6 +1,7 @@
 services:
   db:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-skinguard}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
@@ -15,6 +16,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
       - redisdata:/data
@@ -26,6 +28,7 @@ services:
 
   backend:
     build: .
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-skinguard}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-skinguard}
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
@@ -51,10 +54,12 @@ services:
       interval: 15s
       timeout: 5s
       retries: 20
-      start_period: 300s
+      # 360s: allows time for Alembic + seeding + MiniLM model load on first boot.
+      start_period: 360s
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     environment:
       BACKEND_URL: http://backend:8000
     ports:
@@ -62,6 +67,37 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── nginx reverse proxy (production only) ────────────────────────────────────
+  # Provides TLS termination and routes /api/* to the backend.
+  # Comment this service out for local development (ports 3000 and 8000 are
+  # already exposed above and are sufficient without TLS).
+  #
+  # To enable:
+  #   1. Set YOUR_DOMAIN in nginx/nginx.conf
+  #   2. Place TLS certs at ./nginx/certs/fullchain.pem and ./nginx/certs/privkey.pem
+  #   3. Uncomment this block and run: docker compose up -d nginx
+  #
+  # nginx:
+  #   image: nginx:1.27-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - ./nginx/certs:/etc/nginx/certs:ro
+  #   depends_on:
+  #     frontend:
+  #       condition: service_healthy
+  #     backend:
+  #       condition: service_healthy
 
 volumes:
   pgdata:

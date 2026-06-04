@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /api/
+
+# Allow public pages
+Allow: /
+
+Sitemap: https://YOUR_DOMAIN/sitemap.xml

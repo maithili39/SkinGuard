@@ -34,17 +34,19 @@ SECRET_KEY: str = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-IN-PRODUCTION"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
-if SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION":
-    if _ENV == "production":
+if _ENV == "production":
+    if not SECRET_KEY or len(SECRET_KEY) < 32 or SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION":
         raise RuntimeError(
-            "SECRET_KEY is using the insecure default value. "
+            "SECRET_KEY must be set and at least 32 characters in production mode. "
             "Set a cryptographically random SECRET_KEY in your environment before deploying. "
             "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
         )
-    logger.warning(
-        "SECRET_KEY is using the insecure default. "
-        "Set SECRET_KEY in your .env before deploying to production."
-    )
+else:
+    if not SECRET_KEY or len(SECRET_KEY) < 32 or SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION":
+        logger.warning(
+            "SECRET_KEY is insecure or missing. For local development, this is fine, "
+            "but you MUST set a cryptographically secure SECRET_KEY (min 32 chars) in production."
+        )
 
 # ── Password hashing ──────────────────────────────────────────────────────────
 
@@ -71,6 +73,23 @@ def decode_token(token: str) -> Optional[str]:
     """Return the email (subject) from a valid JWT, or None if invalid/expired."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("sub")
+    except InvalidTokenError:
+        return None
+
+
+def create_reset_token(email: str) -> str:
+    """Create a signed JWT for password reset that expires in 1 hour."""
+    expire = datetime.now(timezone.utc) + timedelta(hours=1)
+    return jwt.encode({"sub": email, "purpose": "password_reset", "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_reset_token(token: str) -> Optional[str]:
+    """Verify and decode a password reset token, checking its purpose."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("purpose") != "password_reset":
+            return None
         return payload.get("sub")
     except InvalidTokenError:
         return None

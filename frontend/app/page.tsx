@@ -177,8 +177,8 @@ export default function Home() {
       }
       const data = await res.json();
       setExtractedText(data.text || '');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setIsExtracting(false);
     }
@@ -209,8 +209,8 @@ export default function Home() {
         throw new Error(d.detail || 'Analysis failed');
       }
       setResults(await res.json());
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setIsAnalyzing(false);
     }

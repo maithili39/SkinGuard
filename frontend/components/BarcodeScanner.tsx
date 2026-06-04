@@ -59,9 +59,9 @@ export function BarcodeScanner({ onScan, onClose }: Props) {
         );
 
         if (mounted) setStatus('scanning');
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!mounted) return;
-        const msg: string = err?.message ?? String(err);
+        const msg: string = err instanceof Error ? err.message : String(err);
         // Friendly messages for the most common failure modes.
         if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')) {
           setErrorMsg('Camera permission denied. Please allow camera access in your browser settings and try again.');

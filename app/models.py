@@ -83,11 +83,11 @@ class Alias(Base):
 
 
 class User(Base):
-    """A user identified by email, with a saved skin profile.
+    """A user identified by email with a hashed password and saved skin profile.
 
-    NOTE: this is identity-by-email persistence, NOT authentication. There is no
-    password/session here yet — anyone who knows an email can act as that user.
-    Add real auth (password hash + JWT/session) before any public deployment.
+    Authentication uses bcrypt (passlib) for password hashing and HS256 JWTs
+    for stateless sessions (set as HttpOnly cookies).  Legacy email-only accounts
+    have hashed_password=None and must set a password before using the login flow.
     """
 
     __tablename__ = "users"

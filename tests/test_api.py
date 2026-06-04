@@ -9,6 +9,9 @@ import csv
 import os
 import uuid
 
+# Set environment variables for tests before importing the app
+os.environ["SKIP_RATELIMIT"] = "1"
+
 # pyrefly: ignore [missing-import]
 import pytest
 # pyrefly: ignore [missing-import]
@@ -147,7 +150,9 @@ def test_register_new_user(client):
     assert r.status_code == 201
     data = r.json()
     assert data["email"] == email
-    assert "access_token" in data
+    # JWT is set as an HttpOnly cookie — it is NOT in the response body.
+    assert "access_token" not in data
+    assert "profile" in data
 
 
 def test_register_duplicate_email(client):
@@ -170,7 +175,9 @@ def test_login_correct_credentials(client):
     client.post("/auth/register", json={"email": email, "password": "mypassword99"})
     r = client.post("/auth/login", json={"email": email, "password": "mypassword99"})
     assert r.status_code == 200
-    assert "access_token" in r.json()
+    # JWT is cookie-only; response body contains email and profile, not access_token.
+    assert "access_token" not in r.json()
+    assert "email" in r.json()
 
 
 def test_login_wrong_password(client):
@@ -184,8 +191,8 @@ def test_me_authenticated(client):
     email = f"me_{uuid.uuid4().hex[:8]}@example.com"
     reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
     assert reg.status_code == 201, f"Registration failed: {reg.json()}"
-    token = reg.json()["access_token"]
-    r = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    # After register the TestClient holds the HttpOnly cookie — use it directly.
+    r = client.get("/auth/me")
     assert r.status_code == 200
     assert r.json()["email"] == email
 
@@ -234,10 +241,12 @@ def test_profile_update_requires_auth(client):
 
 def test_scan_history_and_profile_jwt_authorized(client):
     email = f"jwt_{uuid.uuid4().hex[:8]}@example.com"
-    # Register
+    # Register — cookie is set in the TestClient's jar automatically.
     reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
     assert reg.status_code == 201
-    token = reg.json()["access_token"]
+    # Mint a token directly for Bearer-based assertions (does not hit the API).
+    from app.auth import create_token
+    token = create_token(email)
     headers = {"Authorization": f"Bearer {token}"}
 
     # Access own scans

@@ -2,7 +2,11 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional
+
+# Read version from the single-source VERSION file at the project root.
+_VERSION = Path(__file__).parent.parent.joinpath("VERSION").read_text().strip()
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +53,13 @@ logger = logging.getLogger("skinguard")
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 8 * 1024 * 1024))
 
 # ── Rate limiter ──────────────────────────────────────────────────────────────
+# SKIP_RATELIMIT=1 disables real limits in tests (same convention as SKIP_LIFESPAN).
+_RATELIMIT_DISABLED = os.environ.get("SKIP_RATELIMIT", "0") == "1"
+
+def _limit(real: str) -> str:
+    """Return the real limit string, or an effectively-unlimited one in test mode."""
+    return "10000/minute" if _RATELIMIT_DISABLED else real
+
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 
@@ -175,7 +186,7 @@ def health():
         "llm_model": get_model_name() if llm_ok() else "unavailable",
         "llm_available": llm_ok(),
         "cache": cache_info(),
-        "version": "0.4.0",
+        "version": _VERSION,
     }
 
 
@@ -183,7 +194,7 @@ def health():
 # ── Auth endpoints ────────────────────────────────────────────────────────────
 
 @app.post("/auth/register", status_code=201)
-@limiter.limit("5/minute")
+@limiter.limit(_limit("5/minute"))
 def register(request: Request, payload: RegisterIn, response: Response, db: Session = Depends(get_db)):
     """Register a new account. Sets an HttpOnly session cookie — JWT is NOT in the body."""
     try:
@@ -205,7 +216,7 @@ def register(request: Request, payload: RegisterIn, response: Response, db: Sess
 
 
 @app.post("/auth/login")
-@limiter.limit("10/minute")
+@limiter.limit(_limit("10/minute"))
 def login(request: Request, payload: LoginIn, response: Response, db: Session = Depends(get_db)):
     """Authenticate with email + password. Sets an HttpOnly session cookie — JWT is NOT in the body."""
     user = users_svc.authenticate_user(db, payload.email, payload.password)
@@ -354,7 +365,7 @@ def ingredient_count(db: Session = Depends(get_db)):
 # ── Core analysis endpoints ───────────────────────────────────────────────────
 
 @app.post("/analyze")
-@limiter.limit("30/minute", key_func=hybrid_rate_limit_key)
+@limiter.limit(_limit("30/minute"), key_func=hybrid_rate_limit_key)
 def analyze(
     request: Request,
     payload: AnalyzeIn,
@@ -403,7 +414,7 @@ def analyze(
 
 
 @app.post("/analyze/routine")
-@limiter.limit("10/minute")
+@limiter.limit(_limit("10/minute"))
 def analyze_routine(
     request: Request,
     payload: RoutineAnalyzeIn,
@@ -587,134 +598,6 @@ def analyze_routine(
         "conflicts": conflicts
     }
 
-    product_actives = {}
-    for prod in payload.products:
-        matches = matcher.match_list(prod.text)
-        # Find which categories are in this product
-        actives = {}
-        for m in matches:
-            if m.status == "matched" and m.matched_inci:
-                name_lower = m.matched_inci.lower()
-                for cat, INCI_set in categories_def.items():
-                    if name_lower in INCI_set:
-                        actives[cat] = m.matched_inci
-        product_actives[prod.name] = actives
-
-    conflicts = []
-    prod_names = list(product_actives.keys())
-    for i in range(len(prod_names)):
-        for j in range(i + 1, len(prod_names)):
-            p1 = prod_names[i]
-            p2 = prod_names[j]
-            actives1 = product_actives[p1]
-            actives2 = product_actives[p2]
-
-            # 1. AHA + Retinol
-            if "AHA" in actives1 and "Retinol" in actives2:
-                conflicts.append({
-                    "product_a": p1,
-                    "product_b": p2,
-                    "ingredient_a": actives1["AHA"],
-                    "ingredient_b": actives2["Retinol"],
-                    "conflict_type": "AHA + Retinol",
-                    "severity": "danger",
-                    "message": f"Alpha Hydroxy Acids (AHAs) like {actives1['AHA']} and Retinoids like {actives2['Retinol']} both speed up skin cell turnover. Layering them can disrupt your skin barrier, causing redness, dryness, and severe irritation. Tip: Use AHA in the morning (with SPF) and Retinol at night, or alternate nights."
-                })
-            if "Retinol" in actives1 and "AHA" in actives2:
-                conflicts.append({
-                    "product_a": p1,
-                    "product_b": p2,
-                    "ingredient_a": actives1["Retinol"],
-                    "ingredient_b": actives2["AHA"],
-                    "conflict_type": "AHA + Retinol",
-                    "severity": "danger",
-                    "message": f"Alpha Hydroxy Acids (AHAs) like {actives2['AHA']} and Retinoids like {actives1['Retinol']} both speed up skin cell turnover. Layering them can disrupt your skin barrier, causing redness, dryness, and severe irritation. Tip: Use AHA in the morning (with SPF) and Retinol at night, or alternate nights."
-                })
-
-            # 2. BHA + Retinol
-            if "BHA" in actives1 and "Retinol" in actives2:
-                conflicts.append({
-                    "product_a": p1,
-                    "product_b": p2,
-                    "ingredient_a": actives1["BHA"],
-                    "ingredient_b": actives2["Retinol"],
-                    "conflict_type": "BHA + Retinol",
-                    "severity": "danger",
-                    "message": f"Beta Hydroxy Acids (BHAs) like {actives1['BHA']} exfoliate deep inside pores while Retinoids like {actives2['Retinol']} speed up cell turnover. Combining them in the same routine can cause severe dryness, flaking, and over-exfoliation. Tip: Use BHA in the morning or alternate nights with Retinol."
-                })
-            if "Retinol" in actives1 and "BHA" in actives2:
-                conflicts.append({
-                    "product_a": p1,
-                    "product_b": p2,
-                    "ingredient_a": actives1["Retinol"],
-                    "ingredient_b": actives2["BHA"],
-                    "conflict_type": "BHA + Retinol",
-                    "severity": "danger",
-                    "message": f"Beta Hydroxy Acids (BHAs) like {actives2['BHA']} exfoliate deep inside pores while Retinoids like {actives1['Retinol']} speed up cell turnover. Combining them in the same routine can cause severe dryness, flaking, and over-exfoliation. Tip: Use BHA in the morning or alternate nights with Retinol."
-                })
-
-            # 3. Benzoyl Peroxide + Retinol
-            if "Benzoyl Peroxide" in actives1 and "Retinol" in actives2:
-                conflicts.append({
-                    "product_a": p1,
-                    "product_b": p2,
-                    "ingredient_a": actives1["Benzoyl Peroxide"],
-                    "ingredient_b": actives2["Retinol"],
-                    "conflict_type": "Benzoyl Peroxide + Retinol",
-                    "severity": "danger",
-                    "message": f"Benzoyl Peroxide oxidizes and deactivates Retinoids like {actives2['Retinol']} when applied together, making the Retinol ineffective and increasing irritation. Tip: Use Benzoyl Peroxide in the morning and Retinol at night."
-                })
-            if "Retinol" in actives1 and "Benzoyl Peroxide" in actives2:
-                conflicts.append({
-                    "product_a": p1,
-                    "product_b": p2,
-                    "ingredient_a": actives1["Retinol"],
-                    "ingredient_b": actives2["Benzoyl Peroxide"],
-                    "conflict_type": "Benzoyl Peroxide + Retinol",
-                    "severity": "danger",
-                    "message": f"Benzoyl Peroxide oxidizes and deactivates Retinoids like {actives1['Retinol']} when applied together, making the Retinol ineffective and increasing irritation. Tip: Use Benzoyl Peroxide in the morning and Retinol at night."
-                })
-
-            # 4. Vitamin C + AHA/BHA
-            if "Vitamin C" in actives1 and ("AHA" in actives2 or "BHA" in actives2):
-                other_active = actives2.get("AHA") or actives2.get("BHA") or ""
-                conflicts.append({
-                    "product_a": p1,
-                    "product_b": p2,
-                    "ingredient_a": actives1["Vitamin C"],
-                    "ingredient_b": other_active,
-                    "conflict_type": "Vitamin C + AHA/BHA",
-                    "severity": "warning",
-                    "message": f"Vitamin C like {actives1['Vitamin C']} is highly acidic, and combining it with acids like {other_active} can destabilize the Vitamin C, lower its efficacy, and trigger redness or irritation. Tip: Use Vitamin C in the morning and exfoliating acids in the evening."
-                })
-            if ("AHA" in actives1 or "BHA" in actives1) and "Vitamin C" in actives2:
-                other_active = actives1.get("AHA") or actives1.get("BHA") or ""
-                conflicts.append({
-                    "product_a": p1,
-                    "product_b": p2,
-                    "ingredient_a": other_active,
-                    "ingredient_b": actives2["Vitamin C"],
-                    "conflict_type": "Vitamin C + AHA/BHA",
-                    "severity": "warning",
-                    "message": f"Vitamin C like {actives2['Vitamin C']} is highly acidic, and combining it with acids like {other_active} can destabilize the Vitamin C, lower its efficacy, and trigger redness or irritation. Tip: Use Vitamin C in the morning and exfoliating acids in the evening."
-                })
-
-    # Summary recommendation
-    if not conflicts:
-        summary = "No active ingredient conflicts detected. Your routine layers safely!"
-        compatible = True
-    else:
-        num_danger = sum(1 for c in conflicts if c["severity"] == "danger")
-        num_warning = sum(1 for c in conflicts if c["severity"] == "warning")
-        summary = f"Routine analysis found {num_danger} high-risk (danger) and {num_warning} moderate-risk (warning) layering conflicts."
-        compatible = False
-
-    return {
-        "compatible": compatible,
-        "summary": summary,
-        "product_actives": product_actives,
-        "conflicts": conflicts
-    }
 
 
 @app.get("/explain/{name}")
@@ -745,7 +628,7 @@ def explain(
 # ── Barcode lookup endpoint ───────────────────────────────────────────────────
 
 @app.get("/barcode/{code}")
-@limiter.limit("20/minute")
+@limiter.limit(_limit("20/minute"))
 def barcode_lookup(code: str, request: Request):
     """Look up product details and ingredients by barcode using Open Beauty Facts.
 
@@ -775,7 +658,7 @@ def barcode_lookup(code: str, request: Request):
 # ── RAG Chat endpoint ─────────────────────────────────────────────────────────
 
 @app.post("/chat", response_model=ChatOut)
-@limiter.limit("10/minute")
+@limiter.limit(_limit("10/minute"))
 def chat(
     request: Request,
     payload: ChatIn,
@@ -874,7 +757,7 @@ def chat(
 # ── OCR endpoint ──────────────────────────────────────────────────────────────
 
 @app.post("/extract-text")
-@limiter.limit("10/minute")
+@limiter.limit(_limit("10/minute"))
 async def extract_text(request: Request, file: UploadFile = File(...)):
     """Extract ingredient text from an uploaded label image.
 

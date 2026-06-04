@@ -55,11 +55,10 @@ export function LoginModal({ onLogin, onClose }: Props) {
       }
       onLogin({
         email: data.email,
-        token: data.access_token,
         profile: data.profile,
       });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }

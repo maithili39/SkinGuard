@@ -83,12 +83,12 @@ export function ProductChat({ results }: Props) {
           source: data.source,
         },
       ]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: err.message || 'Something went wrong. Please try again.',
+          content: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
           error: true,
         },
       ]);

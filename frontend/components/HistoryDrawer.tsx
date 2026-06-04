@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { History, X, Loader2, Clock, RotateCcw } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { History, X, Clock, RotateCcw, ChevronDown } from 'lucide-react';
 import type { ScanSummary } from '../types';
 import { formatDate } from '../types';
 
@@ -11,10 +11,30 @@ interface Props {
   onSelectScan: (inputText: string) => void;
 }
 
+const PAGE_SIZE = 20;
+
+// ── Skeleton card ──────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div className="bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 animate-pulse">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded-full" />
+          <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded-full" />
+          <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded-full" />
+          <div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded-full" />
+        </div>
+        <div className="flex-shrink-0 h-10 w-12 bg-slate-200 dark:bg-slate-700 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+// ── Score sparkline ────────────────────────────────────────────────────────────
 function ScoreSparkline({ scans }: { scans: ScanSummary[] }) {
   const scores = scans
-    .slice(0, 10) // scans is sorted desc (newest first), so slice(0, 10) is last 10
-    .reverse()    // oldest first for left-to-right timeline
+    .slice(0, 10)
+    .reverse()
     .map(s => s.safety_score)
     .filter((s): s is number => s !== null);
 
@@ -23,7 +43,7 @@ function ScoreSparkline({ scans }: { scans: ScanSummary[] }) {
   const width = 280;
   const height = 44;
   const padding = 6;
-  
+
   const points = scores.map((score, idx) => {
     const x = padding + (idx * (width - padding * 2)) / (scores.length - 1);
     const y = padding + ((100 - score) * (height - padding * 2)) / 100;
@@ -71,27 +91,46 @@ function ScoreSparkline({ scans }: { scans: ScanSummary[] }) {
   );
 }
 
+// ── Main drawer ────────────────────────────────────────────────────────────────
 export function HistoryDrawer({ email, onClose, onSelectScan }: Props) {
   const [scans, setScans] = useState<ScanSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);      // initial load
+  const [loadingMore, setLoadingMore] = useState(false); // pagination
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/auth/scans', {
-          credentials: 'include',
-        });
-        if (!res.ok) throw new Error('Failed to load history');
-        const data = await res.json();
-        setScans(data.scans || []);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  // Load a page of scans from the API.
+  const fetchPage = useCallback(async (currentOffset: number) => {
+    try {
+      const res = await fetch(
+        `/api/auth/scans?limit=${PAGE_SIZE}&offset=${currentOffset}`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) throw new Error('Failed to load history');
+      const data = await res.json();
+      const page: ScanSummary[] = data.scans || [];
+      setScans(prev => currentOffset === 0 ? page : [...prev, ...page]);
+      setHasMore(page.length === PAGE_SIZE);
+      setOffset(currentOffset + page.length);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load scan history.');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
   }, []);
+
+  // Initial load on mount.
+  React.useEffect(() => {
+    fetchPage(0);
+  }, [fetchPage]);
+
+  const handleLoadMore = () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    fetchPage(offset);
+  };
 
   return (
     <>
@@ -119,16 +158,19 @@ export function HistoryDrawer({ email, onClose, onSelectScan }: Props) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll">
+          {/* Skeleton loading state */}
           {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin text-primary-500" size={24} />
+            <div className="space-y-3">
+              {[1, 2, 3].map(n => <SkeletonCard key={n} />)}
             </div>
           )}
+
           {error && (
             <div className="p-4 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl text-sm border border-rose-200 dark:border-rose-800/50">
               {error}
             </div>
           )}
+
           {!loading && !error && scans.length === 0 && (
             <div className="flex flex-col items-center justify-center text-center py-20 px-4">
               <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-full mb-4 text-slate-400 dark:text-slate-500">
@@ -188,12 +230,39 @@ export function HistoryDrawer({ email, onClose, onSelectScan }: Props) {
                         className="mt-3 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1 cursor-pointer transition-colors bg-primary-50 dark:bg-primary-950/40 hover:bg-primary-100/70 dark:hover:bg-primary-900/40 px-2.5 py-1.5 rounded-xl border border-primary-200/50 dark:border-primary-800/40 w-fit"
                       >
                         <RotateCcw size={12} />
-                        Load & Re-analyse
+                        Load &amp; Re-analyse
                       </button>
                     )}
                   </div>
                 ))}
               </div>
+
+              {/* Load more */}
+              {hasMore && (
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {loadingMore ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Loading…
+                    </span>
+                  ) : (
+                    <>
+                      <ChevronDown size={14} />
+                      Load more scans
+                    </>
+                  )}
+                </button>
+              )}
+
+              {!hasMore && scans.length >= PAGE_SIZE && (
+                <p className="text-center text-[11px] text-slate-400 dark:text-slate-600 py-2">
+                  All {scans.length} scans loaded
+                </p>
+              )}
             </>
           )}
         </div>

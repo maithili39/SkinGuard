@@ -40,8 +40,8 @@ export function UploadCard({
     try {
       await onBarcodeLookup(barcodeInput.trim());
       setBarcodeInput('');
-    } catch (err: any) {
-      setBarcodeError(err.message || 'Product not found');
+    } catch (err: unknown) {
+      setBarcodeError(err instanceof Error ? err.message : 'Product not found');
     }
   };
 
@@ -52,8 +52,8 @@ export function UploadCard({
     setBarcodeError(null);
     try {
       await onBarcodeLookup(code);
-    } catch (err: any) {
-      setBarcodeError(err.message || 'Product not found for scanned code');
+    } catch (err: unknown) {
+      setBarcodeError(err instanceof Error ? err.message : 'Product not found for scanned code');
     }
   };
 

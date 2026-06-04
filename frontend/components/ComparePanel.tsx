@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Scale, AlertTriangle, CheckCircle, HelpCircle, Loader2 } from 'lucide-react';
-import type { ScanSummary, AnalysisResult, Finding } from '../types';
+import { Scale, AlertTriangle, HelpCircle, Loader2 } from 'lucide-react';
+import type { ScanSummary, AnalysisResult } from '../types';
 import { scoreColor } from '../types';
 
 interface Props {
@@ -77,19 +77,11 @@ export function ComparePanel({ currentAnalysis, scans }: Props) {
         const data = await res.json();
         setResult(data);
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Helper to extract product name/summary from a result
-  const getProdName = (res: AnalysisResult | null, fallback: string) => {
-    if (!res) return fallback;
-    const match = res.summary.match(/^Generally suitable for|Use with caution|Not recommended/);
-    if (res.original_text.length < 30) return res.original_text;
-    return fallback;
   };
 
   // Compute stats
