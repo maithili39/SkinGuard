@@ -1,5 +1,4 @@
 import pytest
-pytest.importorskip("redis")
 from unittest.mock import patch, MagicMock
 import json
 
@@ -92,6 +91,7 @@ def test_cache_exceptions(mock_get_client):
     assert cache_info() == {"available": False}
 
 def test_get_client_connect_failure():
+    pytest.importorskip("redis")
     # Force _client_tried to False so it attempts connection
     with patch("app.cache._client_tried", False), \
          patch("redis.Redis.from_url") as mock_from_url:
