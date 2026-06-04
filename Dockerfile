@@ -30,5 +30,8 @@ RUN chmod +x ./docker/entrypoint.sh
 
 EXPOSE 8000
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+
 # Entrypoint waits for the DB, seeds it on first run, then starts the API.
 ENTRYPOINT ["./docker/entrypoint.sh"]

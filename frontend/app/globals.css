@@ -199,3 +199,43 @@
   transform: translateY(-3px);
   box-shadow: 0 12px 40px rgba(0,0,0,0.12);
 }
+
+/* ── Focus ring ───────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #16a34a;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Pill stat badge ─────────────────────────────────────────────────────── */
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border-width: 1px;
+}
+
+/* ── Input autofill override (dark) ─────────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #f8fafc inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #1e293b inset;
+  -webkit-text-fill-color: #f1f5f9;
+}
+
+/* ── Smooth dark mode transitions ────────────────────────────────────────── */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}

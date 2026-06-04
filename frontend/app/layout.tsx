@@ -5,8 +5,23 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: "SkinGuard - AI Skincare Analyzer",
-  description: "Analyze skincare ingredients with AI to protect your skin from acne, irritants, and unsafe ingredients.",
+  title: "SkinGuard - AI Skincare Ingredient Analyzer",
+  description: "Know what's in your skincare. Analyze ingredients against 24,000+ EU CosIng entries — flags irritants, pore-cloggers, and pregnancy risks instantly.",
+  keywords: ["skincare", "ingredient analyzer", "acne", "comedogenic", "EU CosIng", "skin safety"],
+  authors: [{ name: "SkinGuard" }],
+  manifest: "/manifest.json",
+  themeColor: "#16a34a",
+  openGraph: {
+    title: "SkinGuard - AI Skincare Analyzer",
+    description: "Know what's in your skincare. Free ingredient safety analysis.",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "SkinGuard - AI Skincare Analyzer",
+    description: "Know what's in your skincare. Free ingredient safety analysis.",
+  },
 };
 
 export default function RootLayout({
@@ -16,6 +31,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
       <body className={`${inter.variable} font-sans bg-slate-50 text-slate-900 min-h-screen selection:bg-primary-500 selection:text-white`}>
         <a
           href="#main-content"

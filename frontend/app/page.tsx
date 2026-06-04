@@ -36,7 +36,15 @@ export default function Home() {
   const [scans, setScans] = useState<ScanSummary[]>([]);
   const [activeTab, setActiveTab] = useState<'routine' | 'compare'>('routine');
 
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sg_dark');
+      if (saved !== null) return saved === '1';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -57,10 +65,18 @@ export default function Home() {
 
   const profileSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Dark mode ──────────────────────────────────────────────────────────────
+  // ── Dark mode (persist to localStorage + system preference on first visit) ─
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
+    localStorage.setItem('sg_dark', isDark ? '1' : '0');
   }, [isDark]);
+
+  // ── Show onboarding tooltip on first visit ────────────────────────────────
+  useEffect(() => {
+    if (!localStorage.getItem('sg_onboarded')) {
+      setShowOnboarding(true);
+    }
+  }, []);
 
   // ── URL.createObjectURL cleanup (prevents memory leak) ────────────────────
   useEffect(() => {
@@ -353,17 +369,51 @@ export default function Home() {
         </div>
       </header>
 
+      {/* ── Onboarding tooltip (first visit only) ────────────────────────── */}
+      {showOnboarding && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-xs bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-5 animate-fade-in-up">
+          <button
+            onClick={() => { setShowOnboarding(false); localStorage.setItem('sg_onboarded', '1'); }}
+            className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          >
+            <X size={14} />
+          </button>
+          <div className="flex gap-3 items-start">
+            <div className="p-2 bg-primary-50 dark:bg-primary-950/40 rounded-xl flex-shrink-0">
+              <ShieldCheck size={18} className="text-primary-600" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Welcome to SkinGuard!</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Paste or scan a product&apos;s ingredient list to get an instant safety analysis for your skin type.
+              </p>
+              <ol className="mt-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                <li>1. Set your skin profile above</li>
+                <li>2. Upload a label photo or paste ingredients</li>
+                <li>3. Hit <strong className="text-primary-600 dark:text-primary-400">Analyse</strong></li>
+              </ol>
+              <button
+                onClick={() => { setShowOnboarding(false); localStorage.setItem('sg_onboarded', '1'); }}
+                className="mt-3 w-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold py-2 rounded-lg transition"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col items-center pt-20 pb-10 px-6 w-full relative z-10">
-        <div className="mb-4 flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-4 py-1.5">
+        <div className="mb-4 flex items-center gap-2 bg-primary-50 border border-primary-200 dark:bg-primary-950/30 dark:border-primary-800/60 rounded-full px-4 py-1.5">
           <CheckCircle size={14} className="text-primary-500" />
-          <span className="text-xs font-semibold text-primary-700 uppercase tracking-wider">EU CosIng + Curated Risk Database</span>
+          <span className="text-xs font-semibold text-primary-700 dark:text-primary-400 uppercase tracking-wider">EU CosIng · 24,000+ ingredients · Free</span>
         </div>
-        <h1 className="text-5xl md:text-6xl font-black text-center text-slate-900 mb-5 leading-tight">
+        <h1 className="text-5xl md:text-6xl font-black text-center text-slate-900 dark:text-white mb-5 leading-tight">
           Know What&apos;s In Your <br />
           <span className="gradient-text">Skincare</span>
         </h1>
-        <p className="text-xl text-slate-600 text-center max-w-2xl mb-10 leading-relaxed">
+        <p className="text-xl text-slate-600 dark:text-slate-400 text-center max-w-2xl mb-10 leading-relaxed">
           Upload a product label or paste the ingredient list. We&apos;ll tell you what each ingredient does — and flag what matters for your skin.
         </p>
 
@@ -501,28 +551,43 @@ export default function Home() {
           )}
         </div>
 
+        {/* Stats strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-20 w-full max-w-4xl">
+          {[
+            { value: '24,000+', label: 'Ingredients', color: 'text-primary-600 dark:text-primary-400' },
+            { value: '275+', label: 'Risk flags', color: 'text-amber-600 dark:text-amber-400' },
+            { value: '8', label: 'Routine conflicts', color: 'text-rose-600 dark:text-rose-400' },
+            { value: 'Free', label: 'Forever', color: 'text-emerald-600 dark:text-emerald-400' },
+          ].map(({ value, label, color }) => (
+            <div key={label} className="glass-panel rounded-2xl p-4 text-center border border-white/50 dark:border-slate-700/50">
+              <p className={`text-2xl font-black ${color}`}>{value}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+
         {/* Feature highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 w-full max-w-5xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 w-full max-w-5xl">
           <FeatureCard
-            icon={<CheckCircle className="text-green-500" />}
-            title="Acne Safe"
-            description="Detects pore-clogging and fungal acne triggering ingredients instantly."
+            icon={<CheckCircle className="text-green-500" size={24} />}
+            title="Acne & Fungal Acne Safe"
+            description="Detects pore-clogging and fungal acne triggering ingredients — separated from general safety flags."
           />
           <FeatureCard
-            icon={<AlertTriangle className="text-amber-500" />}
+            icon={<AlertTriangle className="text-amber-500" size={24} />}
             title="Honest Scoring"
-            description="We distinguish 'assessed safe' from 'unknown' — and withhold scores when we don't have data."
+            description="We distinguish 'assessed safe' from 'unknown' — and withhold scores when we don't have enough data."
           />
           <FeatureCard
-            icon={<Scale className="text-blue-500" />}
-            title="Regulatory Facts"
-            description="EU-banned and restricted ingredients are flagged separately from curated advice."
+            icon={<Scale className="text-blue-500" size={24} />}
+            title="EU Regulatory Facts"
+            description="EU-banned and concentration-restricted ingredients are flagged separately from curated skin advice."
           />
         </div>
       </div>
 
       {/* ── Medical disclaimer + version footer ──────────────────────────── */}
-      <footer className="w-full max-w-5xl mt-16 mb-8 px-4">
+      <footer className="w-full max-w-5xl mt-16 mb-8 px-4 space-y-3">
         <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl text-xs text-amber-800 dark:text-amber-300">
           <Info size={14} className="flex-shrink-0 mt-0.5" />
           <p>
@@ -531,11 +596,17 @@ export default function Home() {
             or are considering significant changes to your skincare routine.
           </p>
         </div>
-        {(appVersion || llmModel) && (
-          <p className="text-center text-[10px] text-slate-400 dark:text-slate-600 mt-3">
-            SkinGuard {appVersion && `v${appVersion}`}{appVersion && llmModel && ' · '}{llmModel && llmModel !== 'unavailable' && `AI: ${llmModel}`}
-          </p>
-        )}
+        <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+          <div className="flex gap-4">
+            <a href="/privacy" className="text-[10px] text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Privacy Policy</a>
+            <a href="https://github.com/maithili39/SkinGuard" target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">GitHub</a>
+          </div>
+          {(appVersion || llmModel) && (
+            <p className="text-[10px] text-slate-400 dark:text-slate-600">
+              SkinGuard {appVersion && `v${appVersion}`}{appVersion && llmModel && ' · '}{llmModel && llmModel !== 'unavailable' && `AI: ${llmModel}`}
+            </p>
+          )}
+        </div>
       </footer>
 
       {/* ── Modals ────────────────────────────────────────────────────────── */}

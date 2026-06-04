@@ -1,0 +1,34 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    needs: []  # runs after CI passes — add "ci" here if you want sequential gating
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger Render backend deploy
+        if: vars.RENDER_DEPLOY_HOOK_URL != ''
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ vars.RENDER_DEPLOY_HOOK_URL }}" \
+            | grep -qE "^2" && echo "Render deploy triggered." || echo "Render deploy hook returned non-2xx."
+
+      - name: Trigger Vercel frontend deploy
+        if: vars.VERCEL_DEPLOY_HOOK_URL != ''
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ vars.VERCEL_DEPLOY_HOOK_URL }}" \
+            | grep -qE "^2" && echo "Vercel deploy triggered." || echo "Vercel deploy hook returned non-2xx."
+
+      - name: No deploy hooks configured
+        if: vars.RENDER_DEPLOY_HOOK_URL == '' && vars.VERCEL_DEPLOY_HOOK_URL == ''
+        run: |
+          echo "No deploy hooks set. Add RENDER_DEPLOY_HOOK_URL and VERCEL_DEPLOY_HOOK_URL"
+          echo "as repository variables in Settings → Secrets and variables → Actions → Variables."
