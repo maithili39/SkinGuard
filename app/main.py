@@ -17,7 +17,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from app.analysis import analyze_text
-from app.auth import create_token, get_current_user, require_user
+from app.auth import create_token, get_current_user, require_user, create_reset_token, decode_reset_token
 from app.cache import cache_info, get_cached, hash_bytes, hash_text, make_key, set_cached
 from app.database import SessionLocal, get_db
 from app.explain import explain_ingredient, explain_ingredient_llm
@@ -26,7 +26,7 @@ from app.models import Ingredient, Scan, User
 from app.ocr import OCRUnavailable
 from app.ocr import extract_text as run_ocr
 from app.rules import Profile
-from app.schemas import AnalyzeIn, AuthOut, ChatIn, ChatOut, LoginIn, ProfileUpdate, RegisterIn, TokenOut, UserIn, RoutineAnalyzeIn
+from app.schemas import AnalyzeIn, AuthOut, ChatIn, ChatOut, LoginIn, ProfileUpdate, RegisterIn, TokenOut, UserIn, RoutineAnalyzeIn, ForgotPasswordIn, ResetPasswordIn
 from app import users as users_svc
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
@@ -251,6 +251,71 @@ def logout(response: Response):
 def me(user: User = Depends(require_user)):
     """Return the currently authenticated user's profile."""
     return {"email": user.email, "profile": users_svc.profile_dict(user)}
+
+
+@app.post("/auth/forgot-password")
+@limiter.limit(_limit("5/minute"))
+def forgot_password(request: Request, payload: ForgotPasswordIn, db: Session = Depends(get_db)):
+    """Generate a signed reset token and send email (or log reset link)."""
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter_by(email=email_clean).first()
+    if not user:
+        logger.info("Forgot password request for non-existent email: %s", email_clean)
+        return {"detail": "If the email exists in our system, a password reset link has been sent."}
+
+    token = create_reset_token(user.email)
+    origin = request.headers.get("origin") or "http://localhost:3000"
+    reset_url = f"{origin}/reset-password?token={token}"
+    
+    resend_api_key = os.environ.get("RESEND_API_KEY")
+    if resend_api_key:
+        try:
+            import httpx
+            resend_url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json",
+            }
+            email_payload = {
+                "from": "SkinGuard <noreply@resend.dev>",
+                "to": [user.email],
+                "subject": "Reset your SkinGuard Password",
+                "html": f"<p>You requested a password reset for your SkinGuard account.</p>"
+                        f"<p>Click the link below to set a new password (expires in 1 hour):</p>"
+                        f"<p><a href=\"{reset_url}\">{reset_url}</a></p>"
+                        f"<p>If you did not request this, please ignore this email.</p>"
+            }
+            with httpx.Client() as client:
+                res = client.post(resend_url, json=email_payload, headers=headers)
+                res.raise_for_status()
+            logger.info("Password reset email sent via Resend for user: %s", user.email)
+        except Exception as exc:
+            logger.error("Failed to send password reset email via Resend: %s. Logging reset link instead.", exc)
+            logger.warning("DEVELOPER RESET URL: %s", reset_url)
+    else:
+        logger.info("Resend not configured (RESEND_API_KEY missing).")
+        logger.warning("DEVELOPER RESET URL: %s", reset_url)
+
+    return {"detail": "If the email exists in our system, a password reset link has been sent."}
+
+
+@app.post("/auth/reset-password")
+@limiter.limit(_limit("5/minute"))
+def reset_password(request: Request, payload: ResetPasswordIn, db: Session = Depends(get_db)):
+    """Validate token and update password."""
+    email = decode_reset_token(payload.token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
+
+    user = db.query(User).filter_by(email=email.strip().lower()).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found.")
+
+    from app.auth import hash_password
+    user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    logger.info("Password reset successfully for user: %s", user.email)
+    return {"detail": "Password has been reset successfully."}
 
 
 @app.get("/auth/scans")

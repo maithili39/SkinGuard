@@ -82,3 +82,14 @@ class RoutineProduct(BaseModel):
 class RoutineAnalyzeIn(BaseModel):
     products: list[RoutineProduct] = Field(..., min_length=1)
 
+
+# ── Password reset schemas ───────────────────────────────────────────────────
+
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8, description="Min 8 characters")
+
