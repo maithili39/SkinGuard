@@ -102,7 +102,11 @@ RULES: list[Rule] = [
         kind="regulatory",
         profile_gate=None,
         predicate=lambda i: i.regulatory_status == "banned",
-        message=lambda i: f"{i.inci_name} is banned in cosmetics (EU CosIng).",
+        message=lambda i: (
+            f"{i.inci_name} is prohibited in EU cosmetics"
+            + (f" ({i.source})" if i.source else " (EU Reg 1223/2009 Annex II)")
+            + "."
+        ),
     ),
     Rule(
         concern="regulatory",
@@ -110,7 +114,11 @@ RULES: list[Rule] = [
         kind="regulatory",
         profile_gate=None,
         predicate=lambda i: i.regulatory_status == "restricted",
-        message=lambda i: f"{i.inci_name} is restricted in the EU (concentration limits apply).",
+        message=lambda i: (
+            f"{i.inci_name} is restricted in EU cosmetics — concentration limits apply"
+            + (f" ({i.source})" if i.source else " (EU Reg 1223/2009 Annex III)")
+            + "."
+        ),
     ),
     # ── Rosacea rules - active when profile.rosacea is True ──────────────────
     Rule(
@@ -164,6 +172,7 @@ def has_risk_data(ing: "Ingredient") -> bool:
         or ing.irritant is not None
         or ing.pregnancy_safe is not None
         or ing.fungal_acne_safe is not None
+        or ing.regulatory_status in ("banned", "restricted")
     )
 
 

@@ -175,6 +175,10 @@ def load_curated(db, registry: AliasRegistry, existing: dict) -> int:
         ing.irritant = _clean(row.get("irritant"))
         ing.notes = _clean(row.get("notes"))
         ing.source = _clean(row.get("source"))
+        # Regulatory status from curated CSV overrides CosIng's coarse heuristic.
+        curated_status = _clean(row.get("regulatory_status"))
+        if curated_status in ("banned", "restricted", "allowed"):
+            ing.regulatory_status = curated_status
 
         for alias in (row.get("aliases") or "").split("|"):
             if alias.strip():

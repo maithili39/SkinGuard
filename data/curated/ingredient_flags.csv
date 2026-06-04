@@ -1,276 +1,284 @@
-inci_name,aliases,function,comedogenic,fungal_acne_safe,pregnancy_safe,irritant,notes,source
-Aqua,Water|Eau,solvent,0,yes,yes,no,Plain water; base of most products.,common knowledge
-Glycerin,Glycerol|Glycerine,humectant,0,yes,yes,no,Well-tolerated hydrator.,dermatology consensus
-Niacinamide,Nicotinamide|Vitamin B3,skin conditioning,0,yes,yes,no,Helps acne barrier and oil control.,dermatology consensus
-Hyaluronic Acid,Sodium Hyaluronate|Hydrolyzed Hyaluronic Acid,humectant,0,yes,yes,no,Hydrating; suits all skin types.,dermatology consensus
-Retinol,Vitamin A,anti-ageing,2,yes,no,yes,Retinoid - avoid in pregnancy; can irritate.,EU CosIng + teratogenicity guidance
-Retinyl Palmitate,Vitamin A Palmitate,anti-ageing,2,yes,no,yes,Retinoid ester - avoid in pregnancy.,teratogenicity guidance
-Tretinoin,Retinoic Acid|All-trans Retinoic Acid,anti-ageing,1,yes,no,yes,Prescription retinoid - contraindicated in pregnancy.,medical guidance
-Adapalene,,anti-ageing,1,yes,no,yes,Retinoid - avoid in pregnancy.,medical guidance
-Salicylic Acid,BHA|2-Hydroxybenzoic Acid,exfoliant,0,yes,caution,yes,BHA - low topical doses generally ok; high doses cautioned in pregnancy.,dermatology consensus
-Benzoyl Peroxide,BPO,antimicrobial,0,yes,caution,yes,Acne treatment; discuss with doctor in pregnancy.,medical guidance
-Hydroquinone,,skin lightening,0,yes,no,yes,High systemic absorption - avoid in pregnancy.,medical guidance
-Glycolic Acid,AHA,exfoliant,0,yes,caution,yes,AHA exfoliant; can irritate.,dermatology consensus
-Lactic Acid,AHA,exfoliant,1,yes,yes,yes,Gentler AHA; mild irritation possible.,dermatology consensus
-Mandelic Acid,AHA,exfoliant,0,yes,yes,no,Larger AHA molecule; gentle.,dermatology consensus
-Azelaic Acid,,skin conditioning,1,yes,yes,no,Good for acne and rosacea; pregnancy-friendly.,dermatology consensus
-Ascorbic Acid,Vitamin C|L-Ascorbic Acid,antioxidant,0,yes,yes,yes,Vitamin C; can sting at low pH.,dermatology consensus
-Tocopherol,Vitamin E|Tocopheryl Acetate,antioxidant,2,yes,yes,no,Antioxidant; mildly comedogenic for some.,Fulton 1989 / compiled comedogenicity data
-Panthenol,Provitamin B5|D-Panthenol,humectant,0,yes,yes,no,Soothing hydrator.,dermatology consensus
-Allantoin,,soothing,0,yes,yes,no,Soothing and calming.,dermatology consensus
-Centella Asiatica Extract,Cica|Gotu Kola,soothing,0,yes,yes,no,Calming botanical.,dermatology consensus
-Ceramide NP,Ceramide 3|Ceramide,barrier repair,0,yes,yes,no,Barrier-repairing lipid.,dermatology consensus
-Squalane,,emollient,0,yes,yes,no,Lightweight non-comedogenic oil.,Fulton 1989 / compiled comedogenicity data
-Dimethicone,Silicone,emollient,1,yes,yes,no,Silicone; generally non-comedogenic.,Fulton 1989 / compiled comedogenicity data
-Cyclopentasiloxane,,emollient,0,yes,yes,no,Volatile silicone.,Fulton 1989 / compiled comedogenicity data
-Petrolatum,Petroleum Jelly|Vaseline,occlusive,0,yes,yes,no,Occlusive; non-comedogenic despite myths.,Fulton 1989 / compiled comedogenicity data
-Mineral Oil,Paraffinum Liquidum,occlusive,0,yes,yes,no,Refined cosmetic mineral oil; non-comedogenic.,Fulton 1989 / compiled comedogenicity data
-Coconut Oil,Cocos Nucifera Oil,emollient,4,no,yes,no,Highly comedogenic; fungal-acne trigger.,Fulton 1989 / compiled comedogenicity data
-Cocoa Butter,Theobroma Cacao Butter,emollient,4,no,yes,no,Comedogenic for acne-prone skin.,Fulton 1989 / compiled comedogenicity data
-Shea Butter,Butyrospermum Parkii Butter,emollient,2,yes,yes,no,Moderately rich; generally tolerated.,Fulton 1989 / compiled comedogenicity data
-Isopropyl Myristate,IPM,emollient,5,yes,yes,no,Highly comedogenic.,Fulton 1989 / compiled comedogenicity data
-Isopropyl Palmitate,,emollient,4,yes,yes,no,Comedogenic emollient.,Fulton 1989 / compiled comedogenicity data
-Myristyl Myristate,,emollient,5,no,yes,no,Comedogenic and fungal-acne trigger.,Fulton 1989 / compiled comedogenicity data
-Lauric Acid,,emollient,4,no,yes,no,Fatty acid - feeds Malassezia.,Simple Skincare Science fungal-acne-safe list
-Oleic Acid,,emollient,2,no,yes,yes,Fatty acid - fungal-acne trigger; can disrupt barrier.,Simple Skincare Science fungal-acne-safe list
-Stearic Acid,,emulsifier,2,yes,yes,no,Fatty acid emulsifier; generally fine.,Fulton 1989 / compiled comedogenicity data
-Palmitic Acid,,emulsifier,2,yes,yes,no,Fatty acid; low risk.,Fulton 1989 / compiled comedogenicity data
-Polysorbate 20,,emulsifier,0,no,yes,no,Polysorbate - potential Malassezia trigger.,Simple Skincare Science fungal-acne-safe list
-Polysorbate 60,,emulsifier,0,no,yes,no,Polysorbate - potential fungal-acne trigger.,Simple Skincare Science fungal-acne-safe list
-Polysorbate 80,,emulsifier,0,no,yes,no,Polysorbate - potential fungal-acne trigger.,Simple Skincare Science fungal-acne-safe list
-Glyceryl Stearate,,emulsifier,1,no,yes,no,Fatty ester emulsifier; fungal-acne caution.,Simple Skincare Science fungal-acne-safe list
-Cetearyl Alcohol,,emollient,2,yes,yes,no,Fatty alcohol; usually well tolerated.,Fulton 1989 / compiled comedogenicity data
-Cetyl Alcohol,,emollient,2,yes,yes,no,Fatty alcohol; not drying.,Fulton 1989 / compiled comedogenicity data
-Stearyl Alcohol,,emollient,2,yes,yes,no,Fatty alcohol emollient.,Fulton 1989 / compiled comedogenicity data
-Alcohol Denat,Denatured Alcohol|SD Alcohol|Ethanol,solvent,0,yes,yes,yes,Drying; can irritate sensitive skin in high amounts.,dermatology consensus
-Fragrance,Parfum|Perfume,fragrance,0,yes,yes,yes,Common irritant/allergen for sensitive skin.,EU Reg 1223/2009 Annex III
-Limonene,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III
-Linalool,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III
-Citronellol,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III
-Geraniol,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III
-Eugenol,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III
-Citral,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III
-Coumarin,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III
-Benzyl Alcohol,,preservative,0,yes,yes,yes,Preservative and listed fragrance allergen.,EU Reg 1223/2009 Annex III
-Tea Tree Oil,Melaleuca Alternifolia Oil,essential oil,2,yes,caution,yes,Essential oil; antibacterial but irritating; pregnancy caution.,dermatology consensus
-Lavender Oil,Lavandula Angustifolia Oil,essential oil,2,yes,caution,yes,Essential oil; potential irritant/allergen.,dermatology consensus
-Peppermint Oil,Mentha Piperita Oil,essential oil,2,yes,caution,yes,Essential oil; can irritate.,dermatology consensus
-Phenoxyethanol,,preservative,0,yes,yes,no,Common gentle preservative.,EU CosIng
-Ethylhexylglycerin,,preservative,0,yes,yes,no,Preservative booster.,EU CosIng
-Sodium Benzoate,,preservative,0,yes,yes,no,Mild preservative.,EU CosIng
-Potassium Sorbate,,preservative,0,yes,yes,no,Mild preservative.,EU CosIng
-Methylparaben,Paraben,preservative,0,yes,yes,no,Paraben preservative; EU-permitted within limits.,EU CosIng
-Propylparaben,Paraben,preservative,0,yes,yes,no,Paraben preservative; EU-restricted concentration.,EU CosIng Annex V
-Chlorphenesin,,preservative,0,yes,yes,no,Preservative.,EU CosIng
-Zinc Oxide,,UV filter,0,yes,yes,no,Mineral sunscreen; pregnancy-safe.,dermatology consensus
-Titanium Dioxide,,UV filter,1,yes,yes,no,Mineral sunscreen.,dermatology consensus
-Avobenzone,Butyl Methoxydibenzoylmethane,UV filter,0,yes,yes,no,Chemical UVA filter.,EU CosIng
-Octinoxate,Ethylhexyl Methoxycinnamate,UV filter,0,yes,caution,yes,Chemical UV filter; some pregnancy caution debated.,EU CosIng
-Oxybenzone,Benzophenone-3,UV filter,0,yes,caution,yes,Chemical UV filter; absorption concerns.,EU CosIng Annex VI
-Homosalate,,UV filter,0,yes,caution,no,Chemical UV filter; EU concentration review.,EU CosIng Annex VI
-Octocrylene,,UV filter,0,yes,yes,yes,Chemical UV filter; possible allergen.,EU CosIng
-Sodium Hydroxide,Lye,pH adjuster,0,yes,yes,yes,pH adjuster; irritant in raw form, safe in formula.,EU CosIng
-Citric Acid,,pH adjuster,0,yes,yes,no,pH adjuster; mild.,EU CosIng
-Xanthan Gum,,thickener,0,yes,yes,no,Natural thickener.,common knowledge
-Carbomer,,thickener,0,yes,yes,no,Gel thickener.,common knowledge
-Sodium Lauryl Sulfate,SLS,surfactant,0,yes,yes,yes,Strong cleanser; can irritate/dry.,dermatology consensus
-Sodium Laureth Sulfate,SLES,surfactant,0,yes,yes,yes,Cleanser; milder than SLS but still drying.,dermatology consensus
-Cocamidopropyl Betaine,,surfactant,0,yes,yes,yes,Mild surfactant; occasional allergen.,EU allergen data
-Coco-Glucoside,,surfactant,0,yes,yes,no,Gentle surfactant.,common knowledge
-Decyl Glucoside,,surfactant,0,yes,yes,no,Gentle surfactant.,common knowledge
-Propylene Glycol,,humectant,0,yes,yes,yes,Humectant; rare sensitiser.,dermatology consensus
-Butylene Glycol,,humectant,0,yes,yes,no,Humectant; well tolerated.,common knowledge
-Caprylic/Capric Triglyceride,,emollient,1,yes,yes,no,Light spreading emollient.,Fulton 1989 / compiled comedogenicity data
-Jojoba Oil,Simmondsia Chinensis Oil,emollient,2,yes,yes,no,Resembles skin sebum; moderate.,Fulton 1989 / compiled comedogenicity data
-Argan Oil,Argania Spinosa Kernel Oil,emollient,0,yes,yes,no,Lightweight non-comedogenic oil.,Fulton 1989 / compiled comedogenicity data
-Rosehip Oil,Rosa Canina Fruit Oil,emollient,1,no,yes,no,High oleic/linoleic; fungal-acne caution.,Simple Skincare Science fungal-acne-safe list
-Sunflower Oil,Helianthus Annuus Seed Oil,emollient,0,no,yes,no,High linoleic; barrier-friendly but fungal caution.,Simple Skincare Science fungal-acne-safe list
-Almond Oil,Prunus Amygdalus Dulcis Oil,emollient,2,no,yes,no,Nut oil; fungal-acne trigger.,Simple Skincare Science fungal-acne-safe list
-Olive Oil,Olea Europaea Fruit Oil,emollient,2,no,yes,no,High oleic; can clog and feed Malassezia.,Fulton 1989 / compiled comedogenicity data
-Lanolin,,emollient,4,yes,yes,yes,Occlusive; comedogenic and possible allergen.,Fulton 1989 / compiled comedogenicity data
-Beeswax,Cera Alba,emollient,2,yes,yes,no,Occlusive wax; mild.,Fulton 1989 / compiled comedogenicity data
-Bakuchiol,,anti-ageing,0,yes,yes,no,Plant-based retinol alternative; pregnancy-friendlier.,emerging dermatology data
-Kojic Acid,,skin lightening,0,yes,yes,yes,Brightener; can irritate.,dermatology consensus
-Arbutin,Alpha-Arbutin,skin lightening,0,yes,yes,no,Gentle brightener.,dermatology consensus
-Urea,,humectant,0,yes,yes,yes,Humectant/keratolytic; high % can sting.,dermatology consensus
-Aloe Barbadensis Leaf Juice,Aloe Vera,soothing,0,yes,yes,no,Soothing botanical.,common knowledge
-Green Tea Extract,Camellia Sinensis Leaf Extract,antioxidant,0,yes,yes,no,Antioxidant botanical.,common knowledge
-Sodium PCA,PCA-Na,humectant,0,yes,yes,no,Natural moisturizing factor; highly hydrating,dermatology consensus
-Betaine,Trimethylglycine,humectant,0,yes,yes,no,Gentle amino acid derived humectant,dermatology consensus
-Polyglutamic Acid,PGA,humectant,0,yes,yes,no,Holds 10x more moisture than hyaluronic acid,dermatology consensus
-Sorbitol,glucitol,humectant,0,yes,yes,no,Sugar-derived humectant,dermatology consensus
-Trehalose,mycose,humectant,0,yes,yes,no,Sugar humectant; helps skin water retention,dermatology consensus
-Xylitol,,humectant,0,yes,yes,no,Sugar alcohol humectant; reinforces barrier,dermatology consensus
-Erythritol,,humectant,0,yes,yes,no,Moisturizing polyol,dermatology consensus
-Pantolactone,,humectant,0,yes,yes,no,Humectant and conditioning agent,dermatology consensus
-Maltitol,,humectant,0,yes,yes,no,Sugar-based humectant,dermatology consensus
-Diglycerin,,humectant,0,yes,yes,no,Larger glycerin molecule; longer-lasting hydration,dermatology consensus
-C12-15 Alkyl Benzoate,,emollient,1,yes,yes,no,Light non-greasy ester emollient,Fulton 1989
-Isododecane,,emollient,0,yes,yes,no,Volatile hydrocarbon emollient,Fulton 1989
-Behenyl Alcohol,,emollient,0,yes,yes,no,Fatty alcohol; non-comedogenic unlike cetearyl,Fulton 1989
-Hydrogenated Polyisobutene,,emollient,1,yes,yes,no,Synthetic emollient; mineral oil alternative,Fulton 1989
-Caprylyl Glycol,,emollient,1,yes,yes,no,Humectant and preservative booster; mild emollient,dermatology consensus
-Hexylene Glycol,,emollient,2,yes,yes,no,Solvent and emollient; mildly comedogenic,Fulton 1989
-Caprylyl Methicone,,emollient,0,yes,yes,no,Lightweight silicone emollient,dermatology consensus
-Cetyl Ethylhexanoate,,emollient,3,no,yes,no,Highly spreading ester; fungal-acne trigger,Simple Skincare Science
-Neopentyl Glycol Diheptanoate,,emollient,0,yes,yes,no,Lightweight volatile emollient; ester,dermatology consensus
-Squalene,,emollient,3,yes,yes,no,Squalane precursor; oxidises easily; comedogenic,Fulton 1989
-Shea Butter Ethyl Esters,,emollient,1,yes,yes,no,Eco-friendly light ester from shea butter,dermatology consensus
-Coco-Caprylate,Coco-Caprylate/Caprate,emollient,2,no,yes,no,Coconut-derived emollient ester; fungal acne trigger,Simple Skincare Science
-Decyl Oleate,,emollient,3,no,yes,no,Ester emollient; fungal acne trigger,Simple Skincare Science
-Ethylhexyl Palmitate,Octyl Palmitate,emollient,4,yes,yes,no,Highly comedogenic ester,Fulton 1989
-Ethylhexyl Stearate,Octyl Stearate,emollient,5,no,yes,no,Severely comedogenic ester; fungal acne trigger,Fulton 1989
-Myristyl Lactate,,emollient,4,yes,yes,no,Highly comedogenic lactic acid ester,Fulton 1989
-Cetyl Lactate,,emollient,4,yes,yes,no,Comedogenic ester,Fulton 1989
-PPG-15 Stearyl Ether,,emollient,2,yes,yes,no,Synthetic ether emollient,Fulton 1989
-Isostearyl Neopentanoate,,emollient,3,no,yes,no,Comedogenic ester; fungal acne trigger,Fulton 1989
-Diisopropyl Adipate,,emollient,0,yes,yes,no,Fast-absorbing non-comedogenic ester,dermatology consensus
-Butyl Stearate,,emollient,3,no,yes,no,Comedogenic ester; fungal acne trigger,Fulton 1989
-Cetyl Palmitate,,emollient,0,no,yes,no,Fatty ester; fungal acne trigger,Simple Skincare Science
-Lanoline Alcohol,Lanolin Alcohol,emollient,4,yes,yes,yes,Highly comedogenic; potential allergen,Fulton 1989
-Stearyl Heptanoate,,emollient,4,no,yes,no,Highly comedogenic wax ester,Fulton 1989
-Octyldodecanol,,emollient,3,yes,yes,no,Fatty alcohol; moderately comedogenic,Fulton 1989
-Gluconolactone,PHA,exfoliant,0,yes,yes,no,PHA exfoliant; very gentle and hydrating,dermatology consensus
-Lactobionic Acid,PHA,exfoliant,0,yes,yes,no,PHA exfoliant; antioxidant properties,dermatology consensus
-Malic Acid,AHA,exfoliant,0,yes,yes,yes,AHA exfoliant derived from apples; mild irritant,dermatology consensus
-Ferulic Acid,,antioxidant,0,yes,yes,no,Potent antioxidant; stabilises Vitamin C,dermatology consensus
-Tartaric Acid,AHA,exfoliant,0,yes,yes,yes,AHA exfoliant derived from grapes; pH adjuster,dermatology consensus
-Phytic Acid,,exfoliant,0,yes,yes,no,Gentle exfoliating acid and chelating agent,dermatology consensus
-Salicylic Acid Acetate,Aspirin,exfoliant,0,yes,caution,yes,Salicylic derivative; use with caution in pregnancy,medical guidance
-Tranexamic Acid,,skin conditioning,0,yes,yes,no,Helps fade hyperpigmentation and melasma,dermatology consensus
-Dipotassium Glycyrrhizate,Licorice Extract Derivative,soothing,0,yes,yes,no,Licorice derivative; strong anti-inflammatory,dermatology consensus
-Resveratrol,,antioxidant,0,yes,yes,no,Potent antioxidant from grapes,dermatology consensus
-Coenzyme Q10,Ubiquinone,antioxidant,0,yes,yes,no,Antioxidant and anti-ageing active,dermatology consensus
-Adenosine,,skin conditioning,0,yes,yes,no,Anti-ageing cell-signaling ingredient,dermatology consensus
-Caffeine,,skin conditioning,0,yes,yes,no,Vasoconstrictor; reduces puffiness under eyes,dermatology consensus
-Centella Asiatica Leaf Extract,Cica Leaf,soothing,0,yes,yes,no,Soothing cica botanical extract,dermatology consensus
-Madecassoside,,soothing,0,yes,yes,no,Active compound from Centella; wound healing,dermatology consensus
-Asiaticoside,,soothing,0,yes,yes,no,Active compound from Centella; antioxidant,dermatology consensus
-Madecassic Acid,,soothing,0,yes,yes,no,Centella component; skin repair,dermatology consensus
-Asiatic Acid,,soothing,0,yes,yes,no,Centella component; anti-inflammatory,dermatology consensus
-Bisabolol,Alpha-Bisabolol,soothing,0,yes,yes,no,Soothing active derived from Chamomile,dermatology consensus
-Beta-Glucan,,humectant,0,yes,yes,no,Polysaccharide; deeply hydrating and soothing,dermatology consensus
-Glycyrrhiza Glabra Root Extract,Licorice Root Extract,soothing,0,yes,yes,no,Licorice root; fades hyperpigmentation,dermatology consensus
-Astaxanthin,,antioxidant,0,yes,yes,no,Extremely potent antioxidant carotenoid,dermatology consensus
-Allantoin USP,,soothing,0,yes,yes,no,Pure soothing allantoin,dermatology consensus
-Epigallocatechin Gallate,EGCG,antioxidant,0,yes,yes,no,Green tea active antioxidant,dermatology consensus
-Idebenone,Hydroxydecyl Ubiquinone,antioxidant,0,yes,yes,no,Synthetic CoQ10 analog; potent antioxidant,dermatology consensus
-Superoxide Dismutase,SOD,antioxidant,0,yes,yes,no,Antioxidant enzyme,dermatology consensus
-Ferulic Acid Ethyl Ester,,antioxidant,0,yes,yes,no,Esterified ferulic acid,dermatology consensus
-Tinosorb S,Bemotrizinol|Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine,UV filter,0,yes,yes,no,Broad-spectrum next-gen organic UV filter; highly photostable,EU CosIng Annex VI
-Tinosorb M,Bisoctrizole|Methylene Bis-Benzotriazolyl Tetramethylbutylphenol,UV filter,0,yes,yes,no,Organic particulate UV filter; hybrid mineral/chemical,EU CosIng Annex VI
-Uvinul A Plus,Diethylamino Hydroxybenzoyl Hexyl Benzoate,UV filter,0,yes,yes,no,Photostable UVA filter; next-gen,EU CosIng Annex VI
-Uvinul T 150,Ethylhexyl Triazone,UV filter,0,yes,yes,no,Highly effective next-gen UVB filter,EU CosIng Annex VI
-Mexoryl SX,Ecamsule|Terephthalylidene Dicamphor Sulfonic Acid,UV filter,0,yes,yes,no,L'Oreal patented water-soluble UVA filter,EU CosIng Annex VI
-Mexoryl XL,Drometrizole Trisiloxane,UV filter,0,yes,yes,no,L'Oreal patented lipophilic broad-spectrum filter,EU CosIng Annex VI
-Tinosorb A2B,Tris-Biphenyl Triazine,UV filter,0,yes,yes,no,Highly efficient next-gen UVB and UVAII filter,EU CosIng Annex VI
-Iscotrizinol,Uvasorb HEB|Diethylhexyl Butamido Triazone,UV filter,0,yes,yes,no,Very photostable UVB filter,EU CosIng Annex VI
-Parsol SLX,Polysilicone-15,UV filter,0,yes,yes,no,Silicone-based UVB filter,EU CosIng Annex VI
-Palmitoyl Tripeptide-1,Pal-GHK,anti-ageing,0,yes,yes,no,Peptide that stimulates collagen synthesis,dermatology consensus
-Palmitoyl Tetrapeptide-7,Pal-GQPR,anti-ageing,0,yes,yes,no,Peptide that reduces skin inflammation signals,dermatology consensus
-Palmitoyl Pentapeptide-4,Matrixyl,anti-ageing,0,yes,yes,no,Classic anti-ageing peptide,dermatology consensus
-Acetyl Hexapeptide-8,Argireline|Acetyl Hexapeptide-3,anti-ageing,0,yes,yes,no,Argireline; helps relax facial muscle tension,dermatology consensus
-Copper Tripeptide-1,GHK-Cu,skin conditioning,0,yes,yes,no,Promotes wound healing and collagen synthesis,dermatology consensus
-Oligopeptide-1,EGF|Epidermal Growth Factor,anti-ageing,0,yes,yes,no,Growth factor; promotes cell renewal,dermatology consensus
-Acetyl Octapeptide-3,Snap-8,anti-ageing,0,yes,yes,no,Argireline extension peptide,dermatology consensus
-Palmitoyl Tripeptide-5,Syn-Coll,anti-ageing,0,yes,yes,no,Peptide targeting TGF-beta to boost collagen,dermatology consensus
-Nonapeptide-1,,skin conditioning,0,yes,yes,no,Peptide that helps block melanin synthesis,dermatology consensus
-Matrixyl 3000,,anti-ageing,0,yes,yes,no,Peptide blend (Tripeptide-1 + Tetrapeptide-7),dermatology consensus
-DMDM Hydantoin,,preservative,0,yes,yes,yes,Formaldehyde-releaser; common sensitiser,EU CosIng Annex V
-Methylisothiazolinone,MIT,preservative,0,yes,yes,yes,Strong contact allergen; banned in leave-on in EU,EU Reg 1223/2009 Annex V
-Quaternium-15,,preservative,0,yes,yes,yes,Formaldehyde-releaser; strong allergen,EU Reg 1223/2009 Annex V
-Diazolidinyl Urea,,preservative,0,yes,yes,yes,Formaldehyde-releaser preservative,EU CosIng Annex V
-Imidazolidinyl Urea,,preservative,0,yes,yes,yes,Formaldehyde-releaser preservative,EU CosIng Annex V
-Methylchloroisothiazolinone,CMIT,preservative,0,yes,yes,yes,Preservative; highly sensitising; wash-off only in EU,EU Reg 1223/2009 Annex V
-Formaldehyde,,preservative,0,yes,no,yes,Banned in cosmetics in EU; carcinogenic,EU Reg 1223/2009 Annex II
-Benzalkonium Chloride,,preservative,0,yes,yes,yes,Cationic surfactant and preservative; potential irritant,EU CosIng Annex III
-BHT,Butylated Hydroxytoluene,preservative,0,yes,yes,no,Synthetic antioxidant preservative; safety debated,dermatology consensus
-BHA,Butylated Hydroxyanisole,preservative,0,yes,caution,no,Antioxidant preservative; endocrine concern; pregnancy caution,dermatology consensus
-Sorbic Acid,,preservative,0,yes,yes,yes,Natural preservative; rare contact allergen,dermatology consensus
-Salicylic Acid Benzyl Ester,Benzyl Salicylate,fragrance,0,yes,yes,yes,Fragrance allergen and UV absorber,EU Reg 1223/2009 Annex III
-Chamomile Extract,Chamomilla Recutita Flower Extract,soothing,0,yes,yes,no,Soothing botanical extract,dermatology consensus
-Oat Kernel Extract,Avena Sativa Kernel Extract|Colloidal Oatmeal,soothing,0,yes,yes,no,Colloidal oatmeal extract; extremely soothing,dermatology consensus
-Sea Buckthorn Oil,Hippophae Rhamnoides Oil,emollient,1,no,yes,no,Rich botanical oil; fungal acne trigger,Simple Skincare Science
-Calendula Extract,Calendula Officinalis Flower Extract,soothing,0,yes,yes,no,Soothing and healing flower extract,dermatology consensus
-Licorice Extract,Glycyrrhiza Glabra Root,soothing,0,yes,yes,no,Brightening and calming botanical,dermatology consensus
-Rosemary Leaf Extract,Rosmarinus Officinalis Leaf Extract,antioxidant,0,yes,yes,yes,Antioxidant botanical; potential allergen,dermatology consensus
-Neem Oil,Melia Azadirachta Seed Oil,emollient,4,no,yes,no,Highly comedogenic botanical oil; fungal acne trigger,Fulton 1989
-Rose Water,Rosa Damascena Flower Water,soothing,0,yes,yes,no,Soothing distilled flower water,common knowledge
-Grapeseed Oil,Vitis Vinifera Seed Oil,emollient,1,no,yes,no,Linoleic-rich oil; fungal acne trigger,Simple Skincare Science
-Sweet Almond Oil,Prunus Amygdalus Dulcis Oil,emollient,2,no,yes,no,Rich emollient; fungal acne trigger,Fulton 1989
-Avocado Oil,Persea Gratissima Oil,emollient,3,no,yes,no,Heavy comedogenic fruit oil; fungal acne trigger,Fulton 1989
-Sesame Oil,Sesamum Indicum Seed Oil,emollient,3,no,yes,no,Moderately comedogenic oil,Fulton 1989
-Wheat Germ Oil,Triticum Vulgare Germ Oil,emollient,5,no,yes,no,Extremely comedogenic oil; rich in Vitamin E,Fulton 1989
-Evening Primrose Oil,Oenothera Biennis Oil,emollient,2,no,yes,no,Linoleic-rich oil; fungal acne trigger,Simple Skincare Science
-Borage Seed Oil,Borago Officinalis Seed Oil,emollient,2,no,yes,no,Soothes dry skin; fungal acne trigger,Simple Skincare Science
-Macadamia Oil,Macadamia Integrifolia Seed Oil,emollient,2,no,yes,no,Rich in palmitoleic acid; fungal acne trigger,Fulton 1989
-Apricot Kernel Oil,Prunus Armeniaca Kernel Oil,emollient,2,no,yes,no,Moderately comedogenic oil,Fulton 1989
-Tamanu Oil,Calophyllum Inophyllum Seed Oil,emollient,2,no,yes,no,Wound-healing oil; fungal acne trigger,Simple Skincare Science
-Marula Oil,Sclerocarya Birrea Seed Oil,emollient,3,no,yes,no,Rich emollient; fungal acne trigger,Simple Skincare Science
-Castor Oil,Ricinus Communis Seed Oil,emollient,1,yes,yes,no,Thick ricinoleic acid oil; fungal acne safe,Fulton 1989
-Pomegranate Seed Oil,Punica Granatum Seed Oil,emollient,1,no,yes,no,Antioxidant oil; fungal acne trigger,Simple Skincare Science
-Chia Seed Oil,Salvia Hispanica Seed Oil,emollient,3,no,yes,no,Rich in omega-3; fungal acne trigger,Simple Skincare Science
-Marigold Extract,Tagetes Erecta Flower Extract,soothing,0,yes,yes,no,Calming extract,common knowledge
-Oat Beta-Glucan,,soothing,0,yes,yes,no,Soluble oat fiber; highly soothing,dermatology consensus
-Ginseng Root Extract,Panax Ginseng Root Extract,antioxidant,0,yes,yes,no,Traditional anti-ageing herb,common knowledge
-Ginger Root Extract,Zingiber Officinale Root Extract,soothing,0,yes,yes,yes,Anti-inflammatory; can sting in raw form,dermatology consensus
-Centella Extract,Centella Asiatica Extract,soothing,0,yes,yes,no,Calming cica botanical,dermatology consensus
-Propanediol,"1,3-Propanediol",solvent,0,yes,yes,no,Natural humectant and solvent,dermatology consensus
-Pentylene Glycol,,solvent,0,yes,yes,no,Humectant and solvent; antimicrobial booster,dermatology consensus
-Polysorbate 40,,emulsifier,0,no,yes,no,Fatty ester; fungal acne trigger,Simple Skincare Science
-PEG-100 Stearate,,surfactant,1,no,yes,no,Emulsifier; fungal acne trigger,Simple Skincare Science
-PEG-40 Hydrogenated Castor Oil,,surfactant,0,yes,yes,no,Solubilizer; fungal acne safe,Simple Skincare Science
-Steareth-20,,emulsifier,2,no,yes,no,Comedogenic emulsifier; fungal acne trigger,Fulton 1989
-Steareth-2,,emulsifier,2,no,yes,no,Comedogenic emulsifier; fungal acne trigger,Fulton 1989
-Steareth-21,,emulsifier,2,no,yes,no,Emulsifier; fungal acne trigger,Fulton 1989
-Ceteareth-20,,emulsifier,4,no,yes,no,Highly comedogenic when combined with cetearyl alcohol,Fulton 1989
-Cetereath-12,,emulsifier,2,no,yes,no,Emulsifier; fungal acne trigger,Fulton 1989
-Laureth-4,,surfactant,5,no,yes,no,Highly comedogenic surfactant; fungal acne trigger,Fulton 1989
-Laureth-23,,surfactant,3,yes,yes,no,Surfactant; moderately comedogenic,Fulton 1989
-Cetearyl Glucoside,,emulsifier,2,yes,yes,no,Mild emulsifier; generally safe,Fulton 1989
-Sorbitan Olivate,,emulsifier,0,no,yes,no,Olive-derived emulsifier; fungal acne trigger,Simple Skincare Science
-Sorbitan Stearate,,emulsifier,1,no,yes,no,Fatty emulsifier; fungal acne trigger,Simple Skincare Science
-Sorbitan Monostearate,,emulsifier,1,no,yes,no,Fungal acne trigger,Simple Skincare Science
-Sorbitan Trioleate,,emulsifier,3,no,yes,no,Comedogenic emulsifier; fungal acne trigger,Fulton 1989
-Glyceryl Oleate,,emulsifier,2,no,yes,no,Fatty ester; fungal acne trigger,Simple Skincare Science
-Glyceryl Cocoate,,emulsifier,2,no,yes,no,Fungal acne trigger,Simple Skincare Science
-Glyceryl Dilaurate,,emulsifier,3,no,yes,no,Comedogenic; fungal acne trigger,Fulton 1989
-Glyceryl Hydroxystearate,,emulsifier,2,no,yes,no,Fungal acne trigger,Simple Skincare Science
-Sucrose Cocoate,,emulsifier,0,yes,yes,no,Gentle sugar-based emulsifier,Simple Skincare Science
-Sucrose Stearate,,emulsifier,1,no,yes,no,Fungal acne trigger,Simple Skincare Science
-PEG-80 Sorbitan Laurate,,surfactant,0,no,yes,no,Fungal acne trigger,Simple Skincare Science
-Lecithin,,emollient,3,yes,yes,no,Natural phospholipid; moderately comedogenic,Fulton 1989
-Hydrogenated Lecithin,,emollient,2,yes,yes,no,Restores skin barrier,dermatology consensus
-Cholesterol,,barrier repair,0,yes,yes,no,Essential skin barrier lipid,dermatology consensus
-Phytosphingosine,,barrier repair,0,yes,yes,no,Skin-identical lipid; antibacterial,dermatology consensus
-Ceramide EOP,Ceramide 1,barrier repair,0,yes,yes,no,Critical skin barrier lipid,dermatology consensus
-Ceramide AP,Ceramide 6 II,barrier repair,0,yes,yes,no,Barrier-supporting ceramide,dermatology consensus
-Ceramide AS,Ceramide 5,barrier repair,0,yes,yes,no,Ceramide lipid,dermatology consensus
-Ceramide NS,Ceramide 2,barrier repair,0,yes,yes,no,Barrier-repairing ceramide,dermatology consensus
-Hyaluronic Acid Crosspolymer,Sodium Hyaluronate Crosspolymer,humectant,0,yes,yes,no,Crosslinked HA; prolonged hydration,dermatology consensus
-Hydrolyzed Hyaluronic Acid,,humectant,0,yes,yes,no,Low molecular weight HA; penetrates deeper,dermatology consensus
-Sodium Acetylated Hyaluronate,,humectant,0,yes,yes,no,Highly adhesive super hyaluronic acid,dermatology consensus
-Hydrolyzed Sodium Hyaluronate,,humectant,0,yes,yes,no,Ultra-small hydrating molecule,dermatology consensus
-Squalane Oil,,emollient,0,yes,yes,no,Squalane emollient,dermatology consensus
-Helianthus Annuus Seed Oil Unsaponifiables,,emollient,0,yes,yes,no,Soothing sunflower fraction; barrier repair,dermatology consensus
-Shea Butter Glycerides,,emollient,1,yes,yes,no,Water-soluble shea butter derivative,dermatology consensus
-Capryloyl Salicylic Acid,LHA,exfoliant,0,yes,caution,no,Lipophilic LHA; gentle exfoliation,dermatology consensus
-Gluconic Acid,,pH adjuster,0,yes,yes,no,Mild organic acid,common knowledge
-Lactobionate,,exfoliant,0,yes,yes,no,Salt of lactobionic acid,common knowledge
-Malic Acid Salt,Sodium Malate,pH adjuster,0,yes,yes,no,Buffer salt,common knowledge
-Azelaoyl Diglycinate,Potassium Azeloyl Diglycinate,skin conditioning,0,yes,yes,no,Water-soluble azelaic acid derivative; brightens skin,dermatology consensus
-Ascorbyl Glucoside,,antioxidant,0,yes,yes,no,Stable Vitamin C derivative; brightens skin,dermatology consensus
-Tetrahexyldecyl Ascorbate,THD Ascorbate,antioxidant,1,yes,yes,no,Oil-soluble stable Vitamin C; highly effective,dermatology consensus
-Magnesium Ascorbyl Phosphate,MAP,antioxidant,0,yes,yes,no,Stable water-soluble Vitamin C derivative,dermatology consensus
-Sodium Ascorbyl Phosphate,SAP,antioxidant,0,yes,yes,no,Stable Vitamin C derivative; helps acne-prone skin,dermatology consensus
-Ascorbyl Palmitate,,antioxidant,2,yes,yes,no,Comedogenic Vitamin C ester; less stable,Fulton 1989
-3-O-Ethyl Ascorbic Acid,Ethyl Ascorbic Acid,antioxidant,0,yes,yes,no,Highly stable direct-acting Vitamin C derivative,dermatology consensus
-Tocopheryl Acetate USP,,antioxidant,0,yes,yes,no,High-grade Vitamin E,dermatology consensus
-Ubiquinone 10,,antioxidant,0,yes,yes,no,Coenzyme Q10,common knowledge
-Thioctic Acid,Alpha Lipoic Acid,antioxidant,0,yes,yes,yes,Potent antioxidant; can cause temporary stinging,dermatology consensus
-Resveratrol Ferment,,antioxidant,0,yes,yes,no,Bioavailable fermented resveratrol,dermatology consensus
-Bakuchiol Extract,,anti-ageing,0,yes,yes,no,Natural retinol-like botanical,common knowledge
-Zinc PCA,,skin conditioning,0,yes,yes,no,Regulates sebum production; antimicrobial,dermatology consensus
-Copper PCA,,skin conditioning,0,yes,yes,no,Astringent and antioxidant,dermatology consensus
-Manganese PCA,,skin conditioning,0,yes,yes,no,Conditioning agent,common knowledge
-Sodium Salicylate,,preservative,0,yes,caution,no,Salicylic salt; pregnancy caution,medical guidance
+inci_name,aliases,function,comedogenic,fungal_acne_safe,pregnancy_safe,irritant,notes,source,regulatory_status
+Aqua,Water|Eau,solvent,0,yes,yes,no,Plain water; base of most products.,common knowledge,
+Glycerin,Glycerol|Glycerine,humectant,0,yes,yes,no,Well-tolerated hydrator.,dermatology consensus,
+Niacinamide,Nicotinamide|Vitamin B3,skin conditioning,0,yes,yes,no,Helps acne barrier and oil control.,dermatology consensus,
+Hyaluronic Acid,Sodium Hyaluronate|Hydrolyzed Hyaluronic Acid,humectant,0,yes,yes,no,Hydrating; suits all skin types.,dermatology consensus,
+Retinol,Vitamin A,anti-ageing,2,yes,no,yes,Retinoid - avoid in pregnancy; can irritate.,EU CosIng + teratogenicity guidance,
+Retinyl Palmitate,Vitamin A Palmitate,anti-ageing,2,yes,no,yes,Retinoid ester - avoid in pregnancy.,teratogenicity guidance,
+Tretinoin,Retinoic Acid|All-trans Retinoic Acid,anti-ageing,1,yes,no,yes,Prescription retinoid - contraindicated in pregnancy.,EU Reg 1223/2009 Annex II entry 372 (retinoic acid),banned
+Adapalene,,anti-ageing,1,yes,no,yes,Retinoid - avoid in pregnancy.,medical guidance,
+Salicylic Acid,BHA|2-Hydroxybenzoic Acid,exfoliant,0,yes,caution,yes,BHA - low topical doses generally ok; high doses cautioned in pregnancy.,EU Reg 1223/2009 Annex III entry 98 (max 0.5-2%),restricted
+Benzoyl Peroxide,BPO,antimicrobial,0,yes,caution,yes,Acne treatment; discuss with doctor in pregnancy.,medical guidance,
+Hydroquinone,,skin lightening,0,yes,no,yes,High systemic absorption - avoid in pregnancy.,EU Reg 1223/2009 Annex II entry 1339,banned
+Glycolic Acid,AHA,exfoliant,0,yes,caution,yes,AHA exfoliant; can irritate.,dermatology consensus,
+Lactic Acid,AHA,exfoliant,1,yes,yes,yes,Gentler AHA; mild irritation possible.,dermatology consensus,
+Mandelic Acid,AHA,exfoliant,0,yes,yes,no,Larger AHA molecule; gentle.,dermatology consensus,
+Azelaic Acid,,skin conditioning,1,yes,yes,no,Good for acne and rosacea; pregnancy-friendly.,dermatology consensus,
+Ascorbic Acid,Vitamin C|L-Ascorbic Acid,antioxidant,0,yes,yes,yes,Vitamin C; can sting at low pH.,dermatology consensus,
+Tocopherol,Vitamin E|Tocopheryl Acetate,antioxidant,2,yes,yes,no,Antioxidant; mildly comedogenic for some.,Fulton 1989 / compiled comedogenicity data,
+Panthenol,Provitamin B5|D-Panthenol,humectant,0,yes,yes,no,Soothing hydrator.,dermatology consensus,
+Allantoin,,soothing,0,yes,yes,no,Soothing and calming.,dermatology consensus,
+Centella Asiatica Extract,Cica|Gotu Kola,soothing,0,yes,yes,no,Calming botanical.,dermatology consensus,
+Ceramide NP,Ceramide 3|Ceramide,barrier repair,0,yes,yes,no,Barrier-repairing lipid.,dermatology consensus,
+Squalane,,emollient,0,yes,yes,no,Lightweight non-comedogenic oil.,Fulton 1989 / compiled comedogenicity data,
+Dimethicone,Silicone,emollient,1,yes,yes,no,Silicone; generally non-comedogenic.,Fulton 1989 / compiled comedogenicity data,
+Cyclopentasiloxane,,emollient,0,yes,yes,no,Volatile silicone.,Fulton 1989 / compiled comedogenicity data,
+Petrolatum,Petroleum Jelly|Vaseline,occlusive,0,yes,yes,no,Occlusive; non-comedogenic despite myths.,Fulton 1989 / compiled comedogenicity data,
+Mineral Oil,Paraffinum Liquidum,occlusive,0,yes,yes,no,Refined cosmetic mineral oil; non-comedogenic.,Fulton 1989 / compiled comedogenicity data,
+Coconut Oil,Cocos Nucifera Oil,emollient,4,no,yes,no,Highly comedogenic; fungal-acne trigger.,Fulton 1989 / compiled comedogenicity data,
+Cocoa Butter,Theobroma Cacao Butter,emollient,4,no,yes,no,Comedogenic for acne-prone skin.,Fulton 1989 / compiled comedogenicity data,
+Shea Butter,Butyrospermum Parkii Butter,emollient,2,yes,yes,no,Moderately rich; generally tolerated.,Fulton 1989 / compiled comedogenicity data,
+Isopropyl Myristate,IPM,emollient,5,yes,yes,no,Highly comedogenic.,Fulton 1989 / compiled comedogenicity data,
+Isopropyl Palmitate,,emollient,4,yes,yes,no,Comedogenic emollient.,Fulton 1989 / compiled comedogenicity data,
+Myristyl Myristate,,emollient,5,no,yes,no,Comedogenic and fungal-acne trigger.,Fulton 1989 / compiled comedogenicity data,
+Lauric Acid,,emollient,4,no,yes,no,Fatty acid - feeds Malassezia.,Simple Skincare Science fungal-acne-safe list,
+Oleic Acid,,emollient,2,no,yes,yes,Fatty acid - fungal-acne trigger; can disrupt barrier.,Simple Skincare Science fungal-acne-safe list,
+Stearic Acid,,emulsifier,2,yes,yes,no,Fatty acid emulsifier; generally fine.,Fulton 1989 / compiled comedogenicity data,
+Palmitic Acid,,emulsifier,2,yes,yes,no,Fatty acid; low risk.,Fulton 1989 / compiled comedogenicity data,
+Polysorbate 20,,emulsifier,0,no,yes,no,Polysorbate - potential Malassezia trigger.,Simple Skincare Science fungal-acne-safe list,
+Polysorbate 60,,emulsifier,0,no,yes,no,Polysorbate - potential fungal-acne trigger.,Simple Skincare Science fungal-acne-safe list,
+Polysorbate 80,,emulsifier,0,no,yes,no,Polysorbate - potential fungal-acne trigger.,Simple Skincare Science fungal-acne-safe list,
+Glyceryl Stearate,,emulsifier,1,no,yes,no,Fatty ester emulsifier; fungal-acne caution.,Simple Skincare Science fungal-acne-safe list,
+Cetearyl Alcohol,,emollient,2,yes,yes,no,Fatty alcohol; usually well tolerated.,Fulton 1989 / compiled comedogenicity data,
+Cetyl Alcohol,,emollient,2,yes,yes,no,Fatty alcohol; not drying.,Fulton 1989 / compiled comedogenicity data,
+Stearyl Alcohol,,emollient,2,yes,yes,no,Fatty alcohol emollient.,Fulton 1989 / compiled comedogenicity data,
+Alcohol Denat,Denatured Alcohol|SD Alcohol|Ethanol,solvent,0,yes,yes,yes,Drying; can irritate sensitive skin in high amounts.,dermatology consensus,
+Fragrance,Parfum|Perfume,fragrance,0,yes,yes,yes,Common irritant/allergen for sensitive skin.,EU Reg 1223/2009 Annex III,
+Limonene,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III,
+Linalool,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III,
+Citronellol,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III,
+Geraniol,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III,
+Eugenol,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III,
+Citral,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III,
+Coumarin,,fragrance,0,yes,yes,yes,Fragrance allergen (EU-listed).,EU Reg 1223/2009 Annex III,
+Benzyl Alcohol,,preservative,0,yes,yes,yes,Preservative and listed fragrance allergen.,EU Reg 1223/2009 Annex III entry 45 (max 1% as preservative),restricted
+Tea Tree Oil,Melaleuca Alternifolia Oil,essential oil,2,yes,caution,yes,Essential oil; antibacterial but irritating; pregnancy caution.,dermatology consensus,
+Lavender Oil,Lavandula Angustifolia Oil,essential oil,2,yes,caution,yes,Essential oil; potential irritant/allergen.,dermatology consensus,
+Peppermint Oil,Mentha Piperita Oil,essential oil,2,yes,caution,yes,Essential oil; can irritate.,dermatology consensus,
+Phenoxyethanol,,preservative,0,yes,yes,no,Common gentle preservative.,EU CosIng,
+Ethylhexylglycerin,,preservative,0,yes,yes,no,Preservative booster.,EU CosIng,
+Sodium Benzoate,,preservative,0,yes,yes,no,Mild preservative.,EU CosIng,
+Potassium Sorbate,,preservative,0,yes,yes,no,Mild preservative.,EU CosIng,
+Methylparaben,Paraben,preservative,0,yes,yes,no,Paraben preservative; EU-permitted within limits.,EU CosIng,
+Propylparaben,Paraben,preservative,0,yes,yes,no,Paraben preservative; EU-restricted concentration.,EU CosIng Annex V,
+Chlorphenesin,,preservative,0,yes,yes,no,Preservative.,EU CosIng,
+Zinc Oxide,,UV filter,0,yes,yes,no,Mineral sunscreen; pregnancy-safe.,EU Reg 1223/2009 Annex VI entry 30 (sunscreen; max 25%),restricted
+Titanium Dioxide,,UV filter,1,yes,yes,no,Mineral sunscreen.,dermatology consensus,
+Avobenzone,Butyl Methoxydibenzoylmethane,UV filter,0,yes,yes,no,Chemical UVA filter.,EU Reg 1223/2009 Annex VI entry 22 (max 3%),restricted
+Octinoxate,Ethylhexyl Methoxycinnamate,UV filter,0,yes,caution,yes,Chemical UV filter; some pregnancy caution debated.,EU Reg 1223/2009 Annex VI entry 13 (max 7.5%),restricted
+Oxybenzone,Benzophenone-3,UV filter,0,yes,caution,yes,Chemical UV filter; absorption concerns.,"EU Reg 1223/2009 Annex VI entry 4 (max 6% body/face, 0.5% oral)",restricted
+Homosalate,,UV filter,0,yes,caution,no,Chemical UV filter; EU concentration review.,EU Reg 1223/2009 Annex VI entry 3 (max 7.34%),restricted
+Octocrylene,,UV filter,0,yes,yes,yes,Chemical UV filter; possible allergen.,EU Reg 1223/2009 Annex VI entry 10 (max 9%),restricted
+Sodium Hydroxide,Lye,pH adjuster,0,yes,yes,yes,pH adjuster; irritant in raw form,safe in formula.; EU CosIng,
+Citric Acid,,pH adjuster,0,yes,yes,no,pH adjuster; mild.,EU CosIng,
+Xanthan Gum,,thickener,0,yes,yes,no,Natural thickener.,common knowledge,
+Carbomer,,thickener,0,yes,yes,no,Gel thickener.,common knowledge,
+Sodium Lauryl Sulfate,SLS,surfactant,0,yes,yes,yes,Strong cleanser; can irritate/dry.,dermatology consensus,
+Sodium Laureth Sulfate,SLES,surfactant,0,yes,yes,yes,Cleanser; milder than SLS but still drying.,dermatology consensus,
+Cocamidopropyl Betaine,,surfactant,0,yes,yes,yes,Mild surfactant; occasional allergen.,EU allergen data,
+Coco-Glucoside,,surfactant,0,yes,yes,no,Gentle surfactant.,common knowledge,
+Decyl Glucoside,,surfactant,0,yes,yes,no,Gentle surfactant.,common knowledge,
+Propylene Glycol,,humectant,0,yes,yes,yes,Humectant; rare sensitiser.,dermatology consensus,
+Butylene Glycol,,humectant,0,yes,yes,no,Humectant; well tolerated.,common knowledge,
+Caprylic/Capric Triglyceride,,emollient,1,yes,yes,no,Light spreading emollient.,Fulton 1989 / compiled comedogenicity data,
+Jojoba Oil,Simmondsia Chinensis Oil,emollient,2,yes,yes,no,Resembles skin sebum; moderate.,Fulton 1989 / compiled comedogenicity data,
+Argan Oil,Argania Spinosa Kernel Oil,emollient,0,yes,yes,no,Lightweight non-comedogenic oil.,Fulton 1989 / compiled comedogenicity data,
+Rosehip Oil,Rosa Canina Fruit Oil,emollient,1,no,yes,no,High oleic/linoleic; fungal-acne caution.,Simple Skincare Science fungal-acne-safe list,
+Sunflower Oil,Helianthus Annuus Seed Oil,emollient,0,no,yes,no,High linoleic; barrier-friendly but fungal caution.,Simple Skincare Science fungal-acne-safe list,
+Almond Oil,Prunus Amygdalus Dulcis Oil,emollient,2,no,yes,no,Nut oil; fungal-acne trigger.,Simple Skincare Science fungal-acne-safe list,
+Olive Oil,Olea Europaea Fruit Oil,emollient,2,no,yes,no,High oleic; can clog and feed Malassezia.,Fulton 1989 / compiled comedogenicity data,
+Lanolin,,emollient,4,yes,yes,yes,Occlusive; comedogenic and possible allergen.,Fulton 1989 / compiled comedogenicity data,
+Beeswax,Cera Alba,emollient,2,yes,yes,no,Occlusive wax; mild.,Fulton 1989 / compiled comedogenicity data,
+Bakuchiol,,anti-ageing,0,yes,yes,no,Plant-based retinol alternative; pregnancy-friendlier.,emerging dermatology data,
+Kojic Acid,,skin lightening,0,yes,yes,yes,Brightener; can irritate.,"EU Reg 1223/2009 Annex III entry 243 (max 1% face, 0.5% hands)",restricted
+Arbutin,Alpha-Arbutin,skin lightening,0,yes,yes,no,Gentle brightener.,dermatology consensus,
+Urea,,humectant,0,yes,yes,yes,Humectant/keratolytic; high % can sting.,dermatology consensus,
+Aloe Barbadensis Leaf Juice,Aloe Vera,soothing,0,yes,yes,no,Soothing botanical.,common knowledge,
+Green Tea Extract,Camellia Sinensis Leaf Extract,antioxidant,0,yes,yes,no,Antioxidant botanical.,common knowledge,
+Sodium PCA,PCA-Na,humectant,0,yes,yes,no,Natural moisturizing factor; highly hydrating,dermatology consensus,
+Betaine,Trimethylglycine,humectant,0,yes,yes,no,Gentle amino acid derived humectant,dermatology consensus,
+Polyglutamic Acid,PGA,humectant,0,yes,yes,no,Holds 10x more moisture than hyaluronic acid,dermatology consensus,
+Sorbitol,glucitol,humectant,0,yes,yes,no,Sugar-derived humectant,dermatology consensus,
+Trehalose,mycose,humectant,0,yes,yes,no,Sugar humectant; helps skin water retention,dermatology consensus,
+Xylitol,,humectant,0,yes,yes,no,Sugar alcohol humectant; reinforces barrier,dermatology consensus,
+Erythritol,,humectant,0,yes,yes,no,Moisturizing polyol,dermatology consensus,
+Pantolactone,,humectant,0,yes,yes,no,Humectant and conditioning agent,dermatology consensus,
+Maltitol,,humectant,0,yes,yes,no,Sugar-based humectant,dermatology consensus,
+Diglycerin,,humectant,0,yes,yes,no,Larger glycerin molecule; longer-lasting hydration,dermatology consensus,
+C12-15 Alkyl Benzoate,,emollient,1,yes,yes,no,Light non-greasy ester emollient,Fulton 1989,
+Isododecane,,emollient,0,yes,yes,no,Volatile hydrocarbon emollient,Fulton 1989,
+Behenyl Alcohol,,emollient,0,yes,yes,no,Fatty alcohol; non-comedogenic unlike cetearyl,Fulton 1989,
+Hydrogenated Polyisobutene,,emollient,1,yes,yes,no,Synthetic emollient; mineral oil alternative,Fulton 1989,
+Caprylyl Glycol,,emollient,1,yes,yes,no,Humectant and preservative booster; mild emollient,dermatology consensus,
+Hexylene Glycol,,emollient,2,yes,yes,no,Solvent and emollient; mildly comedogenic,Fulton 1989,
+Caprylyl Methicone,,emollient,0,yes,yes,no,Lightweight silicone emollient,dermatology consensus,
+Cetyl Ethylhexanoate,,emollient,3,no,yes,no,Highly spreading ester; fungal-acne trigger,Simple Skincare Science,
+Neopentyl Glycol Diheptanoate,,emollient,0,yes,yes,no,Lightweight volatile emollient; ester,dermatology consensus,
+Squalene,,emollient,3,yes,yes,no,Squalane precursor; oxidises easily; comedogenic,Fulton 1989,
+Shea Butter Ethyl Esters,,emollient,1,yes,yes,no,Eco-friendly light ester from shea butter,dermatology consensus,
+Coco-Caprylate,Coco-Caprylate/Caprate,emollient,2,no,yes,no,Coconut-derived emollient ester; fungal acne trigger,Simple Skincare Science,
+Decyl Oleate,,emollient,3,no,yes,no,Ester emollient; fungal acne trigger,Simple Skincare Science,
+Ethylhexyl Palmitate,Octyl Palmitate,emollient,4,yes,yes,no,Highly comedogenic ester,Fulton 1989,
+Ethylhexyl Stearate,Octyl Stearate,emollient,5,no,yes,no,Severely comedogenic ester; fungal acne trigger,Fulton 1989,
+Myristyl Lactate,,emollient,4,yes,yes,no,Highly comedogenic lactic acid ester,Fulton 1989,
+Cetyl Lactate,,emollient,4,yes,yes,no,Comedogenic ester,Fulton 1989,
+PPG-15 Stearyl Ether,,emollient,2,yes,yes,no,Synthetic ether emollient,Fulton 1989,
+Isostearyl Neopentanoate,,emollient,3,no,yes,no,Comedogenic ester; fungal acne trigger,Fulton 1989,
+Diisopropyl Adipate,,emollient,0,yes,yes,no,Fast-absorbing non-comedogenic ester,dermatology consensus,
+Butyl Stearate,,emollient,3,no,yes,no,Comedogenic ester; fungal acne trigger,Fulton 1989,
+Cetyl Palmitate,,emollient,0,no,yes,no,Fatty ester; fungal acne trigger,Simple Skincare Science,
+Lanoline Alcohol,Lanolin Alcohol,emollient,4,yes,yes,yes,Highly comedogenic; potential allergen,Fulton 1989,
+Stearyl Heptanoate,,emollient,4,no,yes,no,Highly comedogenic wax ester,Fulton 1989,
+Octyldodecanol,,emollient,3,yes,yes,no,Fatty alcohol; moderately comedogenic,Fulton 1989,
+Gluconolactone,PHA,exfoliant,0,yes,yes,no,PHA exfoliant; very gentle and hydrating,dermatology consensus,
+Lactobionic Acid,PHA,exfoliant,0,yes,yes,no,PHA exfoliant; antioxidant properties,dermatology consensus,
+Malic Acid,AHA,exfoliant,0,yes,yes,yes,AHA exfoliant derived from apples; mild irritant,dermatology consensus,
+Ferulic Acid,,antioxidant,0,yes,yes,no,Potent antioxidant; stabilises Vitamin C,dermatology consensus,
+Tartaric Acid,AHA,exfoliant,0,yes,yes,yes,AHA exfoliant derived from grapes; pH adjuster,dermatology consensus,
+Phytic Acid,,exfoliant,0,yes,yes,no,Gentle exfoliating acid and chelating agent,dermatology consensus,
+Salicylic Acid Acetate,Aspirin,exfoliant,0,yes,caution,yes,Salicylic derivative; use with caution in pregnancy,EU Reg 1223/2009 Annex III (salicylate derivative; same limits apply),restricted
+Tranexamic Acid,,skin conditioning,0,yes,yes,no,Helps fade hyperpigmentation and melasma,dermatology consensus,
+Dipotassium Glycyrrhizate,Licorice Extract Derivative,soothing,0,yes,yes,no,Licorice derivative; strong anti-inflammatory,dermatology consensus,
+Resveratrol,,antioxidant,0,yes,yes,no,Potent antioxidant from grapes,dermatology consensus,
+Coenzyme Q10,Ubiquinone,antioxidant,0,yes,yes,no,Antioxidant and anti-ageing active,dermatology consensus,
+Adenosine,,skin conditioning,0,yes,yes,no,Anti-ageing cell-signaling ingredient,dermatology consensus,
+Caffeine,,skin conditioning,0,yes,yes,no,Vasoconstrictor; reduces puffiness under eyes,dermatology consensus,
+Centella Asiatica Leaf Extract,Cica Leaf,soothing,0,yes,yes,no,Soothing cica botanical extract,dermatology consensus,
+Madecassoside,,soothing,0,yes,yes,no,Active compound from Centella; wound healing,dermatology consensus,
+Asiaticoside,,soothing,0,yes,yes,no,Active compound from Centella; antioxidant,dermatology consensus,
+Madecassic Acid,,soothing,0,yes,yes,no,Centella component; skin repair,dermatology consensus,
+Asiatic Acid,,soothing,0,yes,yes,no,Centella component; anti-inflammatory,dermatology consensus,
+Bisabolol,Alpha-Bisabolol,soothing,0,yes,yes,no,Soothing active derived from Chamomile,dermatology consensus,
+Beta-Glucan,,humectant,0,yes,yes,no,Polysaccharide; deeply hydrating and soothing,dermatology consensus,
+Glycyrrhiza Glabra Root Extract,Licorice Root Extract,soothing,0,yes,yes,no,Licorice root; fades hyperpigmentation,dermatology consensus,
+Astaxanthin,,antioxidant,0,yes,yes,no,Extremely potent antioxidant carotenoid,dermatology consensus,
+Allantoin USP,,soothing,0,yes,yes,no,Pure soothing allantoin,dermatology consensus,
+Epigallocatechin Gallate,EGCG,antioxidant,0,yes,yes,no,Green tea active antioxidant,dermatology consensus,
+Idebenone,Hydroxydecyl Ubiquinone,antioxidant,0,yes,yes,no,Synthetic CoQ10 analog; potent antioxidant,dermatology consensus,
+Superoxide Dismutase,SOD,antioxidant,0,yes,yes,no,Antioxidant enzyme,dermatology consensus,
+Ferulic Acid Ethyl Ester,,antioxidant,0,yes,yes,no,Esterified ferulic acid,dermatology consensus,
+Tinosorb S,Bemotrizinol|Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine,UV filter,0,yes,yes,no,Broad-spectrum next-gen organic UV filter; highly photostable,EU CosIng Annex VI,
+Tinosorb M,Bisoctrizole|Methylene Bis-Benzotriazolyl Tetramethylbutylphenol,UV filter,0,yes,yes,no,Organic particulate UV filter; hybrid mineral/chemical,EU CosIng Annex VI,
+Uvinul A Plus,Diethylamino Hydroxybenzoyl Hexyl Benzoate,UV filter,0,yes,yes,no,Photostable UVA filter; next-gen,EU CosIng Annex VI,
+Uvinul T 150,Ethylhexyl Triazone,UV filter,0,yes,yes,no,Highly effective next-gen UVB filter,EU CosIng Annex VI,
+Mexoryl SX,Ecamsule|Terephthalylidene Dicamphor Sulfonic Acid,UV filter,0,yes,yes,no,L'Oreal patented water-soluble UVA filter,EU CosIng Annex VI,
+Mexoryl XL,Drometrizole Trisiloxane,UV filter,0,yes,yes,no,L'Oreal patented lipophilic broad-spectrum filter,EU CosIng Annex VI,
+Tinosorb A2B,Tris-Biphenyl Triazine,UV filter,0,yes,yes,no,Highly efficient next-gen UVB and UVAII filter,EU CosIng Annex VI,
+Iscotrizinol,Uvasorb HEB|Diethylhexyl Butamido Triazone,UV filter,0,yes,yes,no,Very photostable UVB filter,EU CosIng Annex VI,
+Parsol SLX,Polysilicone-15,UV filter,0,yes,yes,no,Silicone-based UVB filter,EU CosIng Annex VI,
+Palmitoyl Tripeptide-1,Pal-GHK,anti-ageing,0,yes,yes,no,Peptide that stimulates collagen synthesis,dermatology consensus,
+Palmitoyl Tetrapeptide-7,Pal-GQPR,anti-ageing,0,yes,yes,no,Peptide that reduces skin inflammation signals,dermatology consensus,
+Palmitoyl Pentapeptide-4,Matrixyl,anti-ageing,0,yes,yes,no,Classic anti-ageing peptide,dermatology consensus,
+Acetyl Hexapeptide-8,Argireline|Acetyl Hexapeptide-3,anti-ageing,0,yes,yes,no,Argireline; helps relax facial muscle tension,dermatology consensus,
+Copper Tripeptide-1,GHK-Cu,skin conditioning,0,yes,yes,no,Promotes wound healing and collagen synthesis,dermatology consensus,
+Oligopeptide-1,EGF|Epidermal Growth Factor,anti-ageing,0,yes,yes,no,Growth factor; promotes cell renewal,dermatology consensus,
+Acetyl Octapeptide-3,Snap-8,anti-ageing,0,yes,yes,no,Argireline extension peptide,dermatology consensus,
+Palmitoyl Tripeptide-5,Syn-Coll,anti-ageing,0,yes,yes,no,Peptide targeting TGF-beta to boost collagen,dermatology consensus,
+Nonapeptide-1,,skin conditioning,0,yes,yes,no,Peptide that helps block melanin synthesis,dermatology consensus,
+Matrixyl 3000,,anti-ageing,0,yes,yes,no,Peptide blend (Tripeptide-1 + Tetrapeptide-7),dermatology consensus,
+DMDM Hydantoin,,preservative,0,yes,yes,yes,Formaldehyde-releaser; common sensitiser,EU Reg 1223/2009 Annex III (formaldehyde releaser; max 0.2% as HCHO),restricted
+Methylisothiazolinone,MIT,preservative,0,yes,yes,yes,Strong contact allergen; banned in leave-on in EU,"EU Reg 1223/2009 Annex III entry 57 (rinse-off only, 0.0015%)",restricted
+Quaternium-15,,preservative,0,yes,yes,yes,Formaldehyde-releaser; strong allergen,EU Reg 1223/2009 Annex III (formaldehyde releaser; max 0.2% as HCHO),restricted
+Diazolidinyl Urea,,preservative,0,yes,yes,yes,Formaldehyde-releaser preservative,EU Reg 1223/2009 Annex III (formaldehyde releaser; max 0.5%),restricted
+Imidazolidinyl Urea,,preservative,0,yes,yes,yes,Formaldehyde-releaser preservative,EU Reg 1223/2009 Annex III (formaldehyde releaser; max 0.6%),restricted
+Methylchloroisothiazolinone,CMIT,preservative,0,yes,yes,yes,Preservative; highly sensitising; wash-off only in EU,"EU Reg 1223/2009 Annex III entry 39 (rinse-off only, 0.0015%)",restricted
+Formaldehyde,,preservative,0,yes,no,yes,Banned in cosmetics in EU; carcinogenic,EU Reg 1223/2009 Annex III entry 5 (max 0.2% as HCHO),restricted
+Benzalkonium Chloride,,preservative,0,yes,yes,yes,Cationic surfactant and preservative; potential irritant,EU CosIng Annex III,
+BHT,Butylated Hydroxytoluene,preservative,0,yes,yes,no,Synthetic antioxidant preservative; safety debated,dermatology consensus,
+BHA,Butylated Hydroxyanisole,preservative,0,yes,caution,no,Antioxidant preservative; endocrine concern; pregnancy caution,dermatology consensus,
+Sorbic Acid,,preservative,0,yes,yes,yes,Natural preservative; rare contact allergen,dermatology consensus,
+Salicylic Acid Benzyl Ester,Benzyl Salicylate,fragrance,0,yes,yes,yes,Fragrance allergen and UV absorber,EU Reg 1223/2009 Annex III,
+Chamomile Extract,Chamomilla Recutita Flower Extract,soothing,0,yes,yes,no,Soothing botanical extract,dermatology consensus,
+Oat Kernel Extract,Avena Sativa Kernel Extract|Colloidal Oatmeal,soothing,0,yes,yes,no,Colloidal oatmeal extract; extremely soothing,dermatology consensus,
+Sea Buckthorn Oil,Hippophae Rhamnoides Oil,emollient,1,no,yes,no,Rich botanical oil; fungal acne trigger,Simple Skincare Science,
+Calendula Extract,Calendula Officinalis Flower Extract,soothing,0,yes,yes,no,Soothing and healing flower extract,dermatology consensus,
+Licorice Extract,Glycyrrhiza Glabra Root,soothing,0,yes,yes,no,Brightening and calming botanical,dermatology consensus,
+Rosemary Leaf Extract,Rosmarinus Officinalis Leaf Extract,antioxidant,0,yes,yes,yes,Antioxidant botanical; potential allergen,dermatology consensus,
+Neem Oil,Melia Azadirachta Seed Oil,emollient,4,no,yes,no,Highly comedogenic botanical oil; fungal acne trigger,Fulton 1989,
+Rose Water,Rosa Damascena Flower Water,soothing,0,yes,yes,no,Soothing distilled flower water,common knowledge,
+Grapeseed Oil,Vitis Vinifera Seed Oil,emollient,1,no,yes,no,Linoleic-rich oil; fungal acne trigger,Simple Skincare Science,
+Sweet Almond Oil,Prunus Amygdalus Dulcis Oil,emollient,2,no,yes,no,Rich emollient; fungal acne trigger,Fulton 1989,
+Avocado Oil,Persea Gratissima Oil,emollient,3,no,yes,no,Heavy comedogenic fruit oil; fungal acne trigger,Fulton 1989,
+Sesame Oil,Sesamum Indicum Seed Oil,emollient,3,no,yes,no,Moderately comedogenic oil,Fulton 1989,
+Wheat Germ Oil,Triticum Vulgare Germ Oil,emollient,5,no,yes,no,Extremely comedogenic oil; rich in Vitamin E,Fulton 1989,
+Evening Primrose Oil,Oenothera Biennis Oil,emollient,2,no,yes,no,Linoleic-rich oil; fungal acne trigger,Simple Skincare Science,
+Borage Seed Oil,Borago Officinalis Seed Oil,emollient,2,no,yes,no,Soothes dry skin; fungal acne trigger,Simple Skincare Science,
+Macadamia Oil,Macadamia Integrifolia Seed Oil,emollient,2,no,yes,no,Rich in palmitoleic acid; fungal acne trigger,Fulton 1989,
+Apricot Kernel Oil,Prunus Armeniaca Kernel Oil,emollient,2,no,yes,no,Moderately comedogenic oil,Fulton 1989,
+Tamanu Oil,Calophyllum Inophyllum Seed Oil,emollient,2,no,yes,no,Wound-healing oil; fungal acne trigger,Simple Skincare Science,
+Marula Oil,Sclerocarya Birrea Seed Oil,emollient,3,no,yes,no,Rich emollient; fungal acne trigger,Simple Skincare Science,
+Castor Oil,Ricinus Communis Seed Oil,emollient,1,yes,yes,no,Thick ricinoleic acid oil; fungal acne safe,Fulton 1989,
+Pomegranate Seed Oil,Punica Granatum Seed Oil,emollient,1,no,yes,no,Antioxidant oil; fungal acne trigger,Simple Skincare Science,
+Chia Seed Oil,Salvia Hispanica Seed Oil,emollient,3,no,yes,no,Rich in omega-3; fungal acne trigger,Simple Skincare Science,
+Marigold Extract,Tagetes Erecta Flower Extract,soothing,0,yes,yes,no,Calming extract,common knowledge,
+Oat Beta-Glucan,,soothing,0,yes,yes,no,Soluble oat fiber; highly soothing,dermatology consensus,
+Ginseng Root Extract,Panax Ginseng Root Extract,antioxidant,0,yes,yes,no,Traditional anti-ageing herb,common knowledge,
+Ginger Root Extract,Zingiber Officinale Root Extract,soothing,0,yes,yes,yes,Anti-inflammatory; can sting in raw form,dermatology consensus,
+Centella Extract,Centella Asiatica Extract,soothing,0,yes,yes,no,Calming cica botanical,dermatology consensus,
+Propanediol,"1,3-Propanediol",solvent,0,yes,yes,no,Natural humectant and solvent,dermatology consensus,
+Pentylene Glycol,,solvent,0,yes,yes,no,Humectant and solvent; antimicrobial booster,dermatology consensus,
+Polysorbate 40,,emulsifier,0,no,yes,no,Fatty ester; fungal acne trigger,Simple Skincare Science,
+PEG-100 Stearate,,surfactant,1,no,yes,no,Emulsifier; fungal acne trigger,Simple Skincare Science,
+PEG-40 Hydrogenated Castor Oil,,surfactant,0,yes,yes,no,Solubilizer; fungal acne safe,Simple Skincare Science,
+Steareth-20,,emulsifier,2,no,yes,no,Comedogenic emulsifier; fungal acne trigger,Fulton 1989,
+Steareth-2,,emulsifier,2,no,yes,no,Comedogenic emulsifier; fungal acne trigger,Fulton 1989,
+Steareth-21,,emulsifier,2,no,yes,no,Emulsifier; fungal acne trigger,Fulton 1989,
+Ceteareth-20,,emulsifier,4,no,yes,no,Highly comedogenic when combined with cetearyl alcohol,Fulton 1989,
+Cetereath-12,,emulsifier,2,no,yes,no,Emulsifier; fungal acne trigger,Fulton 1989,
+Laureth-4,,surfactant,5,no,yes,no,Highly comedogenic surfactant; fungal acne trigger,Fulton 1989,
+Laureth-23,,surfactant,3,yes,yes,no,Surfactant; moderately comedogenic,Fulton 1989,
+Cetearyl Glucoside,,emulsifier,2,yes,yes,no,Mild emulsifier; generally safe,Fulton 1989,
+Sorbitan Olivate,,emulsifier,0,no,yes,no,Olive-derived emulsifier; fungal acne trigger,Simple Skincare Science,
+Sorbitan Stearate,,emulsifier,1,no,yes,no,Fatty emulsifier; fungal acne trigger,Simple Skincare Science,
+Sorbitan Monostearate,,emulsifier,1,no,yes,no,Fungal acne trigger,Simple Skincare Science,
+Sorbitan Trioleate,,emulsifier,3,no,yes,no,Comedogenic emulsifier; fungal acne trigger,Fulton 1989,
+Glyceryl Oleate,,emulsifier,2,no,yes,no,Fatty ester; fungal acne trigger,Simple Skincare Science,
+Glyceryl Cocoate,,emulsifier,2,no,yes,no,Fungal acne trigger,Simple Skincare Science,
+Glyceryl Dilaurate,,emulsifier,3,no,yes,no,Comedogenic; fungal acne trigger,Fulton 1989,
+Glyceryl Hydroxystearate,,emulsifier,2,no,yes,no,Fungal acne trigger,Simple Skincare Science,
+Sucrose Cocoate,,emulsifier,0,yes,yes,no,Gentle sugar-based emulsifier,Simple Skincare Science,
+Sucrose Stearate,,emulsifier,1,no,yes,no,Fungal acne trigger,Simple Skincare Science,
+PEG-80 Sorbitan Laurate,,surfactant,0,no,yes,no,Fungal acne trigger,Simple Skincare Science,
+Lecithin,,emollient,3,yes,yes,no,Natural phospholipid; moderately comedogenic,Fulton 1989,
+Hydrogenated Lecithin,,emollient,2,yes,yes,no,Restores skin barrier,dermatology consensus,
+Cholesterol,,barrier repair,0,yes,yes,no,Essential skin barrier lipid,dermatology consensus,
+Phytosphingosine,,barrier repair,0,yes,yes,no,Skin-identical lipid; antibacterial,dermatology consensus,
+Ceramide EOP,Ceramide 1,barrier repair,0,yes,yes,no,Critical skin barrier lipid,dermatology consensus,
+Ceramide AP,Ceramide 6 II,barrier repair,0,yes,yes,no,Barrier-supporting ceramide,dermatology consensus,
+Ceramide AS,Ceramide 5,barrier repair,0,yes,yes,no,Ceramide lipid,dermatology consensus,
+Ceramide NS,Ceramide 2,barrier repair,0,yes,yes,no,Barrier-repairing ceramide,dermatology consensus,
+Hyaluronic Acid Crosspolymer,Sodium Hyaluronate Crosspolymer,humectant,0,yes,yes,no,Crosslinked HA; prolonged hydration,dermatology consensus,
+Hydrolyzed Hyaluronic Acid,,humectant,0,yes,yes,no,Low molecular weight HA; penetrates deeper,dermatology consensus,
+Sodium Acetylated Hyaluronate,,humectant,0,yes,yes,no,Highly adhesive super hyaluronic acid,dermatology consensus,
+Hydrolyzed Sodium Hyaluronate,,humectant,0,yes,yes,no,Ultra-small hydrating molecule,dermatology consensus,
+Squalane Oil,,emollient,0,yes,yes,no,Squalane emollient,dermatology consensus,
+Helianthus Annuus Seed Oil Unsaponifiables,,emollient,0,yes,yes,no,Soothing sunflower fraction; barrier repair,dermatology consensus,
+Shea Butter Glycerides,,emollient,1,yes,yes,no,Water-soluble shea butter derivative,dermatology consensus,
+Capryloyl Salicylic Acid,LHA,exfoliant,0,yes,caution,no,Lipophilic LHA; gentle exfoliation,dermatology consensus,
+Gluconic Acid,,pH adjuster,0,yes,yes,no,Mild organic acid,common knowledge,
+Lactobionate,,exfoliant,0,yes,yes,no,Salt of lactobionic acid,common knowledge,
+Malic Acid Salt,Sodium Malate,pH adjuster,0,yes,yes,no,Buffer salt,common knowledge,
+Azelaoyl Diglycinate,Potassium Azeloyl Diglycinate,skin conditioning,0,yes,yes,no,Water-soluble azelaic acid derivative; brightens skin,dermatology consensus,
+Ascorbyl Glucoside,,antioxidant,0,yes,yes,no,Stable Vitamin C derivative; brightens skin,dermatology consensus,
+Tetrahexyldecyl Ascorbate,THD Ascorbate,antioxidant,1,yes,yes,no,Oil-soluble stable Vitamin C; highly effective,dermatology consensus,
+Magnesium Ascorbyl Phosphate,MAP,antioxidant,0,yes,yes,no,Stable water-soluble Vitamin C derivative,dermatology consensus,
+Sodium Ascorbyl Phosphate,SAP,antioxidant,0,yes,yes,no,Stable Vitamin C derivative; helps acne-prone skin,dermatology consensus,
+Ascorbyl Palmitate,,antioxidant,2,yes,yes,no,Comedogenic Vitamin C ester; less stable,Fulton 1989,
+3-O-Ethyl Ascorbic Acid,Ethyl Ascorbic Acid,antioxidant,0,yes,yes,no,Highly stable direct-acting Vitamin C derivative,dermatology consensus,
+Tocopheryl Acetate USP,,antioxidant,0,yes,yes,no,High-grade Vitamin E,dermatology consensus,
+Ubiquinone 10,,antioxidant,0,yes,yes,no,Coenzyme Q10,common knowledge,
+Thioctic Acid,Alpha Lipoic Acid,antioxidant,0,yes,yes,yes,Potent antioxidant; can cause temporary stinging,dermatology consensus,
+Resveratrol Ferment,,antioxidant,0,yes,yes,no,Bioavailable fermented resveratrol,dermatology consensus,
+Bakuchiol Extract,,anti-ageing,0,yes,yes,no,Natural retinol-like botanical,common knowledge,
+Zinc PCA,,skin conditioning,0,yes,yes,no,Regulates sebum production; antimicrobial,dermatology consensus,
+Copper PCA,,skin conditioning,0,yes,yes,no,Astringent and antioxidant,dermatology consensus,
+Manganese PCA,,skin conditioning,0,yes,yes,no,Conditioning agent,common knowledge,
+Sodium Salicylate,,preservative,0,yes,caution,no,Salicylic salt; pregnancy caution,medical guidance,
+Triclosan,Trichloro-2-hydroxydiphenyl Ether,preservative,,,caution,no,"Antimicrobial restricted in EU to specific product types (toothpaste, hand soap, deodorant, foot care; max 0.3%). Endocrine disruption concerns.",EU Reg 1223/2009 Annex III entry 40,restricted
+Resorcinol,m-Dihydroxybenzene|Resorcin,hair colorant,,,caution,yes,"Phenolic compound used in hair dyes. EU restricted: max 0.5% non-oxidative hair colorants, max 1.25% oxidative preparations.",EU Reg 1223/2009 Annex III entry 35,restricted
+Hydrogen Peroxide,H2O2,oxidising agent,,,caution,yes,"Oxidising bleaching agent. EU restricted with concentration limits by product type (max 4% hair bleach, 0.1% general cosmetics). Avoid eye area.",EU Reg 1223/2009 Annex III entry 8,restricted
+Hexachlorophene,,antimicrobial,,,no,yes,Chlorinated bisphenol antimicrobial. Banned in EU cosmetics due to neurotoxicity and teratogenicity.,EU Reg 1223/2009 Annex II entry 419,banned
+Bithionol,,antimicrobial,,,no,yes,Chlorinated antimicrobial. Banned in EU cosmetics due to photosensitisation risk.,EU Reg 1223/2009 Annex II entry 93,banned
+Zinc Pyrithione,Pyrithione Zinc|ZPT,antimicrobial,,,caution,no,Anti-dandruff agent. EU restricted to rinse-off hair products only at max 1%; banned in leave-on products since 2022.,EU Reg 1223/2009 Annex III entry 101,restricted
+Piroctone Olamine,Octopirox,antimicrobial,,,caution,no,"Anti-dandruff agent. EU restricted to rinse-off hair products at max 1%, face products at max 0.5%.",EU Reg 1223/2009 Annex III entry 92,restricted
+Chlorhexidine Digluconate,Chlorhexidine|CHG,antimicrobial,,,caution,yes,"Broad-spectrum antimicrobial. EU restricted: max 0.1% general use, 0.5% oral hygiene. Avoid eye contact; anaphylaxis risk reported.",EU Reg 1223/2009 Annex III entry 43,restricted
