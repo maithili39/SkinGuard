@@ -34,16 +34,10 @@ export default function Home() {
   const [profile, setProfile] = useState<SkinProfile>(DEFAULT_PROFILE);
   const [avoidInput, setAvoidInput] = useState('');
   const [scans, setScans] = useState<ScanSummary[]>([]);
-  const [activeTab, setActiveTab] = useState<'routine' | 'compare'>('routine');
+  const [activeTab, setActiveTab] = useState<'analyze' | 'routine' | 'compare'>('analyze');
 
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sg_dark');
-      if (saved !== null) return saved === '1';
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
+  const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [file, setFile] = useState<File | null>(null);
@@ -67,9 +61,21 @@ export default function Home() {
 
   // ── Dark mode (persist to localStorage + system preference on first visit) ─
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark);
-    localStorage.setItem('sg_dark', isDark ? '1' : '0');
-  }, [isDark]);
+    setMounted(true);
+    const saved = localStorage.getItem('sg_dark');
+    if (saved !== null) {
+      setIsDark(saved === '1');
+    } else {
+      setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      document.documentElement.classList.toggle('dark', isDark);
+      localStorage.setItem('sg_dark', isDark ? '1' : '0');
+    }
+  }, [isDark, mounted]);
 
   // ── Show onboarding tooltip on first visit ────────────────────────────────
   useEffect(() => {
@@ -314,28 +320,28 @@ export default function Home() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <main id="main-content" className="min-h-screen flex flex-col items-center bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/20 relative overflow-hidden">
+    <main id="main-content" className="min-h-screen flex flex-col items-center bg-gradient-to-br from-slate-50 via-green-50/10 to-emerald-50/20 dark:from-slate-950 dark:via-slate-950/20 dark:to-slate-950 relative overflow-hidden transition-colors duration-300">
       {/* Decorative blobs */}
-      <div className="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] bg-primary-200/20 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-[-80px] right-[-80px] w-[400px] h-[400px] bg-emerald-200/20 rounded-full blur-[60px] pointer-events-none" />
+      <div className="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] bg-primary-200/20 dark:bg-primary-900/10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute bottom-[-80px] right-[-80px] w-[400px] h-[400px] bg-emerald-200/20 dark:bg-emerald-900/10 rounded-full blur-[60px] pointer-events-none" />
 
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <header className="w-full px-6 py-4 flex items-center justify-between relative z-10 border-b border-white/50 bg-white/60 backdrop-blur-sm">
+      <header className="w-full px-6 py-4 flex items-center justify-between relative z-10 border-b border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md transition-colors duration-300">
         <div className="flex items-center gap-2">
           <div className="bg-gradient-to-tr from-primary-600 to-primary-400 p-2 rounded-xl text-white shadow-lg shadow-primary-500/30">
             <ShieldCheck size={22} />
           </div>
-          <span className="font-extrabold text-xl text-slate-800">SkinGuard</span>
+          <span className="font-extrabold text-xl text-slate-800 dark:text-white">SkinGuard</span>
         </div>
         <div className="flex items-center gap-3">
           {/* Dark mode toggle */}
           <button
             onClick={() => setIsDark((d) => !d)}
-            className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors"
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+            title={mounted && isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             id="dark-mode-toggle"
           >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            {mounted && isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
           {user ? (
@@ -343,17 +349,17 @@ export default function Home() {
               <button
                 id="history-btn"
                 onClick={() => setShowHistory(true)}
-                className="flex items-center gap-2 text-sm text-slate-600 hover:text-primary-600 transition-colors px-3 py-2 rounded-full hover:bg-primary-50"
+                className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors px-3.5 py-2 rounded-full hover:bg-primary-50 dark:hover:bg-primary-950/20 font-semibold"
               >
                 <History size={16} /> History
               </button>
-              <div className="flex items-center gap-2 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-200">
+              <div className="flex items-center gap-2 bg-primary-50 dark:bg-primary-950/30 px-3.5 py-1.5 rounded-full border border-primary-100 dark:border-primary-900/60">
                 <span className="w-2 h-2 rounded-full bg-primary-500" />
-                <span className="text-sm font-medium text-primary-700 max-w-[140px] truncate">{user.email}</span>
+                <span className="text-sm font-semibold text-primary-700 dark:text-primary-300 max-w-[140px] truncate">{user.email}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-rose-500 transition-colors rounded-full hover:bg-rose-50"
+                className="p-2 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/20"
                 title="Sign out"
               >
                 <LogOut size={16} />
@@ -363,7 +369,7 @@ export default function Home() {
             <button
               id="login-btn"
               onClick={() => setShowLoginModal(true)}
-              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-md shadow-primary-500/20"
+              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-md shadow-primary-500/20 btn-lift"
             >
               <LogIn size={15} /> Sign In
             </button>
@@ -419,139 +425,158 @@ export default function Home() {
           Upload a product label or paste the ingredient list. We&apos;ll tell you what each ingredient does — and flag what matters for your skin.
         </p>
 
-        <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
-
-        {/* Avoid list input */}
-        {user && (
-          <div className="w-full max-w-2xl mb-8">
-            <input
-              value={avoidInput}
-              onChange={(e) => handleAvoidChange(e.target.value)}
-              placeholder="Ingredients to avoid (comma-separated, e.g. Fragrance, SLS)"
-              className="w-full border border-slate-300 rounded-full px-5 py-3 text-sm text-slate-700 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition bg-white/80 backdrop-blur-sm"
-              id="avoid-input"
-            />
-          </div>
-        )}
-
-        {/* Upload + Manual entry */}
-        <UploadCard
-          file={file}
-          previewUrl={previewUrl}
-          isExtracting={isExtracting}
-          onFileChange={handleFileChange}
-          onExtract={handleExtract}
-          onBarcodeLookup={handleBarcodeLookup}
-          isBarcodeLookingUp={isBarcodeLookingUp}
-        />
-
-        {/* Barcode product match banner */}
-        {barcodeProduct && (
-          <div className="w-full max-w-2xl mt-6 p-4 rounded-2xl bg-gradient-to-r from-primary-50 to-emerald-50 dark:from-primary-950/20 dark:to-emerald-950/20 border border-primary-200 dark:border-primary-800/60 flex items-center justify-between gap-4 animate-fade-in-up">
-            <div className="flex items-center gap-3">
-              {barcodeProduct.imageUrl && (
-                <Image
-                  src={barcodeProduct.imageUrl}
-                  alt={barcodeProduct.name}
-                  width={48}
-                  height={48}
-                  className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
-                />
-              )}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">Barcode Match</p>
-                <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm leading-tight">
-                  {barcodeProduct.name}
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{barcodeProduct.brand}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                setBarcodeProduct(null);
-                setExtractedText('');
-              }}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Clear product"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
-
-        {/* Editable text area (shown after OCR or for manual entry) */}
-        {(extractedText !== '' || !file) && (
-          <div className="w-full max-w-2xl mt-6 space-y-3">
-            <label className="text-sm font-semibold text-slate-600 ml-1">
-              {extractedText ? 'Extracted ingredients (edit if needed):' : 'Or paste ingredients manually:'}
-            </label>
-            <textarea
-              value={extractedText}
-              onChange={(e) => { setExtractedText(e.target.value); setResults(null); }}
-              rows={5}
-              id="ingredient-textarea"
-              placeholder="Aqua, Glycerin, Niacinamide, Panthenol…"
-              className="w-full border border-slate-300 rounded-2xl p-4 text-sm text-slate-700 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition bg-white/90 shadow-sm resize-none"
-            />
-            <button
-              onClick={() => handleAnalyze()}
-              disabled={isAnalyzing || !extractedText.trim()}
-              id="analyze-btn"
-              className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-4 rounded-full font-semibold text-lg transition-all shadow-xl shadow-primary-500/30 flex items-center justify-center gap-3"
-            >
-              {isAnalyzing ? <Loader2 className="animate-spin" size={22} /> : <ShieldCheck size={22} />}
-              {isAnalyzing ? 'Analysing…' : 'Analyse Ingredients'}
-            </button>
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div className="w-full max-w-2xl mt-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700">
-            <AlertTriangle size={18} />
-            <p className="text-sm">{error}</p>
-          </div>
-        )}
-
-        {/* Results */}
-        {results && <ResultsDashboard results={results} onReanalyze={handleReanalyze} />}
-
-        {/* RAG Product Chat — shown after analysis */}
-        {results && (
-          <ProductChat results={results} />
-        )}
-
-        {/* Advanced Tools Section */}
-        <div className="w-full max-w-4xl mt-12 space-y-6">
-          <div className="flex border-b border-slate-200 dark:border-slate-850">
-            <button
-              onClick={() => setActiveTab('routine')}
-              className={`px-6 py-3 font-bold text-sm border-b-2 transition-all duration-200 ${
-                activeTab === 'routine'
-                  ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                  : 'border-transparent text-slate-550 hover:text-slate-700'
-              }`}
-            >
-              🔄 Routine Layering Check
-            </button>
-            <button
-              onClick={() => setActiveTab('compare')}
-              className={`px-6 py-3 font-bold text-sm border-b-2 transition-all duration-200 ${
-                activeTab === 'compare'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-slate-550 hover:text-slate-700'
-              }`}
-            >
-              ⚖️ Product Comparison
-            </button>
-          </div>
-          
-          {activeTab === 'routine' ? (
-            <RoutineAnalyzer scans={scans} />
-          ) : (
-            <ComparePanel currentAnalysis={results} scans={scans} />
-          )}
+        {/* Unified Workspace Tab Bar */}
+        <div className="flex gap-1.5 p-1 bg-slate-100/85 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-800/40 w-fit mx-auto mb-10 relative z-10 shadow-sm">
+          <button
+            onClick={() => setActiveTab('analyze')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'analyze'
+                ? 'bg-white dark:bg-slate-800 text-primary-600 dark:text-primary-400 shadow-sm border border-slate-200/5 dark:border-slate-700/10'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            📸 Scan &amp; Analyze
+          </button>
+          <button
+            onClick={() => setActiveTab('routine')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'routine'
+                ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200/5 dark:border-slate-700/10'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            🔄 Routine Layering
+          </button>
+          <button
+            onClick={() => setActiveTab('compare')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'compare'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/5 dark:border-slate-700/10'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            ⚖️ Product Compare
+          </button>
         </div>
+
+        {/* Workspace Panels */}
+        {activeTab === 'analyze' && (
+          <div className="w-full max-w-4xl flex flex-col items-center animate-fade-in">
+            <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
+
+            {/* Avoid list input */}
+            {user && (
+              <div className="w-full max-w-2xl mb-8">
+                <input
+                  value={avoidInput}
+                  onChange={(e) => handleAvoidChange(e.target.value)}
+                  placeholder="Ingredients to avoid (comma-separated, e.g. Fragrance, SLS)"
+                  className="w-full border border-slate-250 dark:border-slate-750 rounded-full px-6 py-3.5 text-sm text-slate-800 dark:text-slate-100 bg-white/80 dark:bg-slate-900/80 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 dark:focus:ring-primary-950/20 outline-none transition shadow-sm"
+                  id="avoid-input"
+                />
+              </div>
+            )}
+
+            {/* Upload + Manual entry */}
+            <UploadCard
+              file={file}
+              previewUrl={previewUrl}
+              isExtracting={isExtracting}
+              onFileChange={handleFileChange}
+              onExtract={handleExtract}
+              onBarcodeLookup={handleBarcodeLookup}
+              isBarcodeLookingUp={isBarcodeLookingUp}
+            />
+
+            {/* Barcode product match banner */}
+            {barcodeProduct && (
+              <div className="w-full max-w-2xl mt-6 p-4 rounded-2xl bg-gradient-to-r from-primary-50 to-emerald-50 dark:from-primary-950/20 dark:to-emerald-950/20 border border-primary-200 dark:border-primary-800/60 flex items-center justify-between gap-4 animate-fade-in-up">
+                <div className="flex items-center gap-3">
+                  {barcodeProduct.imageUrl && (
+                    <Image
+                      src={barcodeProduct.imageUrl}
+                      alt={barcodeProduct.name}
+                      width={48}
+                      height={48}
+                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
+                    />
+                  )}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">Barcode Match</p>
+                    <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm leading-tight">
+                      {barcodeProduct.name}
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{barcodeProduct.brand}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setBarcodeProduct(null);
+                    setExtractedText('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                  title="Clear product"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Editable text area (shown after OCR or for manual entry) */}
+            {(extractedText !== '' || !file) && (
+              <div className="w-full max-w-2xl mt-6 space-y-3">
+                <label className="text-sm font-bold text-slate-650 dark:text-slate-350 ml-1.5">
+                  {extractedText ? 'Extracted ingredients (edit if needed):' : 'Or paste ingredients manually:'}
+                </label>
+                <textarea
+                  value={extractedText}
+                  onChange={(e) => { setExtractedText(e.target.value); setResults(null); }}
+                  rows={5}
+                  id="ingredient-textarea"
+                  placeholder="Aqua, Glycerin, Niacinamide, Panthenol…"
+                  className="w-full border border-slate-250 dark:border-slate-750 rounded-2xl p-4 text-sm text-slate-800 dark:text-slate-100 bg-white/90 dark:bg-slate-900/90 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 dark:focus:ring-primary-950/20 outline-none transition shadow-sm resize-none"
+                />
+                <button
+                  onClick={() => handleAnalyze()}
+                  disabled={isAnalyzing || !extractedText.trim()}
+                  id="analyze-btn"
+                  className="w-full bg-gradient-to-r from-primary-600 to-emerald-600 hover:from-primary-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-primary-500/25 hover:shadow-primary-500/35 flex items-center justify-center gap-3 btn-lift"
+                >
+                  {isAnalyzing ? <Loader2 className="animate-spin" size={22} /> : <ShieldCheck size={22} />}
+                  {isAnalyzing ? 'Analysing…' : 'Analyse Ingredients'}
+                </button>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div className="w-full max-w-2xl mt-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700">
+                <AlertTriangle size={18} />
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Results */}
+            {results && <ResultsDashboard results={results} onReanalyze={handleReanalyze} />}
+
+            {/* RAG Product Chat — shown after analysis */}
+            {results && (
+              <ProductChat results={results} />
+            )}
+          </div>
+        )}
+
+        {activeTab === 'routine' && (
+          <div className="w-full max-w-4xl animate-fade-in">
+            <RoutineAnalyzer scans={scans} />
+          </div>
+        )}
+
+        {activeTab === 'compare' && (
+          <div className="w-full max-w-4xl animate-fade-in">
+            <ComparePanel currentAnalysis={results} scans={scans} />
+          </div>
+        )}
 
         {/* Stats strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-20 w-full max-w-4xl">

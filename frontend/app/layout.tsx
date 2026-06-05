@@ -1,8 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
+
+export const viewport: Viewport = {
+  themeColor: "#16a34a",
+};
 
 export const metadata: Metadata = {
   title: "SkinGuard - AI Skincare Ingredient Analyzer",
@@ -10,7 +14,6 @@ export const metadata: Metadata = {
   keywords: ["skincare", "ingredient analyzer", "acne", "comedogenic", "EU CosIng", "skin safety"],
   authors: [{ name: "SkinGuard" }],
   manifest: "/manifest.json",
-  themeColor: "#16a34a",
   openGraph: {
     title: "SkinGuard - AI Skincare Analyzer",
     description: "Know what's in your skincare. Free ingredient safety analysis.",
@@ -36,7 +39,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className={`${inter.variable} font-sans bg-slate-50 text-slate-900 min-h-screen selection:bg-primary-500 selection:text-white`}>
+      <body className={`${inter.variable} font-sans min-h-screen selection:bg-primary-500 selection:text-white`}>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:bg-primary-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-xl focus:z-50 focus:shadow-lg focus:font-bold outline-none"

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 // In Docker, BACKEND_URL is set to http://backend:8000 (the compose service name).
 // Locally it defaults to the dev backend on 127.0.0.1:8000.
-const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
+const BACKEND_URL = (process.env.BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
 
 const nextConfig = {
     output: 'standalone', // smaller production image for Docker

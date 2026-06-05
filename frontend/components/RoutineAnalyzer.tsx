@@ -101,7 +101,7 @@ export function RoutineAnalyzer({ scans }: Props) {
   };
 
   return (
-    <div className="w-full max-w-4xl bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-3xl border border-slate-200/60 dark:border-slate-800/60 p-6 shadow-xl animate-fade-in-up mt-8">
+    <div className="w-full max-w-4xl glass-panel rounded-3xl p-6 shadow-glass animate-fade-in-up mt-8">
       <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl text-emerald-600 dark:text-emerald-400">
           <Sparkles size={20} />
