@@ -119,13 +119,13 @@ export function ProductChat({ results }: Props) {
               Ask about this product
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Powered by Gemini 2.5 Pro · Grounded on your ingredient data
+              Grounded on your ingredient data
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700/50">
-            <Sparkles size={9} /> RAG
+            <Sparkles size={9} /> Assistant
           </span>
           {isOpen
             ? <ChevronUp size={18} className="text-slate-400" />
@@ -147,7 +147,7 @@ export function ProductChat({ results }: Props) {
                   SkinGuard AI
                 </p>
                 <p className="text-[10px] text-slate-400">
-                  Gemini 2.5 Pro · {results.found_ingredients?.length ?? 0} ingredients in context
+                  {results.found_ingredients?.length ?? 0} ingredients in context
                 </p>
               </div>
             </div>
@@ -224,8 +224,8 @@ export function ProductChat({ results }: Props) {
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 px-1">
                       Grounded on: {msg.groundedOn.slice(0, 5).join(', ')}
                       {msg.groundedOn.length > 5 && ` +${msg.groundedOn.length - 5} more`}
-                      {msg.source && msg.source !== 'template' && (
-                        <span className="ml-1 text-violet-400">· {msg.source}</span>
+                      {msg.source && msg.source === 'guard' && (
+                        <span className="ml-1 text-violet-400">· Guarded</span>
                       )}
                     </p>
                   )}
