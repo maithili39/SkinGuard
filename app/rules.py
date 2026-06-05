@@ -87,7 +87,7 @@ RULES: list[Rule] = [
         concern="acne",
         level="warning",
         kind="advice",
-        profile_gate=lambda p: p.acne_prone,
+        profile_gate=lambda p: p.acne_prone or p.oily_skin or p.combination_skin,
         predicate=lambda i: _comedo(i, 3),
         message=lambda i: f"{i.inci_name} is comedogenic (rating {i.comedogenic}/5) - may clog pores.",
     ),

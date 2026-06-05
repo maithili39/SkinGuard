@@ -173,7 +173,7 @@ def _summary(
 
     if has_pregnancy_danger and profile.pregnant:
         parts.append("but strictly NOT recommended during pregnancy")
-    elif has_acne_warning and profile.acne_prone:
+    elif has_acne_warning and (profile.acne_prone or getattr(profile, "oily_skin", False) or getattr(profile, "combination_skin", False)):
         parts.append("but contains pore-clogging ingredients")
     elif has_irritant and profile.sensitive_skin:
         parts.append("but contains known irritants")
