@@ -50,11 +50,10 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
         round(100 * assessed_count / matched_count) if matched_count > 0 else 0
     )
 
-    # If zero assessed ingredients, the rules engine defaulted to score=100 —
-    # but that 100 means "no problems found", NOT "safe". Override to None so
-    # the UI can distinguish "scored and clean" from "no data".
+    # If zero assessed ingredients or zero matched ingredients, override score to None
+    # so the UI can distinguish "scored and clean" from "no data".
     safety_score: int | None = result["score"]
-    if matched_count > 0 and assessed_count == 0:
+    if (matched_count > 0 and assessed_count == 0) or matched_count == 0:
         safety_score = None
 
     # Build per-ingredient detail (reusing the already-fetched `ingredients` list,

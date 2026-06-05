@@ -95,6 +95,44 @@ export function ResultsDashboard({ results, onReanalyze }: Props) {
     onReanalyze(updatedText);
   };
 
+  if (results.matched_count === 0) {
+    return (
+      <div className="w-full max-w-2xl mt-12 animate-fade-in-up">
+        <div className="glass-panel rounded-3xl p-8 border border-amber-250/45 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/15 via-transparent to-transparent shadow-glass text-center space-y-6">
+          <div className="flex justify-center">
+            <div className="p-4 bg-amber-50/80 dark:bg-amber-950/35 rounded-full">
+              <AlertTriangle size={36} className="text-amber-500 animate-pulse" />
+            </div>
+          </div>
+          
+          <div className="space-y-2 max-w-md mx-auto">
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg">
+              No Ingredients Recognized
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              We couldn&apos;t identify any standard cosmetic ingredients in the text you provided. Let&apos;s make sure the input is correct.
+            </p>
+          </div>
+
+          <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800/60 rounded-2xl p-5 text-left space-y-3 max-w-md mx-auto">
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Tips for a successful analysis:</p>
+            <ul className="text-xs text-slate-500 dark:text-slate-450 space-y-2 list-disc list-inside">
+              <li>
+                <strong className="text-slate-700 dark:text-slate-200">Check the text:</strong> Make sure you are pasting a standard INCI ingredients list (e.g., starting with <code className="bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded text-rose-500 font-semibold font-mono">Aqua / Water</code>, <code className="bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded text-rose-500 font-semibold font-mono">Glycerin</code>, etc.).
+              </li>
+              <li>
+                <strong className="text-slate-700 dark:text-slate-200">Improve photo quality:</strong> If uploading a photo, ensure it is in focus, well-lit, and cropped closely to the ingredients block.
+              </li>
+              <li>
+                <strong className="text-slate-700 dark:text-slate-205 dark:text-slate-200">Avoid description text:</strong> Do not paste full marketing claims, usage directions, or general product copy.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const dangerFindings  = results.findings.filter((f) => f.level === 'danger');
   const warningFindings = results.findings.filter((f) => f.level === 'warning');
   const goodFindings    = results.findings.filter((f) => f.level === 'good');
