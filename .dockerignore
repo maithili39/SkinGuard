@@ -12,8 +12,9 @@ frontend/node_modules/
 frontend/.next/
 frontend/tsconfig.tsbuildinfo
 
-# Data is bind-mounted at runtime, not baked into the image
-data/
+# Data: exclude evaluation/test data, but keep curated/reference for DB ingestion
+data/evaluation/
+data/test/
 
 # VCS / misc
 .git/
