@@ -23,7 +23,7 @@ frontend/next-env.d.ts
 *.sqlite3
 
 # Large raw reference data (downloaded, not committed)
-data/reference/*.csv
+# data/reference/*.csv
 
 # Fetched test fixtures (regenerable via scripts/fetch_test_labels.py)
 data/test/*.jsonl
