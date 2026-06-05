@@ -27,10 +27,10 @@ python-json-logger==2.0.7
 google-genai>=1.0.0
 # Tier 1-B: Sentence-embedding semantic matcher (local, no API key required)
 # CPU-only torch avoids the large GPU bundle; model downloads ~80 MB on first run.
-sentence-transformers>=3.0.0
-torch>=2.2.0
+# sentence-transformers>=3.0.0
+# torch>=2.2.0
 # numpy is already a transitive dep of sentence-transformers; pinned for safety
-numpy>=1.26.0
+# numpy>=1.26.0
 pgvector==0.3.1
 google-cloud-vision==3.8.0
 # ── Caching ───────────────────────────────────────────────────────────────────
