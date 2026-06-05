@@ -36,7 +36,10 @@ def register(request: Request, payload: RegisterIn, response: Response, db: Sess
     try:
         user = users_svc.register_user(db, payload.email, payload.password)
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        msg = str(exc)
+        if "already registered" in msg.lower() or "already exists" in msg.lower():
+            raise HTTPException(status_code=409, detail="User already exists.")
+        raise HTTPException(status_code=400, detail=msg)
     _set_auth_cookie(response, create_token(user.email))
     return AuthOut(email=user.email, profile=users_svc.profile_dict(user))
 
@@ -125,6 +128,11 @@ def reset_password(request: Request, payload: ResetPasswordIn, db: Session = Dep
     user = db.query(User).filter_by(email=email.strip().lower()).first()
     if not user:
         raise HTTPException(status_code=400, detail="User not found.")
+
+    try:
+        users_svc.validate_password_complexity(payload.new_password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     user.hashed_password = hash_password(payload.new_password)
     db.commit()

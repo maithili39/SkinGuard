@@ -55,6 +55,7 @@ export default function Home() {
   const [isBarcodeLookingUp, setIsBarcodeLookingUp] = useState(false);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalMode, setLoginModalMode] = useState<'login' | 'register'>('login');
   const [showHistory, setShowHistory] = useState(false);
 
   const profileSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -366,13 +367,22 @@ export default function Home() {
               </button>
             </>
           ) : (
-            <button
-              id="login-btn"
-              onClick={() => setShowLoginModal(true)}
-              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-md shadow-primary-500/20 btn-lift"
-            >
-              <LogIn size={15} /> Sign In
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                id="login-btn"
+                onClick={() => { setLoginModalMode('login'); setShowLoginModal(true); }}
+                className="text-slate-600 dark:text-slate-350 hover:text-primary-600 dark:hover:text-primary-400 transition-colors px-4 py-2 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full font-sans"
+              >
+                Sign In
+              </button>
+              <button
+                id="signup-btn"
+                onClick={() => { setLoginModalMode('register'); setShowLoginModal(true); }}
+                className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-md shadow-primary-500/20 btn-lift font-sans"
+              >
+                Create Account
+              </button>
+            </div>
           )}
         </div>
       </header>
@@ -435,7 +445,7 @@ export default function Home() {
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            📸 Scan &amp; Analyze
+            Scan &amp; Analyze
           </button>
           <button
             onClick={() => setActiveTab('routine')}
@@ -445,7 +455,7 @@ export default function Home() {
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            🔄 Routine Layering
+            Routine Layering
           </button>
           <button
             onClick={() => setActiveTab('compare')}
@@ -455,7 +465,7 @@ export default function Home() {
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            ⚖️ Product Compare
+            Product Compare
           </button>
         </div>
 
@@ -638,7 +648,7 @@ export default function Home() {
 
       {/* ── Modals ────────────────────────────────────────────────────────── */}
       {showLoginModal && (
-        <LoginModal onLogin={handleLogin} onClose={() => setShowLoginModal(false)} />
+        <LoginModal initialMode={loginModalMode} onLogin={handleLogin} onClose={() => setShowLoginModal(false)} />
       )}
       {showHistory && user && (
         <HistoryDrawer

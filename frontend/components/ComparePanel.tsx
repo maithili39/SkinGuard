@@ -256,7 +256,7 @@ export function ComparePanel({ currentAnalysis, scans }: Props) {
                   <div className="flex flex-wrap gap-1.5">
                     {stats.commonFindings.map((f, i) => (
                       <span key={i} className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 rounded-full">
-                        ⚠️ {f.ingredient}
+                        {f.ingredient}
                       </span>
                     ))}
                   </div>

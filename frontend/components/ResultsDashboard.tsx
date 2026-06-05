@@ -188,7 +188,7 @@ export function ResultsDashboard({ results, onReanalyze }: Props) {
             <AlertTriangle size={18} className="text-rose-600 dark:text-rose-400" />
           </div>
           <div>
-            <h4 className="font-bold text-rose-800 dark:text-rose-300 text-sm mb-1">⚠️ Pregnancy Warning</h4>
+            <h4 className="font-bold text-rose-800 dark:text-rose-300 text-sm mb-1">Pregnancy Warning</h4>
             <p className="text-rose-700 dark:text-rose-400 text-xs leading-relaxed">
               Not recommended during pregnancy:{' '}
               <strong>{results.pregnancy_alerts.map((a) => a.matched_name).join(', ')}</strong>
@@ -272,7 +272,7 @@ export function ResultsDashboard({ results, onReanalyze }: Props) {
                 {onReanalyze && results.unmatched.some(u => u.best_candidate && u.best_confidence >= 50) && (
                   <div className="mt-1 pt-2.5 border-t border-amber-200/40 dark:border-amber-800/30">
                     <p className="text-[11px] text-amber-700 dark:text-amber-400 font-bold mb-1.5 flex items-center gap-1">
-                      💡 Suggestions:
+                      Suggestions:
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {results.unmatched

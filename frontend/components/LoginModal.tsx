@@ -5,14 +5,15 @@ import { ShieldCheck, LogIn, Loader2, X, XCircle, Info, UserPlus, Mail, CheckCir
 import type { UserState } from '../types';
 
 interface Props {
+  initialMode?: 'login' | 'register';
   onLogin: (user: UserState) => void;
   onClose: () => void;
 }
 
 type Mode = 'login' | 'register' | 'forgot';
 
-export function LoginModal({ onLogin, onClose }: Props) {
-  const [mode, setMode] = useState<Mode>('login');
+export function LoginModal({ initialMode = 'login', onLogin, onClose }: Props) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,9 +51,32 @@ export function LoginModal({ onLogin, onClose }: Props) {
       setError('Please enter a valid email address.');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      return;
+    if (mode === 'register') {
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters long.');
+        return;
+      }
+      if (!/[A-Z]/.test(password)) {
+        setError('Password must contain at least one uppercase letter.');
+        return;
+      }
+      if (!/[a-z]/.test(password)) {
+        setError('Password must contain at least one lowercase letter.');
+        return;
+      }
+      if (!/[0-9]/.test(password)) {
+        setError('Password must contain at least one digit.');
+        return;
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        setError('Password must contain at least one special character.');
+        return;
+      }
+    } else {
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters.');
+        return;
+      }
     }
     setLoading(true);
     setError(null);
@@ -67,7 +91,7 @@ export function LoginModal({ onLogin, onClose }: Props) {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (res.status === 409) throw new Error('Email already registered. Try signing in instead.');
+        if (res.status === 409) throw new Error('User already exists.');
         if (res.status === 401) throw new Error('Invalid email or password.');
         if (res.status === 422) {
           const detail = data?.detail;
@@ -86,6 +110,8 @@ export function LoginModal({ onLogin, onClose }: Props) {
 
   const switchMode = (next: Mode) => {
     setMode(next);
+    setEmail('');
+    setPassword('');
     setError(null);
     setForgotSent(false);
   };
@@ -155,17 +181,6 @@ export function LoginModal({ onLogin, onClose }: Props) {
             </div>
           ) : (
             <>
-              {/* Auth note */}
-              {mode !== 'forgot' && (
-                <div className="mb-5 p-3.5 bg-primary-50 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-800/60 rounded-xl flex gap-2.5">
-                  <Info size={15} className="text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-primary-700 dark:text-primary-300 leading-relaxed">
-                    Your scan history and skin profile are saved securely to your account.
-                    <strong className="block mt-1">Passwords are hashed — we never store them in plain text.</strong>
-                  </p>
-                </div>
-              )}
-
               {mode === 'forgot' && (
                 <div className="mb-5 p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-xl flex gap-2.5">
                   <Mail size={15} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
@@ -194,7 +209,7 @@ export function LoginModal({ onLogin, onClose }: Props) {
                 {mode !== 'forgot' && (
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="auth-password">
-                      Password <span className="font-normal text-slate-400">(min. 8 characters)</span>
+                      Password {mode === 'register' ? <span className="font-normal text-slate-450 text-[11px]">(8+ chars, 1 caps, 1 special, 1 digit)</span> : <span className="font-normal text-slate-400">(min. 8 characters)</span>}
                     </label>
                     <input
                       id="auth-password"

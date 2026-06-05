@@ -550,5 +550,37 @@ def test_scan_history_pagination(client, test_db_session):
     assert data["offset"] == 2
 
 
+def test_password_complexity_validator():
+    from app.users import validate_password_complexity
+    import sys
+    import pytest
+
+    # Temporarily bypass the pytest check to test complexity rules
+    original_pytest = sys.modules.get("pytest")
+    if "pytest" in sys.modules:
+        del sys.modules["pytest"]
+    try:
+        with pytest.raises(ValueError, match="uppercase"):
+            validate_password_complexity("lowercase123!")
+            
+        with pytest.raises(ValueError, match="lowercase"):
+            validate_password_complexity("UPPERCASE123!")
+            
+        with pytest.raises(ValueError, match="digit"):
+            validate_password_complexity("LowercaseAndUpper!")
+            
+        with pytest.raises(ValueError, match="special"):
+            validate_password_complexity("LowercaseAndUpper123")
+            
+        with pytest.raises(ValueError, match="8 characters"):
+            validate_password_complexity("Short1!")
+
+        # Valid password should pass
+        validate_password_complexity("Valid123!")
+    finally:
+        if original_pytest:
+            sys.modules["pytest"] = original_pytest
+
+
 
 

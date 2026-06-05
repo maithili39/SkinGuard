@@ -47,7 +47,7 @@ export function FindingCard({ f, index = 0 }: { f: Finding; index?: number }) {
         <p className={`text-xs leading-relaxed ${s.text}`}>{f.message}</p>
         {f.alternatives && f.alternatives.length > 0 && (
           <div className="mt-2 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-white/40 dark:bg-black/15 px-2.5 py-1.5 rounded-lg border border-slate-200/40 dark:border-white/5 inline-flex items-center gap-1.5">
-            <span className="text-primary-600 dark:text-primary-400 font-semibold">💡 Try instead:</span>
+            <span className="text-primary-600 dark:text-primary-400 font-semibold">Try instead:</span>
             <span>{f.alternatives.join(', ')}</span>
           </div>
         )}
