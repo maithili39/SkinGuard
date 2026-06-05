@@ -50,6 +50,34 @@ const TOGGLES: {
     glowClass: 'shadow-glow-rose',
     hoverClass: 'hover:border-pink-300 dark:hover:border-pink-800 hover:bg-pink-50 dark:hover:bg-pink-950/20',
   },
+  {
+    key: 'normal_skin',
+    label: 'Normal Skin',
+    activeClass: 'bg-gradient-to-r from-emerald-600 to-green-500 dark:from-emerald-700 dark:to-green-600 border-emerald-600 dark:border-emerald-700 shadow-glow-green',
+    glowClass: 'shadow-glow-green',
+    hoverClass: 'hover:border-emerald-300 dark:hover:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/20',
+  },
+  {
+    key: 'dry_skin',
+    label: 'Dry Skin',
+    activeClass: 'bg-gradient-to-r from-sky-500 to-sky-400 dark:from-sky-600 dark:to-sky-500 border-sky-500 dark:border-sky-700 shadow-glow-sky',
+    glowClass: 'shadow-glow-sky',
+    hoverClass: 'hover:border-sky-300 dark:hover:border-sky-800 hover:bg-sky-50 dark:hover:bg-sky-950/20',
+  },
+  {
+    key: 'oily_skin',
+    label: 'Oily Skin',
+    activeClass: 'bg-gradient-to-r from-teal-500 to-teal-400 dark:from-teal-600 dark:to-teal-500 border-teal-500 dark:border-teal-700 shadow-glow-teal',
+    glowClass: 'shadow-glow-teal',
+    hoverClass: 'hover:border-teal-300 dark:hover:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/20',
+  },
+  {
+    key: 'combination_skin',
+    label: 'Combination Skin',
+    activeClass: 'bg-gradient-to-r from-indigo-500 to-indigo-400 dark:from-indigo-650 dark:to-indigo-555 border-indigo-500 dark:border-indigo-700 shadow-glow-indigo',
+    glowClass: 'shadow-glow-indigo',
+    hoverClass: 'hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20',
+  },
 ];
 
 export function ProfilePanel({ profile, onToggle }: Props) {

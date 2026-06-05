@@ -34,14 +34,14 @@ def _set_auth_cookie(response: Response, token: str) -> None:
 def register(request: Request, payload: RegisterIn, response: Response, db: Session = Depends(get_db)):
     """Register a new account. Sets an HttpOnly session cookie — JWT is NOT in the body."""
     try:
-        user = users_svc.register_user(db, payload.email, payload.password)
+        user = users_svc.register_user(db, payload.email, payload.password, full_name=payload.full_name)
     except ValueError as exc:
         msg = str(exc)
         if "already registered" in msg.lower() or "already exists" in msg.lower():
             raise HTTPException(status_code=409, detail="User already exists.")
         raise HTTPException(status_code=400, detail=msg)
     _set_auth_cookie(response, create_token(user.email))
-    return AuthOut(email=user.email, profile=users_svc.profile_dict(user))
+    return AuthOut(email=user.email, full_name=user.full_name, profile=users_svc.profile_dict(user))
 
 
 @router.post("/login")
@@ -52,7 +52,7 @@ def login(request: Request, payload: LoginIn, response: Response, db: Session = 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
     _set_auth_cookie(response, create_token(user.email))
-    return AuthOut(email=user.email, profile=users_svc.profile_dict(user))
+    return AuthOut(email=user.email, full_name=user.full_name, profile=users_svc.profile_dict(user))
 
 
 @router.post("/logout")
@@ -65,7 +65,7 @@ def logout(response: Response):
 @router.get("/me")
 def me(user: User = Depends(require_user)):
     """Return the currently authenticated user's profile."""
-    return {"email": user.email, "profile": users_svc.profile_dict(user)}
+    return {"email": user.email, "full_name": user.full_name, "profile": users_svc.profile_dict(user)}
 
 
 @router.post("/forgot-password")

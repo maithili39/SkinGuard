@@ -7,6 +7,10 @@ class ProfileIn(BaseModel):
     acne_prone: bool = False
     fungal_acne: bool = False
     rosacea: bool = False
+    dry_skin: bool = False
+    oily_skin: bool = False
+    combination_skin: bool = False
+    normal_skin: bool = False
     avoid_list: list[str] = Field(default_factory=list)
 
 
@@ -46,6 +50,7 @@ class AuthOut(BaseModel):
     to prevent XSS token theft via localStorage.
     """
     email: str
+    full_name: str | None = None
     profile: dict
 
 

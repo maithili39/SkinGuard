@@ -30,7 +30,7 @@ def save_profile(
     if current_user.email.strip().lower() != email.strip().lower():
         raise HTTPException(status_code=403, detail="Forbidden: You can only update your own profile.")
     user = users_svc.update_profile(db, current_user, payload.model_dump())
-    return {"email": user.email, "profile": users_svc.profile_dict(user)}
+    return {"email": user.email, "full_name": user.full_name, "profile": users_svc.profile_dict(user)}
 
 
 @router.get("/{email}/scans")

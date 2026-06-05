@@ -7,11 +7,16 @@ export interface SkinProfile {
   acne_prone: boolean;
   fungal_acne: boolean;
   rosacea: boolean;
+  dry_skin: boolean;
+  oily_skin: boolean;
+  combination_skin: boolean;
+  normal_skin: boolean;
 }
 
 export interface UserState {
   email: string;
   token?: string;
+  full_name?: string;
   profile: SkinProfile & { avoid_list: string[] };
 }
 

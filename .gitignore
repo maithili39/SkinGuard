@@ -58,3 +58,5 @@ htmlcov/
 nginx/certs/*.pem
 
 
+
+.vercel

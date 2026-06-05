@@ -161,6 +161,10 @@ def _summary(
     if profile.acne_prone: skin_types.append("acne-prone")
     if profile.sensitive_skin: skin_types.append("sensitive")
     if profile.fungal_acne: skin_types.append("fungal acne-prone")
+    if getattr(profile, "dry_skin", False): skin_types.append("dry")
+    if getattr(profile, "oily_skin", False): skin_types.append("oily")
+    if getattr(profile, "combination_skin", False): skin_types.append("combination")
+    if getattr(profile, "normal_skin", False): skin_types.append("normal")
 
     if skin_types and score is not None:
         base += f" for {', '.join(skin_types)} skin"

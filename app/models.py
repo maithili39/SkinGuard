@@ -95,6 +95,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=_utcnow)
+    full_name = Column(String, nullable=True)
 
     # Real auth: bcrypt hash. Null = legacy email-only account (no password set yet).
     hashed_password = Column(String, nullable=True)
@@ -105,6 +106,10 @@ class User(Base):
     acne_prone = Column(Boolean, default=False)
     fungal_acne = Column(Boolean, default=False)
     rosacea = Column(Boolean, default=False)
+    dry_skin = Column(Boolean, default=False)
+    oily_skin = Column(Boolean, default=False)
+    combination_skin = Column(Boolean, default=False)
+    normal_skin = Column(Boolean, default=False)
     avoid_list = Column(JSON, default=list)
 
     scans = relationship(

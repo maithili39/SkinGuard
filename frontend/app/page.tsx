@@ -26,6 +26,10 @@ const DEFAULT_PROFILE: SkinProfile = {
   acne_prone: false,
   fungal_acne: false,
   rosacea: false,
+  dry_skin: false,
+  oily_skin: false,
+  combination_skin: false,
+  normal_skin: false,
 };
 
 export default function Home() {
@@ -136,6 +140,10 @@ export default function Home() {
           acne_prone: saved.profile.acne_prone,
           fungal_acne: saved.profile.fungal_acne,
           rosacea: saved.profile.rosacea ?? false,
+          dry_skin: saved.profile.dry_skin ?? false,
+          oily_skin: saved.profile.oily_skin ?? false,
+          combination_skin: saved.profile.combination_skin ?? false,
+          normal_skin: saved.profile.normal_skin ?? false,
         });
         setAvoidInput((saved.profile.avoid_list || []).join(', '));
       } catch {
@@ -320,6 +328,10 @@ export default function Home() {
       acne_prone: newUser.profile.acne_prone,
       fungal_acne: newUser.profile.fungal_acne,
       rosacea: newUser.profile.rosacea ?? false,
+      dry_skin: newUser.profile.dry_skin ?? false,
+      oily_skin: newUser.profile.oily_skin ?? false,
+      combination_skin: newUser.profile.combination_skin ?? false,
+      normal_skin: newUser.profile.normal_skin ?? false,
     });
     setAvoidInput((newUser.profile.avoid_list || []).join(', '));
     setShowLoginModal(false);
@@ -374,7 +386,7 @@ export default function Home() {
               </button>
               <div className="flex items-center gap-2 bg-primary-50 dark:bg-primary-950/30 px-3.5 py-1.5 rounded-full border border-primary-100 dark:border-primary-900/60">
                 <span className="w-2 h-2 rounded-full bg-primary-500" />
-                <span className="text-sm font-semibold text-primary-700 dark:text-primary-300 max-w-[140px] truncate">{user.email}</span>
+                <span className="text-sm font-semibold text-primary-700 dark:text-primary-300 max-w-[140px] truncate">{user.full_name || user.email}</span>
               </div>
               <button
                 onClick={handleLogout}

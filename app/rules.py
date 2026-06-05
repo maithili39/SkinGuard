@@ -25,6 +25,10 @@ class Profile:
     acne_prone: bool = False
     fungal_acne: bool = False
     rosacea: bool = False
+    dry_skin: bool = False
+    oily_skin: bool = False
+    combination_skin: bool = False
+    normal_skin: bool = False
     avoid_list: list[str] = field(default_factory=list)  # lowercased inci names
 
 
@@ -155,6 +159,16 @@ RULES: list[Rule] = [
             f"{i.inci_name} is an acid exfoliant - at high concentrations or low pH "
             f"these can aggravate rosacea; use only in low-strength formulas."
         ),
+    ),
+    Rule(
+        concern="dry_skin",
+        level="warning",
+        kind="advice",
+        profile_gate=lambda p: p.dry_skin,
+        predicate=lambda i: i.inci_name.lower() in (
+            "alcohol denat", "ethanol", "sd alcohol", "denatured alcohol"
+        ),
+        message=lambda i: f"{i.inci_name} is a drying alcohol - can strip and dehydrate dry skin.",
     ),
 ]
 

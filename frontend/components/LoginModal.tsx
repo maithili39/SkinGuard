@@ -112,7 +112,7 @@ export function LoginModal({ initialMode = 'choice', onLogin, onClose }: Props) 
         if (res.status === 409) throw new Error('Account already exists.');
         throw new Error(data?.detail || 'Registration failed.');
       }
-      onLogin({ email: data.email, profile: data.profile });
+      onLogin({ email: data.email, full_name: data.full_name, profile: data.profile });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Network error. Please try again.');
     } finally {
@@ -138,7 +138,7 @@ export function LoginModal({ initialMode = 'choice', onLogin, onClose }: Props) 
         if (res.status === 401) throw new Error('Incorrect email or password.');
         throw new Error(data?.detail || 'Sign in failed.');
       }
-      onLogin({ email: data.email, profile: data.profile });
+      onLogin({ email: data.email, full_name: data.full_name, profile: data.profile });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Network error. Please try again.');
     } finally {

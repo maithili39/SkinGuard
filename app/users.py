@@ -46,7 +46,7 @@ def validate_password_complexity(password: str) -> None:
     if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
         raise ValueError("Password must contain at least one special character.")
 
-def register_user(db: Session, email: str, password: str) -> User:
+def register_user(db: Session, email: str, password: str, full_name: str | None = None) -> User:
     """Create a new user with a bcrypt-hashed password.
 
     Raises ValueError if the email is already registered.
@@ -57,6 +57,7 @@ def register_user(db: Session, email: str, password: str) -> User:
         raise ValueError("Email already registered.")
     user = User(
         email=email,
+        full_name=full_name.strip() if full_name else None,
         avoid_list=[],
         hashed_password=hash_password(password),
     )
@@ -85,6 +86,10 @@ def update_profile(db: Session, user: User, profile: dict) -> User:
     user.acne_prone = profile.get("acne_prone", user.acne_prone)
     user.fungal_acne = profile.get("fungal_acne", user.fungal_acne)
     user.rosacea = profile.get("rosacea", user.rosacea)
+    user.dry_skin = profile.get("dry_skin", user.dry_skin)
+    user.oily_skin = profile.get("oily_skin", user.oily_skin)
+    user.combination_skin = profile.get("combination_skin", user.combination_skin)
+    user.normal_skin = profile.get("normal_skin", user.normal_skin)
     user.avoid_list = profile.get("avoid_list", user.avoid_list)
     db.commit()
     db.refresh(user)
@@ -113,6 +118,10 @@ def profile_dict(user: User) -> dict:
         "acne_prone": user.acne_prone,
         "fungal_acne": user.fungal_acne,
         "rosacea": getattr(user, "rosacea", False),
+        "dry_skin": getattr(user, "dry_skin", False),
+        "oily_skin": getattr(user, "oily_skin", False),
+        "combination_skin": getattr(user, "combination_skin", False),
+        "normal_skin": getattr(user, "normal_skin", False),
         "avoid_list": user.avoid_list or [],
     }
 
