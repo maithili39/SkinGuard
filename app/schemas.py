@@ -31,6 +31,7 @@ class ProfileUpdate(ProfileIn):
 class RegisterIn(BaseModel):
     email: EmailStr = Field(..., description="Valid email address")
     password: str = Field(..., min_length=8, description="Min 8 characters")
+    full_name: str | None = None
 
 
 class LoginIn(BaseModel):

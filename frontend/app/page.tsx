@@ -78,6 +78,24 @@ export default function Home() {
     }
   }, [isDark, mounted]);
 
+  // ── Open login modal if URL query specifies it ────────────────────────────
+  useEffect(() => {
+    if (mounted && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('login') === 'true') {
+        setLoginModalMode('login');
+        setShowLoginModal(true);
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      } else if (params.get('register') === 'true') {
+        setLoginModalMode('register');
+        setShowLoginModal(true);
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [mounted]);
+
   // ── Show onboarding tooltip on first visit ────────────────────────────────
   useEffect(() => {
     if (!localStorage.getItem('sg_onboarded')) {
