@@ -13,7 +13,9 @@ WORKDIR /app
 
 # Install Python deps first for better layer caching.
 COPY requirements.txt .
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --default-timeout=1000 torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Pre-bake the sentence-transformer model so startup is fast and offline-capable
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
