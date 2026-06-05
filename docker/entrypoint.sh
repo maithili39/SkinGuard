@@ -27,7 +27,8 @@ PY
 alembic upgrade head
 
 # Seed ingredient data on first run (idempotent — preserves users/scans).
-python -m app.ingestion --bootstrap
+# Run in the background (&) so it doesn't block the API server startup and cause health check failures.
+python -m app.ingestion --bootstrap &
 
 # Start the API with gunicorn for production-grade multi-worker serving.
 # Falls back to uvicorn if gunicorn is not installed (e.g. local dev).

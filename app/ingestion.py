@@ -124,7 +124,6 @@ def load_cosing(db, registry: AliasRegistry) -> dict:
                 regulatory_status=status,
             )
             db.add(ing)
-            db.flush()
             registry.add(name, ing)
             for alias_key in _COSING_ALIAS_KEYS:
                 if low.get(alias_key):
@@ -156,7 +155,6 @@ def load_curated(db, registry: AliasRegistry, existing: dict) -> int:
         if ing is None:
             ing = Ingredient(inci_name=inci, function=_clean(row.get("function")))
             db.add(ing)
-            db.flush()
             existing[inci.lower()] = ing
             registry.add(inci, ing)
             inserted += 1

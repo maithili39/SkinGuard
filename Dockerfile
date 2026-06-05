@@ -1,6 +1,8 @@
 # SkinGuard backend: FastAPI + Tesseract OCR
 FROM python:3.12-slim
 
+ENV PYTHONUNBUFFERED=1
+
 # System deps: Tesseract OCR engine (pytesseract is just a wrapper) + libs Pillow
 # may need for certain image formats. Kept minimal.
 RUN apt-get update && apt-get install -y --no-install-recommends \
