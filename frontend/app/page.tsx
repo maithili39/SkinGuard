@@ -212,6 +212,11 @@ export default function Home() {
 
   // ── File selection (revokes previous blob URL before creating new one) ────
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) {
+      setLoginModalMode('login');
+      setShowLoginModal(true);
+      return;
+    }
     const selected = e.target.files?.[0];
     if (!selected) return;
     if (previewUrl) URL.revokeObjectURL(previewUrl);   // ← memory leak fix
@@ -224,6 +229,11 @@ export default function Home() {
 
   // ── OCR extract ───────────────────────────────────────────────────────────
   const handleExtract = async () => {
+    if (!user) {
+      setLoginModalMode('login');
+      setShowLoginModal(true);
+      return;
+    }
     if (!file) return;
     setIsExtracting(true);
     setError(null);
@@ -250,6 +260,11 @@ export default function Home() {
 
   // ── Analysis ──────────────────────────────────────────────────────────────
   const handleAnalyze = async (overrideText?: string) => {
+    if (!user) {
+      setLoginModalMode('login');
+      setShowLoginModal(true);
+      return;
+    }
     const textToAnalyze = typeof overrideText === 'string' ? overrideText : extractedText;
     if (!textToAnalyze.trim()) return;
     setIsAnalyzing(true);
@@ -286,6 +301,11 @@ export default function Home() {
   };
 
   const handleBarcodeLookup = async (barcode: string) => {
+    if (!user) {
+      setLoginModalMode('login');
+      setShowLoginModal(true);
+      return;
+    }
     setIsBarcodeLookingUp(true);
     setError(null);
     setBarcodeProduct(null);
@@ -526,6 +546,7 @@ export default function Home() {
               onExtract={handleExtract}
               onBarcodeLookup={handleBarcodeLookup}
               isBarcodeLookingUp={isBarcodeLookingUp}
+              hasUser={!!user}
             />
 
             {/* Barcode product match banner */}
@@ -577,13 +598,20 @@ export default function Home() {
                   className="w-full border border-slate-250 dark:border-slate-750 rounded-2xl p-4 text-sm text-slate-800 dark:text-slate-100 bg-white/90 dark:bg-slate-900/90 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 dark:focus:ring-primary-950/20 outline-none transition shadow-sm resize-none"
                 />
                 <button
-                  onClick={() => handleAnalyze()}
-                  disabled={isAnalyzing || !extractedText.trim()}
+                  onClick={() => {
+                    if (!user) {
+                      setLoginModalMode('login');
+                      setShowLoginModal(true);
+                    } else {
+                      handleAnalyze();
+                    }
+                  }}
+                  disabled={isAnalyzing || (!user ? false : !extractedText.trim())}
                   id="analyze-btn"
                   className="w-full bg-gradient-to-r from-primary-600 to-emerald-600 hover:from-primary-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-primary-500/25 hover:shadow-primary-500/35 flex items-center justify-center gap-3 btn-lift"
                 >
                   {isAnalyzing ? <Loader2 className="animate-spin" size={22} /> : <ShieldCheck size={22} />}
-                  {isAnalyzing ? 'Analysing…' : 'Analyse Ingredients'}
+                  {isAnalyzing ? 'Analysing…' : user ? 'Analyse Ingredients' : 'Sign In to Analyse'}
                 </button>
               </div>
             )}
@@ -607,14 +635,54 @@ export default function Home() {
         )}
 
         {activeTab === 'routine' && (
-          <div className="w-full max-w-4xl animate-fade-in">
-            <RoutineAnalyzer scans={scans} />
+          <div className="w-full max-w-4xl animate-fade-in flex flex-col items-center py-12">
+            {!user ? (
+              <div className="glass-panel rounded-3xl p-8 max-w-md text-center border border-slate-200/50 dark:border-slate-800/50 shadow-2xl">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950/35 rounded-full">
+                    <ShieldCheck size={36} className="text-emerald-500" />
+                  </div>
+                </div>
+                <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg mb-2">Sign In to Analyze Routine</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                  Log in to check multiple product layers for active ingredient conflicts and build your personalized safe routine.
+                </p>
+                <button
+                  onClick={() => { setLoginModalMode('login'); setShowLoginModal(true); }}
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-full text-xs font-bold shadow-md shadow-primary-500/10 btn-lift"
+                >
+                  Sign In
+                </button>
+              </div>
+            ) : (
+              <RoutineAnalyzer scans={scans} />
+            )}
           </div>
         )}
 
         {activeTab === 'compare' && (
-          <div className="w-full max-w-4xl animate-fade-in">
-            <ComparePanel currentAnalysis={results} scans={scans} />
+          <div className="w-full max-w-4xl animate-fade-in flex flex-col items-center py-12">
+            {!user ? (
+              <div className="glass-panel rounded-3xl p-8 max-w-md text-center border border-slate-200/50 dark:border-slate-800/50 shadow-2xl">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950/35 rounded-full">
+                    <ShieldCheck size={36} className="text-emerald-500" />
+                  </div>
+                </div>
+                <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg mb-2">Sign In to Compare Products</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                  Log in to compare different cosmetic products side-by-side and find the safest option for your skin type.
+                </p>
+                <button
+                  onClick={() => { setLoginModalMode('login'); setShowLoginModal(true); }}
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-full text-xs font-bold shadow-md shadow-primary-500/10 btn-lift"
+                >
+                  Sign In
+                </button>
+              </div>
+            ) : (
+              <ComparePanel currentAnalysis={results} scans={scans} />
+            )}
           </div>
         )}
 

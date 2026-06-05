@@ -13,6 +13,7 @@ interface Props {
   onExtract: () => void;
   onBarcodeLookup?: (barcode: string) => Promise<void>;
   isBarcodeLookingUp?: boolean;
+  hasUser: boolean;
 }
 
 export function UploadCard({
@@ -23,6 +24,7 @@ export function UploadCard({
   onExtract,
   onBarcodeLookup,
   isBarcodeLookingUp = false,
+  hasUser,
 }: Props) {
   const inputRef        = useRef<HTMLInputElement>(null);
   const cameraInputRef  = useRef<HTMLInputElement>(null);
@@ -35,6 +37,10 @@ export function UploadCard({
   // ── Barcode manual submit ──────────────────────────────────────────────────
   const handleBarcodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hasUser) {
+      onExtract(); // triggers login modal
+      return;
+    }
     if (!barcodeInput.trim() || !onBarcodeLookup) return;
     setBarcodeError(null);
     try {
@@ -48,6 +54,10 @@ export function UploadCard({
   // ── Live scanner result ────────────────────────────────────────────────────
   const handleLiveScan = async (code: string) => {
     setLiveScanner(false);
+    if (!hasUser) {
+      onExtract(); // triggers login modal
+      return;
+    }
     if (!onBarcodeLookup) return;
     setBarcodeError(null);
     try {
@@ -95,7 +105,13 @@ export function UploadCard({
             /* ── Empty state: drag-and-drop + camera options ── */
             <div className="flex flex-col">
               <label
-                htmlFor="file-upload"
+                htmlFor={hasUser ? "file-upload" : undefined}
+                onClick={(e) => {
+                  if (!hasUser) {
+                    e.preventDefault();
+                    onExtract(); // triggers login
+                  }
+                }}
                 className="flex flex-col items-center justify-center py-10 px-8 cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 transition-all duration-300 hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 group/drop relative overflow-hidden"
               >
                 {/* Background glow on hover */}
@@ -110,28 +126,45 @@ export function UploadCard({
                 </div>
 
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1.5 relative z-10">
-                  Upload Ingredient Label
+                  {hasUser ? 'Upload Ingredient Label' : 'Sign In to Upload Label'}
                 </h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mb-5 relative z-10 text-center">
-                  Drag &amp; drop an image, or choose an option below
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-5 relative z-10 text-center text-xs">
+                  {hasUser ? 'Drag & drop an image, or choose an option below' : 'Please log in to upload labels or lookup products'}
                 </p>
 
                 {/* Two CTA buttons */}
                 <div className="flex flex-col sm:flex-row gap-2 relative z-10">
                   {/* Browse files */}
-                  <div className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary-500/25 transition-all duration-200 btn-lift">
+                  <div 
+                    onClick={(e) => {
+                      if (!hasUser) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onExtract(); // triggers login
+                      }
+                    }}
+                    className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary-500/25 transition-all duration-200 btn-lift"
+                  >
                     <Upload size={15} />
-                    Select Image
+                    {hasUser ? 'Select Image' : 'Sign In to Select'}
                   </div>
 
                   {/* Camera capture (opens native camera on mobile) */}
                   <button
                     type="button"
-                    onClick={(e) => { e.preventDefault(); cameraInputRef.current?.click(); }}
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      if (!hasUser) {
+                        e.stopPropagation();
+                        onExtract(); // triggers login
+                      } else {
+                        cameraInputRef.current?.click(); 
+                      }
+                    }}
                     className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 btn-lift shadow-sm"
                   >
                     <Camera size={15} />
-                    Take Photo
+                    {hasUser ? 'Take Photo' : 'Sign In to Capture'}
                   </button>
                 </div>
 
@@ -164,7 +197,13 @@ export function UploadCard({
                 </div>
                 {/* Re-upload button overlay */}
                 <label
-                  htmlFor="file-upload"
+                  htmlFor={hasUser ? "file-upload" : undefined}
+                  onClick={(e) => {
+                    if (!hasUser) {
+                      e.preventDefault();
+                      onExtract();
+                    }
+                  }}
                   className="absolute -top-2 -right-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-full p-1.5 shadow-md cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                   title="Change image"
                 >
@@ -195,7 +234,7 @@ export function UploadCard({
                   ) : (
                     <>
                       <Upload size={18} />
-                      Extract Text
+                      {hasUser ? 'Extract Text' : 'Sign In to Extract'}
                     </>
                   )}
                 </button>
@@ -226,10 +265,10 @@ export function UploadCard({
                 </div>
               </div>
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 text-center">
-                Scan or Enter Barcode
+                {hasUser ? 'Scan or Enter Barcode' : 'Sign In to Scan Barcode'}
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm mb-5 text-center max-w-sm">
-                Search Open Beauty Facts to fetch product ingredients automatically.
+                {hasUser ? 'Search Open Beauty Facts to fetch product ingredients automatically.' : 'Please log in to lookup products or scan barcodes.'}
               </p>
 
               {/* Manual entry form */}
@@ -243,7 +282,7 @@ export function UploadCard({
                 />
                 <button
                   type="submit"
-                  disabled={isBarcodeLookingUp || !barcodeInput.trim()}
+                  disabled={isBarcodeLookingUp || (hasUser ? !barcodeInput.trim() : false)}
                   className="bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-primary-500/25 transition-all flex items-center gap-1.5"
                 >
                   {isBarcodeLookingUp ? (
@@ -251,18 +290,24 @@ export function UploadCard({
                       <Loader2 className="animate-spin" size={16} />
                       Searching…
                     </>
-                  ) : 'Search'}
+                  ) : hasUser ? 'Search' : 'Sign In'}
                 </button>
               </form>
 
               {/* Live scan button */}
               <button
                 type="button"
-                onClick={() => setLiveScanner(true)}
+                onClick={() => {
+                  if (!hasUser) {
+                    onExtract();
+                  } else {
+                    setLiveScanner(true);
+                  }
+                }}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-primary-400 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-sm font-semibold transition-all duration-200 btn-lift"
               >
                 <ScanLine size={16} />
-                Scan with Camera
+                {hasUser ? 'Scan with Camera' : 'Sign In to Scan'}
               </button>
 
               {barcodeError && (
