@@ -33,11 +33,12 @@ python -m app.ingestion --bootstrap &
 # Start the API with gunicorn for production-grade multi-worker serving.
 # Falls back to uvicorn if gunicorn is not installed (e.g. local dev).
 PORT="${PORT:-8000}"
-WORKERS="${GUNICORN_WORKERS:-4}"
+WORKERS="${GUNICORN_WORKERS:-2}"
 if command -v gunicorn &> /dev/null; then
     exec gunicorn app.main:app \
         --worker-class uvicorn.workers.UvicornWorker \
         --workers "$WORKERS" \
+        --timeout 120 \
         --bind "0.0.0.0:$PORT" \
         --access-logfile - \
         --error-logfile -

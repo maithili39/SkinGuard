@@ -113,12 +113,12 @@ class Matcher:
         self._id_to_inci: dict[int, str] = {}
 
         # Load INCI name cache first
-        for ing in db.query(Ingredient).all():
-            self._id_to_inci[ing.id] = ing.inci_name
+        for ing_id, inci_name in db.query(Ingredient.id, Ingredient.inci_name).all():
+            self._id_to_inci[ing_id] = inci_name
 
         # Build alias index
-        for alias in db.query(Alias).all():
-            self._index[normalize(alias.name)] = alias.ingredient_id
+        for alias_name, ingredient_id in db.query(Alias.name, Alias.ingredient_id).all():
+            self._index[normalize(alias_name)] = ingredient_id
 
         self._choices = list(self._index.keys())
         # Note: self.db is intentionally NOT stored — Matcher is DB-free after init.
