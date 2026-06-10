@@ -178,7 +178,22 @@ export default function Home() {
 
   /* ── Handlers ──────────────────────────────────────────────────────────────── */
   const handleProfileToggle = (key: keyof SkinProfile) => {
-    setProfile(prev => { const next = { ...prev, [key]: !prev[key] }; saveProfileToBackend(next, allergies); return next; });
+    const baseTypes: (keyof SkinProfile)[] = ['normal_skin', 'dry_skin', 'oily_skin', 'combination_skin'];
+    setProfile(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      if (baseTypes.includes(key) && next[key]) {
+        baseTypes.forEach(t => {
+          if (t !== key) {
+            next[t] = false;
+          }
+        });
+      }
+      if (key === 'rosacea' && next[key]) {
+        next.sensitive_skin = true;
+      }
+      saveProfileToBackend(next, allergies);
+      return next;
+    });
   };
 
   const saveProfileToBackend = async (p: SkinProfile, a: string[]) => {
@@ -461,7 +476,7 @@ export default function Home() {
 
           {/* ── HERO ────────────────────────────────────────────────────────── */}
           <section style={{ 
-            background: 'linear-gradient(135deg, #113024 0%, #1b4332 100%)', 
+            background: 'linear-gradient(135deg, #7DA681 0%, #5d8261 100%)', 
             padding: '100px 24px 140px', 
             position: 'relative', 
             display: 'flex', 
@@ -472,21 +487,21 @@ export default function Home() {
             width: '100%', 
             overflow: 'hidden' 
           }}>
-            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)', zIndex: 0 }} />
+            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)', zIndex: 0 }} />
             
             <div style={{ position: 'relative', zIndex: 1, maxWidth: 800, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
-              <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#d1e7dd', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+              <div style={{ display: 'inline-block', background: 'rgba(27,67,50,0.08)', border: '1px solid rgba(27,67,50,0.15)', color: '#1b4332', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
                 COSMETIC SAFETY DATABASE
               </div>
-
-              <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(38px, 6vw, 64px)', color: 'white', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
+ 
+              <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(38px, 6vw, 64px)', color: '#1b4332', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
                 Know what&apos;s in<br />your skincare.
               </h1>
-
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: 'rgba(255,255,255,0.8)', lineHeight: 1.6, maxWidth: 580, margin: '0 auto' }}>
+ 
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#2e4e40', lineHeight: 1.6, maxWidth: 580, margin: '0 auto' }}>
                 Decode ingredient labels. Flag EU-banned substances, allergens, comedogenics, and pregnancy risks — adjusted for your skin profile.
               </p>
-
+ 
               <div style={{ 
                 background: 'white', 
                 borderRadius: 28, 
@@ -495,7 +510,7 @@ export default function Home() {
                 alignItems: 'center', 
                 width: '100%', 
                 maxWidth: 680, 
-                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                boxShadow: '0 12px 32px rgba(27,67,50,0.12)',
                 marginTop: 16
               }}>
                 <input 
@@ -527,7 +542,7 @@ export default function Home() {
                   Analyze
                 </button>
               </div>
-
+ 
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
                 <button 
                   onClick={handleHeroDemo} 
@@ -536,17 +551,17 @@ export default function Home() {
                     alignItems: 'center', 
                     gap: 8, 
                     padding: '10px 24px', 
-                    background: 'rgba(255,255,255,0.08)', 
-                    border: '1px solid rgba(255,255,255,0.15)', 
+                    background: 'rgba(27,67,50,0.06)', 
+                    border: '1px solid rgba(27,67,50,0.12)', 
                     borderRadius: 24, 
-                    color: 'white', 
+                    color: '#1b4332', 
                     fontSize: 13, 
                     fontWeight: 600, 
                     cursor: 'pointer', 
                     transition: 'all 0.2s' 
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.12)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.06)'; }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5"/>
@@ -562,17 +577,17 @@ export default function Home() {
                     alignItems: 'center', 
                     gap: 8, 
                     padding: '10px 24px', 
-                    background: 'rgba(255,255,255,0.08)', 
-                    border: '1px solid rgba(255,255,255,0.15)', 
+                    background: 'rgba(27,67,50,0.06)', 
+                    border: '1px solid rgba(27,67,50,0.12)', 
                     borderRadius: 24, 
-                    color: 'white', 
+                    color: '#1b4332', 
                     fontSize: 13, 
                     fontWeight: 600, 
                     cursor: 'pointer', 
                     transition: 'all 0.2s' 
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.12)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.06)'; }}
                 >
                   <Barcode size={14} />
                   Barcode Lookup
