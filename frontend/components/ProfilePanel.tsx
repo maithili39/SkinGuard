@@ -5,7 +5,7 @@ import type { SkinProfile } from '../types';
  
 interface Props {
   profile: SkinProfile;
-  onToggle: (key: keyof SkinProfile) => void;
+  onToggle: (key: keyof SkinProfile | 'clear_concerns') => void;
 }
  
 const SKIN_TYPES: {
@@ -34,6 +34,8 @@ const SKIN_CONCERNS: {
 ];
  
 export function ProfilePanel({ profile, onToggle }: Props) {
+  const hasNoConcerns = !profile.acne_prone && !profile.sensitive_skin && !profile.pregnant && !profile.fungal_acne && !profile.rosacea;
+ 
   const renderPill = ({ key, label, tooltip, activeClass }: {
     key: keyof SkinProfile;
     label: string;
@@ -84,6 +86,32 @@ export function ProfilePanel({ profile, onToggle }: Props) {
           Skin Concerns & Conditions (Select All That Apply)
         </span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+          {/* Virtual 'No Concerns' Toggle */}
+          <div style={{ position: 'relative' }} className="group">
+            <label
+              className={`profile-pill ${hasNoConcerns ? 'active-normal' : ''}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <input
+                type="checkbox"
+                style={{ display: 'none' }}
+                checked={hasNoConcerns}
+                onChange={() => onToggle('clear_concerns')}
+                id="profile-no-concerns"
+              />
+              {hasNoConcerns && (
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', opacity: 0.7, flexShrink: 0 }} />
+              )}
+              No Concerns
+            </label>
+            {/* Tooltip */}
+            <div className="tooltip" style={{ opacity: 0, pointerEvents: 'none', transition: 'opacity 0.15s ease', position: 'absolute', bottom: 'calc(100% + 10px)', left: '50%', transform: 'translateX(-50%)', width: 220, zIndex: 10 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+            >
+              Clears all active sensitivity filters and pregnancy checks.
+            </div>
+          </div>
+ 
           {SKIN_CONCERNS.map(renderPill)}
         </div>
       </div>
