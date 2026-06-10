@@ -177,19 +177,27 @@ export default function Home() {
   });
 
   /* ── Handlers ──────────────────────────────────────────────────────────────── */
-  const handleProfileToggle = (key: keyof SkinProfile) => {
+  const handleProfileToggle = (key: keyof SkinProfile | 'clear_concerns') => {
     const baseTypes: (keyof SkinProfile)[] = ['normal_skin', 'dry_skin', 'oily_skin', 'combination_skin'];
+    const concernTypes: (keyof SkinProfile)[] = ['acne_prone', 'sensitive_skin', 'pregnant', 'fungal_acne', 'rosacea'];
     setProfile(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      if (baseTypes.includes(key) && next[key]) {
-        baseTypes.forEach(t => {
-          if (t !== key) {
-            next[t] = false;
-          }
+      let next = { ...prev };
+      if (key === 'clear_concerns') {
+        concernTypes.forEach(c => {
+          next[c] = false;
         });
-      }
-      if (key === 'rosacea' && next[key]) {
-        next.sensitive_skin = true;
+      } else {
+        next[key] = !prev[key];
+        if (baseTypes.includes(key) && next[key]) {
+          baseTypes.forEach(t => {
+            if (t !== key) {
+              next[t] = false;
+            }
+          });
+        }
+        if (key === 'rosacea' && next[key]) {
+          next.sensitive_skin = true;
+        }
       }
       saveProfileToBackend(next, allergies);
       return next;
@@ -477,121 +485,138 @@ export default function Home() {
           {/* ── HERO ────────────────────────────────────────────────────────── */}
           <section style={{ 
             background: 'linear-gradient(135deg, #7DA681 0%, #5d8261 100%)', 
-            padding: '100px 24px 140px', 
+            padding: '70px 24px 100px', 
             position: 'relative', 
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: 'center', 
             justifyContent: 'center', 
-            textAlign: 'center', 
             width: '100%', 
             overflow: 'hidden' 
           }}>
             <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)', zIndex: 0 }} />
             
-            <div style={{ position: 'relative', zIndex: 1, maxWidth: 800, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
-              <div style={{ display: 'inline-block', background: 'rgba(27,67,50,0.08)', border: '1px solid rgba(27,67,50,0.15)', color: '#1b4332', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                COSMETIC SAFETY DATABASE
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center w-full max-w-6xl" style={{ position: 'relative', zIndex: 1 }}>
+              {/* Left Column (Hero Content) */}
+              <div className="col-span-1 md:col-span-7 flex flex-col gap-6 text-center md:text-left items-center md:items-start w-full">
+                <div style={{ display: 'inline-block', background: 'rgba(27,67,50,0.08)', border: '1px solid rgba(27,67,50,0.15)', color: '#1b4332', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  COSMETIC SAFETY DATABASE
+                </div>
+   
+                <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(38px, 6vw, 64px)', color: '#1b4332', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
+                  Know what&apos;s in<br />your skincare.
+                </h1>
+   
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#2e4e40', lineHeight: 1.6, maxWidth: 580, margin: 0 }}>
+                  Decode ingredient labels. Flag EU-banned substances, allergens, comedogenics, and pregnancy risks — adjusted for your skin profile.
+                </p>
+   
+                <div style={{ 
+                  background: 'white', 
+                  borderRadius: 28, 
+                  padding: '8px 8px 8px 24px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  width: '100%', 
+                  maxWidth: 680, 
+                  boxShadow: '0 12px 32px rgba(27,67,50,0.12)',
+                  marginTop: 8
+                }}>
+                  <input 
+                    type="text" 
+                    value={pastedIngredients} 
+                    onChange={e => setPastedIngredients(e.target.value)} 
+                    onKeyDown={e => { if (e.key === 'Enter') handleHeroAnalyze(); }}
+                    placeholder="Paste ingredient list here (comma-separated)..." 
+                    style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', fontFamily: "'Inter', sans-serif" }} 
+                  />
+                  <button 
+                    onClick={handleHeroAnalyze} 
+                    style={{ 
+                      background: '#4caf50', 
+                      color: 'white', 
+                      fontFamily: "'Nunito', sans-serif", 
+                      fontWeight: 700, 
+                      fontSize: 15, 
+                      padding: '12px 32px', 
+                      borderRadius: 24, 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      transition: 'background 0.2s',
+                      boxShadow: '0 4px 12px rgba(76,175,80,0.2)'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#3d8b40'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#4caf50'}
+                  >
+                    Analyze
+                  </button>
+                </div>
+   
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
+                  <button 
+                    onClick={handleHeroDemo} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 8, 
+                      padding: '10px 24px', 
+                      background: 'rgba(27,67,50,0.06)', 
+                      border: '1px solid rgba(27,67,50,0.12)', 
+                      borderRadius: 24, 
+                      color: '#1b4332', 
+                      fontSize: 13, 
+                      fontWeight: 600, 
+                      cursor: 'pointer', 
+                      transition: 'all 0.2s' 
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.12)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.06)'; }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5"/>
+                      <path d="M12 2v14.5"/>
+                      <path d="M9 6h6"/>
+                    </svg>
+                    Try Demo Scan
+                  </button>
+                  <button 
+                    onClick={handleHeroBarcodeClick} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 8, 
+                      padding: '10px 24px', 
+                      background: 'rgba(27,67,50,0.06)', 
+                      border: '1px solid rgba(27,67,50,0.12)', 
+                      borderRadius: 24, 
+                      color: '#1b4332', 
+                      fontSize: 13, 
+                      fontWeight: 600, 
+                      cursor: 'pointer', 
+                      transition: 'all 0.2s' 
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.12)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.06)'; }}
+                  >
+                    <Barcode size={14} />
+                    Barcode Lookup
+                  </button>
+                </div>
               </div>
- 
-              <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(38px, 6vw, 64px)', color: '#1b4332', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
-                Know what&apos;s in<br />your skincare.
-              </h1>
- 
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#2e4e40', lineHeight: 1.6, maxWidth: 580, margin: '0 auto' }}>
-                Decode ingredient labels. Flag EU-banned substances, allergens, comedogenics, and pregnancy risks — adjusted for your skin profile.
-              </p>
- 
-              <div style={{ 
-                background: 'white', 
-                borderRadius: 28, 
-                padding: '8px 8px 8px 24px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                width: '100%', 
-                maxWidth: 680, 
-                boxShadow: '0 12px 32px rgba(27,67,50,0.12)',
-                marginTop: 16
-              }}>
-                <input 
-                  type="text" 
-                  value={pastedIngredients} 
-                  onChange={e => setPastedIngredients(e.target.value)} 
-                  onKeyDown={e => { if (e.key === 'Enter') handleHeroAnalyze(); }}
-                  placeholder="Paste ingredient list here (comma-separated)..." 
-                  style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', fontFamily: "'Inter', sans-serif" }} 
+
+              {/* Right Column (Illustration) */}
+              <div className="col-span-1 md:col-span-5 hidden md:flex justify-center">
+                <img 
+                  src="/onskin1.png" 
+                  alt="Skincare ingredients inspection" 
+                  style={{ 
+                    width: '100%', 
+                    maxWidth: 420, 
+                    height: 'auto', 
+                    objectFit: 'contain', 
+                    filter: 'drop-shadow(0 20px 40px rgba(27,67,50,0.15))' 
+                  }} 
                 />
-                <button 
-                  onClick={handleHeroAnalyze} 
-                  style={{ 
-                    background: '#4caf50', 
-                    color: 'white', 
-                    fontFamily: "'Nunito', sans-serif", 
-                    fontWeight: 700, 
-                    fontSize: 15, 
-                    padding: '12px 32px', 
-                    borderRadius: 24, 
-                    border: 'none', 
-                    cursor: 'pointer', 
-                    transition: 'background 0.2s',
-                    boxShadow: '0 4px 12px rgba(76,175,80,0.2)'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#3d8b40'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#4caf50'}
-                >
-                  Analyze
-                </button>
-              </div>
- 
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
-                <button 
-                  onClick={handleHeroDemo} 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 8, 
-                    padding: '10px 24px', 
-                    background: 'rgba(27,67,50,0.06)', 
-                    border: '1px solid rgba(27,67,50,0.12)', 
-                    borderRadius: 24, 
-                    color: '#1b4332', 
-                    fontSize: 13, 
-                    fontWeight: 600, 
-                    cursor: 'pointer', 
-                    transition: 'all 0.2s' 
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.12)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.06)'; }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5"/>
-                    <path d="M12 2v14.5"/>
-                    <path d="M9 6h6"/>
-                  </svg>
-                  Try Demo Scan
-                </button>
-                <button 
-                  onClick={handleHeroBarcodeClick} 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 8, 
-                    padding: '10px 24px', 
-                    background: 'rgba(27,67,50,0.06)', 
-                    border: '1px solid rgba(27,67,50,0.12)', 
-                    borderRadius: 24, 
-                    color: '#1b4332', 
-                    fontSize: 13, 
-                    fontWeight: 600, 
-                    cursor: 'pointer', 
-                    transition: 'all 0.2s' 
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.12)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.06)'; }}
-                >
-                  <Barcode size={14} />
-                  Barcode Lookup
-                </button>
               </div>
             </div>
 
@@ -846,27 +871,47 @@ export default function Home() {
             <div style={{ maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
               <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', textAlign: 'center', marginBottom: 48 }}>What users are saying</h2>
 
-              <div className="testimonials-carousel" style={{ gap: 24 }}>
-                {[
-                  { initial: 'P', bg: '#4caf50', quote: "I used to spend 20 minutes googling every ingredient. SkinGuard does it instantly and actually explains what the flag means.", name: 'Priya R.' },
-                  { initial: 'M', bg: '#ef5350', quote: "Found out my 'gentle' cleanser had 3 pore-cloggers. Switched products and my skin finally cleared up.", name: 'Marcus T.' },
-                  { initial: 'L', bg: '#42a5f5', quote: "The fungal acne filter is something I've never seen in any other app. This is the tool dermatology Reddit has been asking for.", name: 'Lena K.' },
-                ].map((t, i) => (
-                  <div key={i} style={{ background: 'white', borderRadius: 20, border: '1px solid #e8e4dc', padding: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', minWidth: 300, flex: '1 1 300px', maxWidth: 380 }}>
-                    {/* Quote mark */}
-                    <svg width="28" height="22" viewBox="0 0 28 22" fill="#4caf50" style={{ marginBottom: 12 }}>
-                      <path d="M0 22V12.5C0 5.5 4.5 1.5 13.5 0l1.5 2.5C10 3.5 7.5 6 7 10H12V22H0zm16 0V12.5C16 5.5 20.5 1.5 29.5 0L31 2.5C26 3.5 23.5 6 23 10H28V22H16z"/>
-                    </svg>
-                    <p style={{ fontFamily: "'Nunito', sans-serif", fontStyle: 'italic', fontSize: 16, color: '#1a1a1a', lineHeight: 1.6, marginBottom: 20 }}>{t.quote}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 16, color: 'white', flexShrink: 0 }}>{t.initial}</div>
-                      <div>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 14, color: '#388e3c' }}>{t.name}</p>
-                        <Stars n={5}/>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center w-full">
+                {/* Left Column (Illustration) */}
+                <div className="col-span-1 md:col-span-5 hidden md:flex justify-center">
+                  <img 
+                    src="/onskin2.png" 
+                    alt="Happy users sharing reviews" 
+                    style={{ 
+                      width: '100%', 
+                      maxWidth: 360, 
+                      height: 'auto', 
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.08))'
+                    }} 
+                  />
+                </div>
+
+                {/* Right Column (Testimonial Cards) */}
+                <div className="col-span-1 md:col-span-7 flex flex-col gap-6 w-full">
+                  {[
+                    { initial: 'P', bg: '#4caf50', quote: "I used to spend 20 minutes googling every ingredient. SkinGuard does it instantly and actually explains what the flag means.", name: 'Priya R.' },
+                    { initial: 'M', bg: '#ef5350', quote: "Found out my 'gentle' cleanser had 3 pore-cloggers. Switched products and my skin finally cleared up.", name: 'Marcus T.' },
+                    { initial: 'L', bg: '#42a5f5', quote: "The fungal acne filter is something I've never seen in any other app. This is the tool dermatology Reddit has been asking for.", name: 'Lena K.' },
+                  ].map((t, i) => (
+                    <div key={i} style={{ background: 'white', borderRadius: 20, border: '1px solid #e8e4dc', padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+                      {/* Quote mark & quote */}
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <svg width="24" height="18" viewBox="0 0 28 22" fill="#4caf50" style={{ flexShrink: 0, marginTop: 4 }}>
+                          <path d="M0 22V12.5C0 5.5 4.5 1.5 13.5 0l1.5 2.5C10 3.5 7.5 6 7 10H12V22H0zm16 0V12.5C16 5.5 20.5 1.5 29.5 0L31 2.5C26 3.5 23.5 6 23 10H28V22H16z"/>
+                        </svg>
+                        <p style={{ fontFamily: "'Nunito', sans-serif", fontStyle: 'italic', fontSize: 15, color: '#1a1a1a', lineHeight: 1.5, margin: 0 }}>{t.quote}</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingLeft: 36 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: 'white', flexShrink: 0 }}>{t.initial}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <p style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 13, color: '#388e3c', margin: 0 }}>{t.name}</p>
+                          <Stars n={5}/>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </section>
