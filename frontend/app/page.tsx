@@ -277,6 +277,70 @@ export default function Home() {
     setExtractedIngredients(parsed); setResults(null); setActiveTab('analyze');
   };
 
+  const handleHeroAnalyze = async () => {
+    if (!pastedIngredients.trim()) return;
+    const sanitized = pastedIngredients.replace(/<[^>]*>/g, '');
+    const parsed = sanitized.split(',').map(s => s.trim().replace(/[.*]/g, '')).filter(Boolean);
+    if (parsed.length <= 1) {
+      setError('Please paste the full ingredient list separated by commas.');
+      scrollTo('analyzer');
+      return;
+    }
+    setError(null);
+    setIsAnalyzing(true);
+    setActiveTab('analyze');
+    setExtractedIngredients(parsed);
+    const textToAnalyze = parsed.join(', ');
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToAnalyze, profile: { ...profile, avoid_list: allergies }, user_email: user?.email || null })
+      });
+      if (!res.ok) throw new Error('Analysis failed');
+      const data: AnalysisResult = await res.json();
+      setResults(data);
+      const mock = { id: Date.now(), created_at: new Date().toISOString(), safety_score: data.safety_score, coverage_percent: data.coverage_percent, summary: data.summary, result: data, input_text: textToAnalyze };
+      if (!user) setScans(prev => [mock, ...prev]);
+      else fetch('/api/auth/scans').then(r => r.ok ? r.json() : null).then(d => { if (d?.scans) setScans(d.scans); });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleHeroDemo = async () => {
+    const parsed = DEMO_INGREDIENTS.split(',').map(s => s.trim()).filter(Boolean);
+    setExtractedIngredients(parsed);
+    setError(null);
+    setIsAnalyzing(true);
+    setActiveTab('analyze');
+    const textToAnalyze = parsed.join(', ');
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToAnalyze, profile: { ...profile, avoid_list: allergies }, user_email: user?.email || null })
+      });
+      if (!res.ok) throw new Error('Analysis failed');
+      const data: AnalysisResult = await res.json();
+      setResults(data);
+      const mock = { id: Date.now(), created_at: new Date().toISOString(), safety_score: data.safety_score, coverage_percent: data.coverage_percent, summary: data.summary, result: data, input_text: textToAnalyze };
+      if (!user) setScans(prev => [mock, ...prev]);
+      else fetch('/api/auth/scans').then(r => r.ok ? r.json() : null).then(d => { if (d?.scans) setScans(d.scans); });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleHeroBarcodeClick = () => {
+    setInputMode('barcode');
+    scrollTo('analyzer');
+  };
+
   const toggleSave = (name: string) => {
     if (!user) { setAuthMode('login'); setShowLoginModal(true); return; }
     const key = `sg_saved_${user.email}`;
@@ -396,138 +460,130 @@ export default function Home() {
         <div>
 
           {/* ── HERO ────────────────────────────────────────────────────────── */}
-          <section style={{ background: 'linear-gradient(135deg, #faf9f6 0%, #f0ede6 100%)', padding: '80px 0 60px', minHeight: '92vh', display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
-            <div style={{ maxWidth: 1400, margin: '0 auto', width: '100%', padding: '0 48px', display: 'grid', gridTemplateColumns: '55fr 45fr', gap: 40, alignItems: 'center' }}>
-
-              {/* Left column */}
-              <div>
-                {/* Eyebrow pill */}
-                <div style={{ display: 'inline-block', background: '#e8f5e9', color: '#388e3c', borderRadius: 20, padding: '5px 16px', marginBottom: 24, fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 600, letterSpacing: '0.5px' }}>
-                  EU CosIng · 24,000+ ingredients · Free
-                </div>
-
-                {/* H1 */}
-                <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(36px,5vw,56px)', color: '#1a1a1a', lineHeight: 1.08, marginBottom: 20 }}>
-                  Know what&apos;s really<br />in your skincare.
-                </h1>
-
-                {/* Subheading */}
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, color: '#6b6b6b', lineHeight: 1.6, marginBottom: 32, maxWidth: 480 }}>
-                  Paste an ingredient list or upload a label photo. We flag irritants, pore-cloggers, and pregnancy risks — backed by EU CosIng data.
-                </p>
-
-                {/* CTA buttons */}
-                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}>
-                  <button onClick={() => scrollTo('analyzer')} className="btn-green" style={{ padding: '14px 32px', fontSize: 16, borderRadius: 28 }}>
-                    Analyze Ingredients
-                  </button>
-                  <button onClick={() => scrollTo('how-it-works')} style={{ padding: '14px 32px', fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 700, background: 'transparent', border: '2px solid #1a1a1a', color: '#1a1a1a', borderRadius: 28, cursor: 'pointer', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f0ede6'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
-                    How It Works
-                  </button>
-                </div>
-
-                {/* Stat pills */}
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  {['24,000+ ingredients', '275+ risk flags', 'Free forever'].map(s => (
-                    <span key={s} style={{ background: 'white', border: '1px solid #e8e4dc', borderRadius: 20, padding: '6px 16px', fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 500, color: '#1a1a1a', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>{s}</span>
-                  ))}
-                </div>
+          <section style={{ 
+            background: 'linear-gradient(135deg, #113024 0%, #1b4332 100%)', 
+            padding: '100px 24px 140px', 
+            position: 'relative', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            textAlign: 'center', 
+            width: '100%', 
+            overflow: 'hidden' 
+          }}>
+            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)', zIndex: 0 }} />
+            
+            <div style={{ position: 'relative', zIndex: 1, maxWidth: 800, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+              <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#d1e7dd', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                COSMETIC SAFETY DATABASE
               </div>
 
-              {/* Right column — hero illustration */}
-              <div className="hidden md:flex" style={{ justifyContent: 'center', alignItems: 'center' }}>
-                <HeroIllustration />
+              <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(38px, 6vw, 64px)', color: 'white', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
+                Know what&apos;s in<br />your skincare.
+              </h1>
+
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: 'rgba(255,255,255,0.8)', lineHeight: 1.6, maxWidth: 580, margin: '0 auto' }}>
+                Decode ingredient labels. Flag EU-banned substances, allergens, comedogenics, and pregnancy risks — adjusted for your skin profile.
+              </p>
+
+              <div style={{ 
+                background: 'white', 
+                borderRadius: 28, 
+                padding: '8px 8px 8px 24px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                width: '100%', 
+                maxWidth: 680, 
+                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                marginTop: 16
+              }}>
+                <input 
+                  type="text" 
+                  value={pastedIngredients} 
+                  onChange={e => setPastedIngredients(e.target.value)} 
+                  onKeyDown={e => { if (e.key === 'Enter') handleHeroAnalyze(); }}
+                  placeholder="Paste ingredient list here (comma-separated)..." 
+                  style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', fontFamily: "'Inter', sans-serif" }} 
+                />
+                <button 
+                  onClick={handleHeroAnalyze} 
+                  style={{ 
+                    background: '#4caf50', 
+                    color: 'white', 
+                    fontFamily: "'Nunito', sans-serif", 
+                    fontWeight: 700, 
+                    fontSize: 15, 
+                    padding: '12px 32px', 
+                    borderRadius: 24, 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    transition: 'background 0.2s',
+                    boxShadow: '0 4px 12px rgba(76,175,80,0.2)'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#3d8b40'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#4caf50'}
+                >
+                  Analyze
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
+                <button 
+                  onClick={handleHeroDemo} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 8, 
+                    padding: '10px 24px', 
+                    background: 'rgba(255,255,255,0.08)', 
+                    border: '1px solid rgba(255,255,255,0.15)', 
+                    borderRadius: 24, 
+                    color: 'white', 
+                    fontSize: 13, 
+                    fontWeight: 600, 
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s' 
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5"/>
+                    <path d="M12 2v14.5"/>
+                    <path d="M9 6h6"/>
+                  </svg>
+                  Try Demo Scan
+                </button>
+                <button 
+                  onClick={handleHeroBarcodeClick} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 8, 
+                    padding: '10px 24px', 
+                    background: 'rgba(255,255,255,0.08)', 
+                    border: '1px solid rgba(255,255,255,0.15)', 
+                    borderRadius: 24, 
+                    color: 'white', 
+                    fontSize: 13, 
+                    fontWeight: 600, 
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s' 
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                >
+                  <Barcode size={14} />
+                  Barcode Lookup
+                </button>
               </div>
             </div>
-          </section>
 
-          {/* ── INDEPENDENCE ────────────────────────────────────────────────── */}
-          <section className="section-reveal" style={{ background: '#f0ede6', padding: '80px 24px' }}>
-            <div style={{ maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
-              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', marginBottom: 48 }}>A 100% independent tool</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 40 }}>
-                {[
-                  {
-                    icon: (
-                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 3L4 7v7c0 5.5 4.2 10.7 10 12 5.8-1.3 10-6.5 10-12V7L14 3z"/>
-                        <line x1="9" y1="14" x2="19" y2="14"/>
-                        <line x1="14" y1="9" x2="14" y2="14"/>
-                      </svg>
-                    ),
-                    title: 'No brand influence',
-                    body: 'No brand or manufacturer can affect our ingredient scores or recommendations.',
-                  },
-                  {
-                    icon: (
-                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 6L6 22M6 6l16 16M10 6H4v6M18 22h6v-6"/>
-                      </svg>
-                    ),
-                    title: 'No ads, ever',
-                    body: "We don't sell ad space. No brand can pay to be shown here.",
-                  },
-                  {
-                    icon: (
-                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="4" y="4" width="20" height="20" rx="3"/>
-                        <line x1="4" y1="10" x2="24" y2="10"/>
-                        <line x1="10" y1="10" x2="10" y2="24"/>
-                      </svg>
-                    ),
-                    title: 'Fully open source',
-                    body: 'Our data sources, methodology, and code are all public on GitHub.',
-                  },
-                ].map((col, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
-                      {col.icon}
-                    </div>
-                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 18, color: '#1a1a1a' }}>{col.title}</h3>
-                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: '#6b6b6b', lineHeight: 1.6, maxWidth: 220, textAlign: 'center' }}>{col.body}</p>
-                  </div>
-                ))}
-              </div>
-              <a href="#" style={{ display: 'inline-block', marginTop: 40, color: '#4caf50', fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 15 }}>
-                Learn about our data sources →
-              </a>
-            </div>
-          </section>
-
-          {/* ── WHAT'S IN EVERY ANALYSIS ────────────────────────────────── */}
-          <section className="section-reveal" style={{ background: 'white', padding: '80px 24px' }}>
-            <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-              <div style={{ textAlign: 'center', marginBottom: 52 }}>
-                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 'clamp(28px,3vw,40px)', color: '#1a1a1a', marginBottom: 14 }}>
-                  Six checks run on every scan
-                </h2>
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#6b6b6b', maxWidth: 520, margin: '0 auto' }}>
-                  Paste your ingredient list once — SkinGuard automatically runs all of these for your skin profile.
-                </p>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
-                {[
-                  { dot: '#43a047', bg: '#e8f5e9', title: 'Safety Score', body: 'An overall 0–100 score calculated from flagged ingredients, weighted by severity and adapted to your selected skin conditions.' },
-                  { dot: '#e53935', bg: '#fdeaea', title: 'Irritants & Allergens', body: 'Detects EU SCCS-listed contact allergens, known sensitisers, and ingredients classified as irritants — especially relevant for sensitive skin.' },
-                  { dot: '#f57c00', bg: '#fff3e0', title: 'Comedogenic Rating', body: 'Identifies pore-clogging ingredients rated 3 or higher on the 0–5 comedogenic scale. Automatically flagged when your profile includes acne-prone skin.' },
-                  { dot: '#9c27b0', bg: '#f3e5f5', title: 'Pregnancy Safety', body: 'Warns on retinoids, high-concentration salicylates, and EU-restricted substances. Active only when your pregnancy profile toggle is on.' },
-                  { dot: '#00897b', bg: '#e0f2f1', title: 'Fungal Acne Triggers', body: 'Scans for fatty acids, esters, and oils known to feed Malassezia yeast — the root cause of fungal acne (Malassezia folliculitis).' },
-                  { dot: '#1565c0', bg: '#e3f2fd', title: 'Routine Conflict Checker', body: 'Paste multiple products and detect active-ingredient clashes — e.g. retinol layered with AHAs, or vitamin C with niacinamide at high concentrations.' },
-                ].map((f, i) => (
-                  <div key={i} style={{ background: '#faf9f6', border: '1px solid #e8e4dc', borderRadius: 18, padding: '28px 28px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 38, height: 38, borderRadius: 10, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ width: 14, height: 14, borderRadius: '50%', background: f.dot }} />
-                      </div>
-                      <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 17, color: '#1a1a1a', margin: 0 }}>{f.title}</h3>
-                    </div>
-                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#6b6b6b', lineHeight: 1.65, margin: 0 }}>{f.body}</p>
-                  </div>
-                ))}
-              </div>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
+              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
+                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#faf9f6"></path>
+              </svg>
             </div>
           </section>
 
@@ -643,6 +699,94 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── INDEPENDENCE ────────────────────────────────────────────────── */}
+          <section className="section-reveal" style={{ background: '#f0ede6', padding: '80px 24px' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
+              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', marginBottom: 48 }}>A 100% independent tool</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 40 }}>
+                {[
+                  {
+                    icon: (
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 3L4 7v7c0 5.5 4.2 10.7 10 12 5.8-1.3 10-6.5 10-12V7L14 3z"/>
+                        <line x1="9" y1="14" x2="19" y2="14"/>
+                        <line x1="14" y1="9" x2="14" y2="14"/>
+                      </svg>
+                    ),
+                    title: 'No brand influence',
+                    body: 'No brand or manufacturer can affect our ingredient scores or recommendations.',
+                  },
+                  {
+                    icon: (
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 6L6 22M6 6l16 16M10 6H4v6M18 22h6v-6"/>
+                      </svg>
+                    ),
+                    title: 'No ads, ever',
+                    body: "We don't sell ad space. No brand can pay to be shown here.",
+                  },
+                  {
+                    icon: (
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="4" y="4" width="20" height="20" rx="3"/>
+                        <line x1="4" y1="10" x2="24" y2="10"/>
+                        <line x1="10" y1="10" x2="10" y2="24"/>
+                      </svg>
+                    ),
+                    title: 'Fully open source',
+                    body: 'Our data sources, methodology, and code are all public on GitHub.',
+                  },
+                ].map((col, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                    <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+                      {col.icon}
+                    </div>
+                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 18, color: '#1a1a1a' }}>{col.title}</h3>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: '#6b6b6b', lineHeight: 1.6, maxWidth: 220, textAlign: 'center' }}>{col.body}</p>
+                  </div>
+                ))}
+              </div>
+              <a href="#" style={{ display: 'inline-block', marginTop: 40, color: '#4caf50', fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 15 }}>
+                Learn about our data sources →
+              </a>
+            </div>
+          </section>
+
+          {/* ── WHAT'S IN EVERY ANALYSIS ────────────────────────────────── */}
+          <section className="section-reveal" style={{ background: 'white', padding: '80px 24px' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 52 }}>
+                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 'clamp(28px,3vw,40px)', color: '#1a1a1a', marginBottom: 14 }}>
+                  Six checks run on every scan
+                </h2>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#6b6b6b', maxWidth: 520, margin: '0 auto' }}>
+                  Paste your ingredient list once — SkinGuard automatically runs all of these for your skin profile.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+                {[
+                  { dot: '#43a047', bg: '#e8f5e9', title: 'Safety Score', body: 'An overall 0–100 score calculated from flagged ingredients, weighted by severity and adapted to your selected skin conditions.' },
+                  { dot: '#e53935', bg: '#fdeaea', title: 'Irritants & Allergens', body: 'Detects EU SCCS-listed contact allergens, known sensitisers, and ingredients classified as irritants — especially relevant for sensitive skin.' },
+                  { dot: '#f57c00', bg: '#fff3e0', title: 'Comedogenic Rating', body: 'Identifies pore-clogging ingredients rated 3 or higher on the 0–5 comedogenic scale. Automatically flagged when your profile includes acne-prone skin.' },
+                  { dot: '#9c27b0', bg: '#f3e5f5', title: 'Pregnancy Safety', body: 'Warns on retinoids, high-concentration salicylates, and EU-restricted substances. Active only when your pregnancy profile toggle is on.' },
+                  { dot: '#00897b', bg: '#e0f2f1', title: 'Fungal Acne Triggers', body: 'Scans for fatty acids, esters, and oils known to feed Malassezia yeast — the root cause of fungal acne (Malassezia folliculitis).' },
+                  { dot: '#1565c0', bg: '#e3f2fd', title: 'Routine Conflict Checker', body: 'Paste multiple products and detect active-ingredient clashes — e.g. retinol layered with AHAs, or vitamin C with niacinamide at high concentrations.' },
+                ].map((f, i) => (
+                  <div key={i} style={{ background: '#faf9f6', border: '1px solid #e8e4dc', borderRadius: 18, padding: '28px 28px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: 14, height: 14, borderRadius: '50%', background: f.dot }} />
+                      </div>
+                      <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 17, color: '#1a1a1a', margin: 0 }}>{f.title}</h3>
+                    </div>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#6b6b6b', lineHeight: 1.65, margin: 0 }}>{f.body}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
