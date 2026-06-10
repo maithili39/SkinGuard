@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck, Loader2, AlertTriangle, Heart, Trash2, Search,
   Plus, X, Barcode, Layers, LogOut, Upload, Camera,
-  FileText, Menu,
+  FileText, Menu, FlaskConical, Zap, Sparkles,
 } from 'lucide-react';
 import type { SkinProfile, UserState, AnalysisResult } from '../types';
 import { RoutineAnalyzer } from '../components/RoutineAnalyzer';
@@ -393,7 +393,7 @@ export default function Home() {
   );
 
   const navItems = [
-    { id: 'home', label: 'Purity Check' },
+    { id: 'home', label: 'Home' },
     { id: 'routine', label: 'Routine' },
     { id: 'compare', label: 'Compare' },
     { id: 'learn', label: 'Encyclopedia' },
@@ -422,7 +422,7 @@ export default function Home() {
           {/* Logo */}
           <button onClick={() => { setResults(null); setExtractedIngredients([]); setActiveTab('home'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
             <img src="/logo.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', background: '#f0ede6' }} />
-            <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#1b4332', letterSpacing: '-0.02em' }}>SkinGuard</span>
+            <span style={{ fontFamily: "'Satisfy', cursive", fontWeight: 700, fontSize: 24, color: '#1b4332', display: 'inline-block', transform: 'translateY(-2px)' }}>SkinGuard</span>
           </button>
 
           {/* Desktop nav */}
@@ -484,7 +484,7 @@ export default function Home() {
 
           {/* ── HERO ────────────────────────────────────────────────────────── */}
           <section style={{ 
-            background: 'linear-gradient(135deg, #7DA681 0%, #5d8261 100%)', 
+            background: '#FAF6F0', 
             padding: '70px 24px 100px', 
             position: 'relative', 
             display: 'flex', 
@@ -492,131 +492,123 @@ export default function Home() {
             alignItems: 'center', 
             justifyContent: 'center', 
             width: '100%', 
-            overflow: 'hidden' 
+            overflow: 'hidden',
+            borderBottom: '1px solid #eae5db'
           }}>
-            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)', zIndex: 0 }} />
+            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(76,175,80,0.06) 0%, transparent 70%)', zIndex: 0 }} />
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center w-full max-w-6xl" style={{ position: 'relative', zIndex: 1 }}>
               {/* Left Column (Hero Content) */}
               <div className="col-span-1 md:col-span-7 flex flex-col gap-6 text-center md:text-left items-center md:items-start w-full">
-                <div style={{ display: 'inline-block', background: 'rgba(27,67,50,0.08)', border: '1px solid rgba(27,67,50,0.15)', color: '#1b4332', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                <div style={{ display: 'inline-block', background: 'rgba(76,175,80,0.08)', border: '1px solid rgba(76,175,80,0.15)', color: '#388e3c', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
                   COSMETIC SAFETY DATABASE
                 </div>
    
-                <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(38px, 6vw, 64px)', color: '#1b4332', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
-                  Know what&apos;s in<br />your skincare.
+                <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(36px, 5vw, 56px)', color: '#37302f', lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0 }}>
+                  Decode Your Skincare<br />
+                  <span style={{ fontFamily: "'Caveat', cursive", color: '#4caf50', display: 'inline-block', fontSize: '1.25em', transform: 'rotate(-1.5deg)', marginTop: 4 }}>
+                    Ingredients
+                  </span>
                 </h1>
    
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#2e4e40', lineHeight: 1.6, maxWidth: 580, margin: 0 }}>
-                  Decode ingredient labels. Flag EU-banned substances, allergens, comedogenics, and pregnancy risks — adjusted for your skin profile.
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#5c5351', lineHeight: 1.6, maxWidth: 580, margin: 0 }}>
+                  Get instant insights into ingredient safety, compatibility, and potential risks before adding a product to your routine.
                 </p>
    
-                <div style={{ 
-                  background: 'white', 
-                  borderRadius: 28, 
-                  padding: '8px 8px 8px 24px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  width: '100%', 
-                  maxWidth: 680, 
-                  boxShadow: '0 12px 32px rgba(27,67,50,0.12)',
-                  marginTop: 8
-                }}>
-                  <input 
-                    type="text" 
-                    value={pastedIngredients} 
-                    onChange={e => setPastedIngredients(e.target.value)} 
-                    onKeyDown={e => { if (e.key === 'Enter') handleHeroAnalyze(); }}
-                    placeholder="Paste ingredient list here (comma-separated)..." 
-                    style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: '#1a1a1a', fontFamily: "'Inter', sans-serif" }} 
-                  />
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 }}>
                   <button 
-                    onClick={handleHeroAnalyze} 
+                    onClick={() => scrollTo('analyzer')} 
+                    className="btn-green"
                     style={{ 
-                      background: '#4caf50', 
-                      color: 'white', 
-                      fontFamily: "'Nunito', sans-serif", 
-                      fontWeight: 700, 
-                      fontSize: 15, 
-                      padding: '12px 32px', 
-                      borderRadius: 24, 
-                      border: 'none', 
-                      cursor: 'pointer', 
-                      transition: 'background 0.2s',
-                      boxShadow: '0 4px 12px rgba(76,175,80,0.2)'
+                      padding: '14px 36px', 
+                      fontSize: 16,
+                      fontWeight: 700,
+                      borderRadius: 30,
+                      boxShadow: '0 8px 20px rgba(76,175,80,0.25)'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#3d8b40'}
-                    onMouseLeave={e => e.currentTarget.style.background = '#4caf50'}
                   >
-                    Analyze
-                  </button>
-                </div>
-   
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
-                  <button 
-                    onClick={handleHeroDemo} 
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 8, 
-                      padding: '10px 24px', 
-                      background: 'rgba(27,67,50,0.06)', 
-                      border: '1px solid rgba(27,67,50,0.12)', 
-                      borderRadius: 24, 
-                      color: '#1b4332', 
-                      fontSize: 13, 
-                      fontWeight: 600, 
-                      cursor: 'pointer', 
-                      transition: 'all 0.2s' 
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.12)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.06)'; }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5"/>
-                      <path d="M12 2v14.5"/>
-                      <path d="M9 6h6"/>
-                    </svg>
-                    Try Demo Scan
-                  </button>
-                  <button 
-                    onClick={handleHeroBarcodeClick} 
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 8, 
-                      padding: '10px 24px', 
-                      background: 'rgba(27,67,50,0.06)', 
-                      border: '1px solid rgba(27,67,50,0.12)', 
-                      borderRadius: 24, 
-                      color: '#1b4332', 
-                      fontSize: 13, 
-                      fontWeight: 600, 
-                      cursor: 'pointer', 
-                      transition: 'all 0.2s' 
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.12)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(27,67,50,0.06)'; }}
-                  >
-                    <Barcode size={14} />
-                    Barcode Lookup
+                    Start Analysis
                   </button>
                 </div>
               </div>
 
-              {/* Right Column (Illustration) */}
-              <div className="col-span-1 md:col-span-5 hidden md:flex justify-center">
-                <img 
-                  src="/onskin1.png" 
-                  alt="Skincare ingredients inspection" 
-                  style={{ 
-                    width: '100%', 
-                    maxWidth: 420, 
-                    height: 'auto', 
-                    objectFit: 'contain', 
-                    filter: 'drop-shadow(0 20px 40px rgba(27,67,50,0.15))' 
-                  }} 
-                />
+              {/* Right Column (Yuka-style Illustration Mockup) */}
+              <div className="col-span-1 md:col-span-5 flex justify-center items-center relative" style={{ minHeight: 360 }}>
+                {/* Background decorative blob */}
+                <div style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', background: 'rgba(76,175,80,0.06)', zIndex: 0 }} />
+                
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, width: '100%' }}>
+                  
+                  {/* Skincare Bottle */}
+                  <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', transition: 'all 0.3s ease' }}>
+                    <img 
+                      src="/hero-bottle.png" 
+                      alt="Skincare safety bottle mockup" 
+                      style={{ 
+                        height: 300, 
+                        objectFit: 'contain', 
+                        filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.12))'
+                      }} 
+                    />
+                    
+                    {/* Floating Yuka-style score badge */}
+                    <div style={{ 
+                      position: 'absolute', 
+                      top: 20, 
+                      right: -30, 
+                      background: 'white', 
+                      borderRadius: 20, 
+                      padding: '6px 14px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 8, 
+                      boxShadow: '0 4px 15px rgba(0,0,0,0.1)', 
+                      border: '1px solid #e8e4dc',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                      fontFamily: "'Nunito', sans-serif"
+                    }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff9800' }}></span>
+                      Poor – 35/100
+                    </div>
+                  </div>
+
+                  {/* Highlights Stack on the right */}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 12, 
+                    marginLeft: 20,
+                    zIndex: 2
+                  }} className="hidden sm:flex">
+                    {[
+                      { icon: <FlaskConical size={14} style={{ color: '#c62828' }} />, text: "2 potential endocrine disruptors", bg: '#fdeaea', color: '#c62828' },
+                      { icon: <Zap size={14} style={{ color: '#e65100' }} />, text: "3 Irritants", bg: '#fff3e0', color: '#e65100' },
+                      { icon: <Sparkles size={14} style={{ color: '#2e7d32' }} />, text: "5 Allergens", bg: '#e8f5e9', color: '#2e7d32' }
+                    ].map((item, idx) => (
+                      <div key={idx} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 8, 
+                        padding: '8px 14px', 
+                        background: item.bg, 
+                        color: item.color,
+                        borderRadius: 20, 
+                        border: '1px solid rgba(0,0,0,0.03)',
+                        fontSize: 11, 
+                        fontWeight: 600,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                        whiteSpace: 'nowrap',
+                        fontFamily: "'Inter', sans-serif"
+                      }}>
+                        {item.icon}
+                        <span>{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
               </div>
             </div>
 
@@ -1245,7 +1237,7 @@ export default function Home() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <img src="/logo.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover' }} />
-                <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#1b4332' }}>SkinGuard</span>
+                <span style={{ fontFamily: "'Satisfy', cursive", fontWeight: 700, fontSize: 24, color: '#1b4332' }}>SkinGuard</span>
               </div>
               <p style={{ fontSize: 14, color: '#6b6b6b', fontFamily: "'Inter', sans-serif", lineHeight: 1.6, maxWidth: 200 }}>
                 Free ingredient safety analysis backed by EU CosIng data. No ads. No brand influence.
