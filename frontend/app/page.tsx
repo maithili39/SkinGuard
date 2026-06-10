@@ -1,759 +1,955 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  ShieldCheck, Loader2, AlertTriangle, CheckCircle, Scale, History,
-  LogIn, Moon, Sun, LogOut, X, Info,
+  ShieldCheck, Loader2, AlertTriangle, CheckCircle, XCircle,
+  Heart, Trash2, Search, Plus, X, ArrowRight, Barcode,
+  BookOpen, Layers, Star, ExternalLink, User, Check, LogOut,
+  Upload, Camera, FileText, ChevronDown, ChevronRight, Info,
+  RefreshCw, Minus, FlaskConical, Leaf
 } from 'lucide-react';
 import type { SkinProfile, UserState, AnalysisResult } from '../types';
-import { ProfilePanel } from '../components/ProfilePanel';
-import { UploadCard } from '../components/UploadCard';
-import { LoginModal } from '../components/LoginModal';
-import { HistoryDrawer } from '../components/HistoryDrawer';
-import { ResultsDashboard, FeatureCard } from '../components/ResultsDashboard';
-import { ProductChat } from '../components/ProductChat';
-import { ComparePanel } from '../components/ComparePanel';
 import { RoutineAnalyzer } from '../components/RoutineAnalyzer';
-import type { ScanSummary } from '../types';
-
+import { ComparePanel } from '../components/ComparePanel';
+import { ResultsDashboard } from '../components/ResultsDashboard';
+import { ProfilePanel } from '../components/ProfilePanel';
+import { BarcodeScanner } from '../components/BarcodeScanner';
 
 const LS_USER_KEY = 'sg_user';
+const DEMO_INGREDIENTS = "Water, Glycerin, Niacinamide, Salicylic Acid, Fragrance, Ceramide NP, Phenoxyethanol, Alcohol Denat.";
 
-const DEFAULT_PROFILE: SkinProfile = {
-  pregnant: false,
-  sensitive_skin: false,
-  acne_prone: false,
-  fungal_acne: false,
-  rosacea: false,
-  dry_skin: false,
-  oily_skin: false,
-  combination_skin: false,
-  normal_skin: false,
-};
+const GLOSSARY_TERMS = [
+  { term: "INCI", definition: "International Nomenclature of Cosmetic Ingredients — standardized chemical naming system for ingredients on cosmetic labels." },
+  { term: "Comedogenic", definition: "The tendency of an ingredient to clog pores. Graded 0–5; ratings of 3+ are considered pore-clogging for acne-prone skin." },
+  { term: "Fungal Acne", definition: "Malassezia folliculitis — triggered when specific fatty acids and esters in products feed Malassezia yeast on skin." },
+  { term: "Drying Alcohols", definition: "Volatile alcohols (Alcohol Denat., Ethanol) that disrupt the skin lipid barrier and trigger rosacea flushing." },
+  { term: "pH Active", definition: "Ingredients like AHAs, BHAs, and Vitamin C that require specific acidic pH ranges to work effectively." },
+  { term: "Retinoids", definition: "Vitamin A derivatives that accelerate cell turnover. Contraindicated during pregnancy at any concentration." },
+  { term: "Ceramides", definition: "Waxy lipids forming over 50% of the skin barrier. Critical for locking in hydration and repairing damage." },
+  { term: "Niacinamide", definition: "Vitamin B3. Controls sebum, strengthens the barrier, calms redness, fades hyperpigmentation. Suitable for all skin types." },
+  { term: "Emollient", definition: "An ingredient that softens and smooths skin by filling in spaces between skin cells, reducing water loss." },
+  { term: "Humectant", definition: "An ingredient that draws moisture from the environment or deeper skin layers into the outer skin. Examples: glycerin, hyaluronic acid." },
+];
 
 export default function Home() {
-  // ── State ──────────────────────────────────────────────────────────────────
   const [user, setUser] = useState<UserState | null>(null);
-  const [profile, setProfile] = useState<SkinProfile>(DEFAULT_PROFILE);
-  const [avoidInput, setAvoidInput] = useState('');
-  const [scans, setScans] = useState<ScanSummary[]>([]);
-  const [activeTab, setActiveTab] = useState<'analyze' | 'routine' | 'compare'>('analyze');
+  const [profile, setProfile] = useState<SkinProfile>({
+    pregnant: false, sensitive_skin: true, acne_prone: true,
+    fungal_acne: false, rosacea: false, dry_skin: false,
+    oily_skin: true, combination_skin: false, normal_skin: false,
+  });
+  const [allergies, setAllergies] = useState<string[]>(['Fragrance', 'Alcohol']);
+  const [newAllergyInput, setNewAllergyInput] = useState('');
 
-  const [isDark, setIsDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = useState<'home' | 'analyze' | 'routine' | 'compare' | 'learn' | 'vanity'>('home');
+  const [inputMode, setInputMode] = useState<'paste' | 'upload' | 'barcode'>('paste');
+
+  const [pastedIngredients, setPastedIngredients] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [isBarcodeLookingUp, setIsBarcodeLookingUp] = useState(false);
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [barcodeProduct, setBarcodeProduct] = useState<{ name: string; brand: string } | null>(null);
+
   const [isExtracting, setIsExtracting] = useState(false);
-  const [extractedText, setExtractedText] = useState('');
+  const [extractedIngredients, setExtractedIngredients] = useState<string[]>([]);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [addIngredientInput, setAddIngredientInput] = useState('');
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [scans, setScans] = useState<any[]>([]);
+  const [savedProducts, setSavedProducts] = useState<any[]>([]);
 
-  const [barcodeProduct, setBarcodeProduct] = useState<{name: string; brand: string; imageUrl?: string} | null>(null);
-  const [appVersion, setAppVersion] = useState<string>('');
-  const [llmModel, setLlmModel] = useState<string>('');
-  const [isBarcodeLookingUp, setIsBarcodeLookingUp] = useState(false);
+  const [encyclopediaSearch, setEncyclopediaSearch] = useState('');
+  const [encyclopediaResult, setEncyclopediaResult] = useState<any | null>(null);
+  const [encyclopediaLoading, setEncyclopediaLoading] = useState(false);
+  const [glossarySearch, setGlossarySearch] = useState('');
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginModalMode, setLoginModalMode] = useState<'login' | 'register'>('login');
-  const [showHistory, setShowHistory] = useState(false);
-
-  const profileSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── Dark mode (persist to localStorage + system preference on first visit) ─
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('sg_dark');
-    if (saved !== null) {
-      setIsDark(saved === '1');
-    } else {
-      setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
-    }
-  }, []);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (mounted) {
-      document.documentElement.classList.toggle('dark', isDark);
-      localStorage.setItem('sg_dark', isDark ? '1' : '0');
-    }
-  }, [isDark, mounted]);
-
-  // ── Open login modal if URL query specifies it ────────────────────────────
-  useEffect(() => {
-    if (mounted && typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('login') === 'true') {
-        setLoginModalMode('login');
-        setShowLoginModal(true);
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-      } else if (params.get('register') === 'true') {
-        setLoginModalMode('register');
-        setShowLoginModal(true);
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-      }
-    }
-  }, [mounted]);
-
-  // ── Show onboarding tooltip on first visit ────────────────────────────────
-  useEffect(() => {
-    if (!localStorage.getItem('sg_onboarded')) {
-      setShowOnboarding(true);
-    }
-  }, []);
-
-  // ── URL.createObjectURL cleanup (prevents memory leak) ────────────────────
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
-  // ── Fetch app version + LLM model from /health ───────────────────────────
-  useEffect(() => {
-    fetch('/api/health')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d) {
-          setAppVersion(d.version || '');
-          setLlmModel(d.llm_model || '');
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // ── Load user from localStorage on mount ──────────────────────────────────
-  useEffect(() => {
-    const raw = localStorage.getItem(LS_USER_KEY);
-    if (raw) {
+    const saved = localStorage.getItem(LS_USER_KEY);
+    if (saved) {
       try {
-        const saved: UserState = JSON.parse(raw);
-        setUser(saved);
-        setProfile({
-          pregnant: saved.profile.pregnant,
-          sensitive_skin: saved.profile.sensitive_skin,
-          acne_prone: saved.profile.acne_prone,
-          fungal_acne: saved.profile.fungal_acne,
-          rosacea: saved.profile.rosacea ?? false,
-          dry_skin: saved.profile.dry_skin ?? false,
-          oily_skin: saved.profile.oily_skin ?? false,
-          combination_skin: saved.profile.combination_skin ?? false,
-          normal_skin: saved.profile.normal_skin ?? false,
-        });
-        setAvoidInput((saved.profile.avoid_list || []).join(', '));
-      } catch {
-        localStorage.removeItem(LS_USER_KEY);
-      }
+        const u: UserState = JSON.parse(saved);
+        setUser(u);
+        if (u.profile) {
+          setProfile({ pregnant: u.profile.pregnant, sensitive_skin: u.profile.sensitive_skin, acne_prone: u.profile.acne_prone, fungal_acne: u.profile.fungal_acne, rosacea: u.profile.rosacea ?? false, dry_skin: u.profile.dry_skin ?? false, oily_skin: u.profile.oily_skin ?? false, combination_skin: u.profile.combination_skin ?? false, normal_skin: u.profile.normal_skin ?? false });
+          setAllergies(u.profile.avoid_list || []);
+        }
+      } catch { localStorage.removeItem(LS_USER_KEY); }
     }
   }, []);
 
-  // ── Load scan history on user login ───────────────────────────────────────
   useEffect(() => {
     if (user) {
-      (async () => {
-        try {
-          const res = await fetch('/api/auth/scans', {
-            credentials: 'include',
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setScans(data.scans || []);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      })();
-    } else {
-      setScans([]);
-    }
+      fetch('/api/auth/scans').then(r => r.ok ? r.json() : null).then(d => { if (d?.scans) setScans(d.scans); }).catch(() => {});
+      const savedKey = `sg_saved_${user.email}`;
+      try { const d = localStorage.getItem(savedKey); if (d) setSavedProducts(JSON.parse(d)); } catch {}
+    } else { setScans([]); setSavedProducts([]); }
   }, [user]);
 
-  // ── Profile auto-save (debounced 800ms) ───────────────────────────────────
-  const saveProfile = useCallback(
-    (email: string, updated: SkinProfile, avoid: string) => {
-      if (!email) return;
-      if (profileSaveTimer.current) clearTimeout(profileSaveTimer.current);
-      profileSaveTimer.current = setTimeout(async () => {
-        try {
-          await fetch(`/api/users/${encodeURIComponent(email)}/profile`, {
-            method: 'PUT',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...updated,
-              avoid_list: avoid.split(',').map((s) => s.trim()).filter(Boolean),
-            }),
-          });
-        } catch {
-          // best-effort — not a blocking error
-        }
-      }, 800);
-    },
-    [],
-  );
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
 
   const handleProfileToggle = (key: keyof SkinProfile) => {
-    setProfile((prev) => {
+    setProfile(prev => {
       const next = { ...prev, [key]: !prev[key] };
-      if (user) saveProfile(user.email, next, avoidInput);
+      saveProfileToBackend(next, allergies);
       return next;
     });
   };
 
-  const handleAvoidChange = (val: string) => {
-    setAvoidInput(val);
-    if (user) saveProfile(user.email, profile, val);
-  };
-
-  // ── File selection (revokes previous blob URL before creating new one) ────
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user) {
-      setLoginModalMode('login');
-      setShowLoginModal(true);
-      return;
-    }
-    const selected = e.target.files?.[0];
-    if (!selected) return;
-    if (previewUrl) URL.revokeObjectURL(previewUrl);   // ← memory leak fix
-    setFile(selected);
-    setPreviewUrl(URL.createObjectURL(selected));
-    setExtractedText('');
-    setResults(null);
-    setError(null);
-  };
-
-  // ── OCR extract ───────────────────────────────────────────────────────────
-  const handleExtract = async () => {
-    if (!user) {
-      setLoginModalMode('login');
-      setShowLoginModal(true);
-      return;
-    }
-    if (!file) return;
-    setIsExtracting(true);
-    setError(null);
-    const formData = new FormData();
-    formData.append('file', file);
+  const saveProfileToBackend = async (p: SkinProfile, a: string[]) => {
+    if (!user) return;
     try {
-      const res = await fetch('/api/extract-text', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || `OCR failed (HTTP ${res.status})`);
-      }
-      const data = await res.json();
-      setExtractedText(data.text || '');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
-    } finally {
-      setIsExtracting(false);
-    }
+      await fetch(`/api/users/${encodeURIComponent(user.email)}/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...p, avoid_list: a }) });
+      const u = { ...user, profile: { ...p, avoid_list: a } };
+      setUser(u); localStorage.setItem(LS_USER_KEY, JSON.stringify(u));
+    } catch {}
   };
 
-  // ── Analysis ──────────────────────────────────────────────────────────────
-  const handleAnalyze = async (overrideText?: string) => {
-    if (!user) {
-      setLoginModalMode('login');
-      setShowLoginModal(true);
-      return;
-    }
-    const textToAnalyze = typeof overrideText === 'string' ? overrideText : extractedText;
-    if (!textToAnalyze.trim()) return;
-    setIsAnalyzing(true);
-    setError(null);
+  const handleLoginMock = (email: string, fullName: string) => {
+    const u: UserState = { email, full_name: fullName, profile: { pregnant: false, sensitive_skin: true, acne_prone: true, fungal_acne: false, rosacea: false, dry_skin: false, oily_skin: true, combination_skin: false, normal_skin: false, avoid_list: ['Fragrance', 'Alcohol'] } };
+    setUser(u); localStorage.setItem(LS_USER_KEY, JSON.stringify(u)); setShowLoginModal(false); setActiveTab('vanity');
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setAuthError(null);
+    if (!emailInput) { setAuthError('Email is required.'); return; }
+    if (authMode === 'forgot') { alert(`Reset link sent to ${emailInput}`); setAuthMode('login'); return; }
     try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: textToAnalyze,
-          profile: {
-            ...profile,
-            avoid_list: avoidInput.split(',').map((s) => s.trim()).filter(Boolean),
-          },
-          user_email: user?.email ?? null,
-        }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || 'Analysis failed');
-      }
-      setResults(await res.json());
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Analysis failed');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleReanalyze = (newText: string) => {
-    setExtractedText(newText);
-    handleAnalyze(newText);
-  };
-
-  const handleBarcodeLookup = async (barcode: string) => {
-    if (!user) {
-      setLoginModalMode('login');
-      setShowLoginModal(true);
-      return;
-    }
-    setIsBarcodeLookingUp(true);
-    setError(null);
-    setBarcodeProduct(null);
-    try {
-      const res = await fetch(`/api/barcode/${barcode}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error('Product not found in Open Beauty Facts database.');
-        }
-        throw new Error(`Barcode lookup failed (HTTP ${res.status})`);
-      }
-      const data = await res.json();
-      setBarcodeProduct({
-        name: data.product_name,
-        brand: data.brands,
-        imageUrl: data.image_url || undefined,
-      });
-      setExtractedText(data.ingredients_text || '');
-      setResults(null);
-      setFile(null);
-      setPreviewUrl(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Barcode lookup failed');
-    } finally {
-      setIsBarcodeLookingUp(false);
-    }
-  };
-
-  // ── Auth callbacks ────────────────────────────────────────────────────────
-  const handleLogin = (newUser: UserState) => {
-    // Strip raw JWT token from localStorage to prevent XSS exposure
-    const safeUser = { ...newUser, token: undefined };
-    setUser(safeUser);
-    localStorage.setItem(LS_USER_KEY, JSON.stringify(safeUser));
-    setProfile({
-      pregnant: newUser.profile.pregnant,
-      sensitive_skin: newUser.profile.sensitive_skin,
-      acne_prone: newUser.profile.acne_prone,
-      fungal_acne: newUser.profile.fungal_acne,
-      rosacea: newUser.profile.rosacea ?? false,
-      dry_skin: newUser.profile.dry_skin ?? false,
-      oily_skin: newUser.profile.oily_skin ?? false,
-      combination_skin: newUser.profile.combination_skin ?? false,
-      normal_skin: newUser.profile.normal_skin ?? false,
-    });
-    setAvoidInput((newUser.profile.avoid_list || []).join(', '));
-    setShowLoginModal(false);
+      const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      const body = authMode === 'login' ? { email: emailInput, password: passwordInput } : { email: emailInput, password: passwordInput, full_name: nameInput || 'User' };
+      const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Authentication failed'); }
+      const d = await res.json();
+      handleLoginMock(d.email, d.full_name || nameInput || 'User');
+    } catch (err: any) { setAuthError(err.message || 'An error occurred'); }
   };
 
   const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch (e) {
-      console.error('Logout failed:', e);
-    }
-    setUser(null);
-    localStorage.removeItem(LS_USER_KEY);
-    setProfile(DEFAULT_PROFILE);
-    setAvoidInput('');
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+    setUser(null); localStorage.removeItem(LS_USER_KEY); setActiveTab('home');
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  return (
-    <main id="main-content" className="min-h-screen flex flex-col items-center bg-gradient-to-br from-slate-50 via-green-50/10 to-emerald-50/20 dark:from-slate-950 dark:via-slate-950/20 dark:to-slate-950 relative overflow-hidden transition-colors duration-300">
-      {/* Decorative blobs */}
-      <div className="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] bg-primary-200/20 dark:bg-primary-900/10 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-[-80px] right-[-80px] w-[400px] h-[400px] bg-emerald-200/20 dark:bg-emerald-900/10 rounded-full blur-[60px] pointer-events-none" />
+  const handleExtractText = async () => {
+    if (!file) return;
+    setIsExtracting(true); setError(null);
+    const formData = new FormData(); formData.append('file', file);
+    try {
+      const res = await fetch('/api/extract-text', { method: 'POST', body: formData });
+      if (!res.ok) { const d = await res.json().catch(() => ({ detail: 'OCR extraction failed' })); throw new Error(d.detail); }
+      const data = await res.json();
+      const text = data.text || '';
+      if (!text.trim()) throw new Error('No text detected in image. Ensure the ingredient list is clearly visible and try again.');
+      const parsed = text.split(/,|\n/).map((s: string) => s.trim().replace(/[.*]/g, '')).filter(Boolean);
+      setExtractedIngredients(parsed); setResults(null); setActiveTab('analyze');
+    } catch (err: any) { setError(err.message); }
+    finally { setIsExtracting(false); }
+  };
 
-      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <header className="w-full px-6 py-4 flex items-center justify-between relative z-10 border-b border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md transition-colors duration-300">
-        <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-tr from-primary-600 to-primary-400 p-2 rounded-xl text-white shadow-lg shadow-primary-500/30">
-            <ShieldCheck size={22} />
-          </div>
-          <span className="font-extrabold text-xl text-slate-800 dark:text-white">SkinGuard</span>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Dark mode toggle */}
+  const handleBarcodeLookup = async (code: string) => {
+    const c = code || barcodeInput;
+    if (!c.trim()) { setError('Enter a barcode number.'); return; }
+    setIsBarcodeLookingUp(true); setError(null); setBarcodeProduct(null);
+    try {
+      const res = await fetch(`/api/barcode/${c.trim()}`);
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Product not found in any barcode database.'); }
+      const data = await res.json();
+      setBarcodeProduct({ name: data.product_name || 'Unknown Product', brand: data.brands || '' });
+      const ingText = data.ingredients_text || '';
+      if (!ingText) throw new Error('Product found but has no ingredient list. Try uploading a photo of the label instead.');
+      const parsed = ingText.split(',').map((s: string) => s.trim()).filter(Boolean);
+      setExtractedIngredients(parsed); setResults(null); setActiveTab('analyze');
+    } catch (err: any) { setError(err.message); }
+    finally { setIsBarcodeLookingUp(false); }
+  };
+
+  const handleManualInputSubmit = () => {
+    if (!pastedIngredients.trim()) return;
+    if (pastedIngredients.length > 5000) { setError('Input too long — limit is 5,000 characters.'); return; }
+    const sanitized = pastedIngredients.replace(/<[^>]*>/g, '');
+    const parsed = sanitized.split(',').map(s => s.trim().replace(/[.*]/g, '')).filter(Boolean);
+    if (parsed.length <= 1) { setError('Please paste the full ingredient list separated by commas.'); return; }
+    setExtractedIngredients(parsed); setResults(null); setError(null); setActiveTab('analyze');
+  };
+
+  const handleRunAnalysis = async () => {
+    if (extractedIngredients.length === 0) return;
+    setIsAnalyzing(true); setError(null);
+    const textToAnalyze = extractedIngredients.join(', ');
+    try {
+      const res = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textToAnalyze, profile: { ...profile, avoid_list: allergies }, user_email: user?.email || null }) });
+      if (!res.ok) throw new Error('Analysis failed');
+      const data: AnalysisResult = await res.json();
+      setResults(data);
+      const mock = { id: Date.now(), created_at: new Date().toISOString(), safety_score: data.safety_score, coverage_percent: data.coverage_percent, summary: data.summary, result: data, input_text: textToAnalyze };
+      if (!user) setScans(prev => [mock, ...prev]);
+      else fetch('/api/auth/scans').then(r => r.ok ? r.json() : null).then(d => { if (d?.scans) setScans(d.scans); });
+    } catch (err: any) { setError(err.message); }
+    finally { setIsAnalyzing(false); }
+  };
+
+  const handleTryDemo = () => {
+    const parsed = DEMO_INGREDIENTS.split(',').map(s => s.trim()).filter(Boolean);
+    setExtractedIngredients(parsed); setResults(null); setActiveTab('analyze');
+  };
+
+  const toggleSave = (name: string) => {
+    if (!user) { setAuthMode('login'); setShowLoginModal(true); return; }
+    const key = `sg_saved_${user.email}`;
+    let current = [...savedProducts];
+    const exists = current.find(p => p.name === name);
+    if (exists) current = current.filter(p => p.name !== name);
+    else current.push({ id: Date.now().toString(), name, date: new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), score: results?.safety_score || 80, result: results });
+    setSavedProducts(current); localStorage.setItem(key, JSON.stringify(current));
+  };
+
+  const handleSearchEncyclopedia = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!encyclopediaSearch.trim()) return;
+    setEncyclopediaLoading(true); setEncyclopediaResult(null);
+    try {
+      const res = await fetch(`/api/explain/${encodeURIComponent(encyclopediaSearch.trim())}?llm=true`);
+      if (!res.ok) throw new Error('Not found');
+      const data = await res.json();
+      setEncyclopediaResult({ name: encyclopediaSearch.trim(), description: data.explanation || 'A cosmetic ingredient used in formulations.', benefits: data.ingredient?.function || 'Conditioning, hydrating, or UV-filtering.', sideEffects: data.ingredient?.irritant === 'yes' ? 'May cause localized redness or irritation in sensitive skin.' : 'Generally well-tolerated under standard use concentrations.', sources: 'EU CosIng Inventory / Dermatology consensus', types: data.ingredient?.comedogenic ? 'Use with caution on acne-prone skin.' : 'Generally suitable for all skin types.' });
+    } catch {
+      setEncyclopediaResult({ name: encyclopediaSearch.trim(), description: 'Cosmetic ingredient used for its skin surface or stability benefits in formulations.', benefits: 'Hydration, viscosity adjustment, or emulsification.', sideEffects: 'Generally well-tolerated.', sources: 'EU CosIng Registry', types: 'Suitable for most skin types.' });
+    } finally { setEncyclopediaLoading(false); }
+  };
+
+  const filteredGlossary = GLOSSARY_TERMS.filter(g =>
+    g.term.toLowerCase().includes(glossarySearch.toLowerCase()) ||
+    g.definition.toLowerCase().includes(glossarySearch.toLowerCase())
+  );
+
+  const navItems = [
+    { id: 'home', label: 'Purity Check' },
+    { id: 'routine', label: 'Routine' },
+    { id: 'compare', label: 'Compare' },
+    { id: 'learn', label: 'Encyclopedia' },
+    ...(user ? [{ id: 'vanity', label: 'My Vanity' }] : []),
+  ];
+
+  /* ─── Render ─────────────────────────────────────────────────────────── */
+  return (
+    <main style={{ background: 'var(--bg)', minHeight: '100vh', fontFamily: "'Nunito Sans', sans-serif" }}>
+
+      {/* Camera Scanner */}
+      {showCameraScanner && (
+        <BarcodeScanner
+          onDetected={code => { setShowCameraScanner(false); setBarcodeInput(code); handleBarcodeLookup(code); }}
+          onClose={() => setShowCameraScanner(false)}
+        />
+      )}
+
+      {/* ─── Header ───────────────────────────────────────────────────────── */}
+      <header style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--header-border)', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+
+          {/* Logo */}
           <button
-            onClick={() => setIsDark((d) => !d)}
-            className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
-            title={mounted && isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            id="dark-mode-toggle"
+            onClick={() => { setResults(null); setExtractedIngredients([]); setActiveTab('home'); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
           >
-            {mounted && isDark ? <Sun size={18} /> : <Moon size={18} />}
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--green-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={17} color="white" />
+            </div>
+            <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: 'var(--text-dark)', letterSpacing: '-0.02em' }}>SkinGuard</span>
           </button>
 
-          {user ? (
-            <>
+          {/* Desktop Nav */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="hidden md:flex">
+            {navItems.map(item => (
               <button
-                id="history-btn"
-                onClick={() => setShowHistory(true)}
-                className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors px-3.5 py-2 rounded-full hover:bg-primary-50 dark:hover:bg-primary-950/20 font-semibold"
+                key={item.id}
+                onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); }}
+                className={`nav-tab ${(activeTab === item.id || (item.id === 'home' && activeTab === 'analyze')) ? 'active' : ''}`}
               >
-                <History size={16} /> History
+                {item.label}
               </button>
-              <div className="flex items-center gap-2 bg-primary-50 dark:bg-primary-950/30 px-3.5 py-1.5 rounded-full border border-primary-100 dark:border-primary-900/60">
-                <span className="w-2 h-2 rounded-full bg-primary-500" />
-                <span className="text-sm font-semibold text-primary-700 dark:text-primary-300 max-w-[140px] truncate">{user.full_name || user.email}</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                title="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </>
-          ) : (
-            <div className="flex items-center gap-3">
-              <button
-                id="login-btn"
-                onClick={() => { setLoginModalMode('login'); setShowLoginModal(true); }}
-                className="text-slate-600 dark:text-slate-350 hover:text-primary-600 dark:hover:text-primary-400 transition-colors px-4 py-2 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full font-sans"
-              >
-                Sign In
-              </button>
-              <button
-                id="signup-btn"
-                onClick={() => { setLoginModalMode('register'); setShowLoginModal(true); }}
-                className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-md shadow-primary-500/20 btn-lift font-sans"
-              >
-                Create Account
-              </button>
-            </div>
-          )}
+            ))}
+          </nav>
+
+          {/* Auth */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            {user ? (
+              <>
+                <button onClick={() => setActiveTab('vanity')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: '1.5px solid var(--border-dark)', borderRadius: 50, padding: '6px 14px', cursor: 'pointer' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--green-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+                    {(user.full_name || user.email)[0].toUpperCase()}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dark)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.full_name || 'User'}</span>
+                </button>
+                <button onClick={handleLogout} title="Sign out" style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 8, display: 'flex' }}>
+                  <LogOut size={15} />
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', padding: '8px 12px', borderRadius: 8 }}>Login</button>
+                <button onClick={() => { setAuthMode('signup'); setShowLoginModal(true); }} className="btn-green" style={{ padding: '9px 20px', fontSize: 13 }}>Sign up</button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* ── Onboarding tooltip (first visit only) ────────────────────────── */}
-      {showOnboarding && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-xs bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-5 animate-fade-in-up">
-          <button
-            onClick={() => { setShowOnboarding(false); localStorage.setItem('sg_onboarded', '1'); }}
-            className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          >
-            <X size={14} />
-          </button>
-          <div className="flex gap-3 items-start">
-            <div className="p-2 bg-primary-50 dark:bg-primary-950/40 rounded-xl flex-shrink-0">
-              <ShieldCheck size={18} className="text-primary-600" />
-            </div>
-            <div>
-              <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Welcome to SkinGuard!</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                Paste or scan a product&apos;s ingredient list to get an instant safety analysis for your skin type.
-              </p>
-              <ol className="mt-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
-                <li>1. Set your skin profile above</li>
-                <li>2. Upload a label photo or paste ingredients</li>
-                <li>3. Hit <strong className="text-primary-600 dark:text-primary-400">Analyse</strong></li>
-              </ol>
-              <button
-                onClick={() => { setShowOnboarding(false); localStorage.setItem('sg_onboarded', '1'); }}
-                className="mt-3 w-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold py-2 rounded-lg transition"
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col items-center pt-20 pb-10 px-6 w-full relative z-10">
-        <div className="mb-4 flex items-center gap-2 bg-primary-50 border border-primary-200 dark:bg-primary-950/30 dark:border-primary-800/60 rounded-full px-4 py-1.5">
-          <CheckCircle size={14} className="text-primary-500" />
-          <span className="text-xs font-semibold text-primary-700 dark:text-primary-400 uppercase tracking-wider">EU CosIng · 24,000+ ingredients · Free</span>
-        </div>
-        <h1 className="text-5xl md:text-6xl font-black text-center text-slate-900 dark:text-white mb-5 leading-tight">
-          Know What&apos;s In Your <br />
-          <span className="gradient-text">Skincare</span>
-        </h1>
-        <p className="text-xl text-slate-600 dark:text-slate-400 text-center max-w-2xl mb-10 leading-relaxed">
-          Upload a product label or paste the ingredient list. We&apos;ll tell you what each ingredient does — and flag what matters for your skin.
-        </p>
-
-        {/* Unified Workspace Tab Bar */}
-        <div className="flex gap-1.5 p-1 bg-slate-100/85 dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-800/40 w-fit mx-auto mb-10 relative z-10 shadow-sm">
-          <button
-            onClick={() => setActiveTab('analyze')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'analyze'
-                ? 'bg-white dark:bg-slate-800 text-primary-600 dark:text-primary-400 shadow-sm border border-slate-200/5 dark:border-slate-700/10'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            Scan &amp; Analyze
-          </button>
-          <button
-            onClick={() => setActiveTab('routine')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'routine'
-                ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200/5 dark:border-slate-700/10'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            Routine Layering
-          </button>
-          <button
-            onClick={() => setActiveTab('compare')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'compare'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/5 dark:border-slate-700/10'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            Product Compare
-          </button>
-        </div>
-
-        {/* Workspace Panels */}
-        {activeTab === 'analyze' && (
-          <div className="w-full max-w-4xl flex flex-col items-center animate-fade-in">
-            <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
-
-            {/* Avoid list input */}
-            {user && (
-              <div className="w-full max-w-2xl mb-8">
-                <input
-                  value={avoidInput}
-                  onChange={(e) => handleAvoidChange(e.target.value)}
-                  placeholder="Ingredients to avoid (comma-separated, e.g. Fragrance, SLS)"
-                  className="w-full border border-slate-250 dark:border-slate-750 rounded-full px-6 py-3.5 text-sm text-slate-800 dark:text-slate-100 bg-white/80 dark:bg-slate-900/80 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 dark:focus:ring-primary-950/20 outline-none transition shadow-sm"
-                  id="avoid-input"
-                />
-              </div>
-            )}
-
-            {/* Upload + Manual entry */}
-            <UploadCard
-              file={file}
-              previewUrl={previewUrl}
-              isExtracting={isExtracting}
-              onFileChange={handleFileChange}
-              onExtract={handleExtract}
-              onBarcodeLookup={handleBarcodeLookup}
-              isBarcodeLookingUp={isBarcodeLookingUp}
-              hasUser={!!user}
-            />
-
-            {/* Barcode product match banner */}
-            {barcodeProduct && (
-              <div className="w-full max-w-2xl mt-6 p-4 rounded-2xl bg-gradient-to-r from-primary-50 to-emerald-50 dark:from-primary-950/20 dark:to-emerald-950/20 border border-primary-200 dark:border-primary-800/60 flex items-center justify-between gap-4 animate-fade-in-up">
-                <div className="flex items-center gap-3">
-                  {barcodeProduct.imageUrl && (
-                    <Image
-                      src={barcodeProduct.imageUrl}
-                      alt={barcodeProduct.name}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
-                    />
-                  )}
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">Barcode Match</p>
-                    <h4 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm leading-tight">
-                      {barcodeProduct.name}
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{barcodeProduct.brand}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setBarcodeProduct(null);
-                    setExtractedText('');
-                  }}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-                  title="Clear product"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-
-            {/* Editable text area (shown after OCR or for manual entry) */}
-            {(extractedText !== '' || !file) && (
-              <div className="w-full max-w-2xl mt-6 space-y-3">
-                <label className="text-sm font-bold text-slate-650 dark:text-slate-350 ml-1.5">
-                  {extractedText ? 'Extracted ingredients (edit if needed):' : 'Or paste ingredients manually:'}
-                </label>
-                <textarea
-                  value={extractedText}
-                  onChange={(e) => { setExtractedText(e.target.value); setResults(null); }}
-                  rows={5}
-                  id="ingredient-textarea"
-                  placeholder="Aqua, Glycerin, Niacinamide, Panthenol…"
-                  className="w-full border border-slate-250 dark:border-slate-750 rounded-2xl p-4 text-sm text-slate-800 dark:text-slate-100 bg-white/90 dark:bg-slate-900/90 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 dark:focus:ring-primary-950/20 outline-none transition shadow-sm resize-none"
-                />
-                <button
-                  onClick={() => {
-                    if (!user) {
-                      setLoginModalMode('login');
-                      setShowLoginModal(true);
-                    } else {
-                      handleAnalyze();
-                    }
-                  }}
-                  disabled={isAnalyzing || (!user ? false : !extractedText.trim())}
-                  id="analyze-btn"
-                  className="w-full bg-gradient-to-r from-primary-600 to-emerald-600 hover:from-primary-700 hover:to-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-primary-500/25 hover:shadow-primary-500/35 flex items-center justify-center gap-3 btn-lift"
-                >
-                  {isAnalyzing ? <Loader2 className="animate-spin" size={22} /> : <ShieldCheck size={22} />}
-                  {isAnalyzing ? 'Analysing…' : user ? 'Analyse Ingredients' : 'Sign In to Analyse'}
-                </button>
-              </div>
-            )}
-
-            {/* Error */}
-            {error && (
-              <div className="w-full max-w-2xl mt-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700">
-                <AlertTriangle size={18} />
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
-
-            {/* Results */}
-            {results && <ResultsDashboard results={results} onReanalyze={handleReanalyze} />}
-
-            {/* RAG Product Chat — shown after analysis */}
-            {results && (
-              <ProductChat results={results} />
-            )}
-          </div>
-        )}
-
-        {activeTab === 'routine' && (
-          <div className="w-full max-w-4xl animate-fade-in flex flex-col items-center py-12">
-            {!user ? (
-              <div className="glass-panel rounded-3xl p-8 max-w-md text-center border border-slate-200/50 dark:border-slate-800/50 shadow-2xl">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950/35 rounded-full">
-                    <ShieldCheck size={36} className="text-emerald-500" />
-                  </div>
-                </div>
-                <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg mb-2">Sign In to Analyze Routine</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-                  Log in to check multiple product layers for active ingredient conflicts and build your personalized safe routine.
-                </p>
-                <button
-                  onClick={() => { setLoginModalMode('login'); setShowLoginModal(true); }}
-                  className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-full text-xs font-bold shadow-md shadow-primary-500/10 btn-lift"
-                >
-                  Sign In
-                </button>
-              </div>
-            ) : (
-              <RoutineAnalyzer scans={scans} />
-            )}
-          </div>
-        )}
-
-        {activeTab === 'compare' && (
-          <div className="w-full max-w-4xl animate-fade-in flex flex-col items-center py-12">
-            {!user ? (
-              <div className="glass-panel rounded-3xl p-8 max-w-md text-center border border-slate-200/50 dark:border-slate-800/50 shadow-2xl">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950/35 rounded-full">
-                    <ShieldCheck size={36} className="text-emerald-500" />
-                  </div>
-                </div>
-                <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg mb-2">Sign In to Compare Products</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-                  Log in to compare different cosmetic products side-by-side and find the safest option for your skin type.
-                </p>
-                <button
-                  onClick={() => { setLoginModalMode('login'); setShowLoginModal(true); }}
-                  className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-full text-xs font-bold shadow-md shadow-primary-500/10 btn-lift"
-                >
-                  Sign In
-                </button>
-              </div>
-            ) : (
-              <ComparePanel currentAnalysis={results} scans={scans} />
-            )}
-          </div>
-        )}
-
-        {/* Stats strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-20 w-full max-w-4xl">
-          {[
-            { value: '24,000+', label: 'Ingredients', color: 'text-primary-600 dark:text-primary-400' },
-            { value: '275+', label: 'Risk flags', color: 'text-amber-600 dark:text-amber-400' },
-            { value: '8', label: 'Routine conflicts', color: 'text-rose-600 dark:text-rose-400' },
-            { value: 'Free', label: 'Forever', color: 'text-emerald-600 dark:text-emerald-400' },
-          ].map(({ value, label, color }) => (
-            <div key={label} className="glass-panel rounded-2xl p-4 text-center border border-white/50 dark:border-slate-700/50">
-              <p className={`text-2xl font-black ${color}`}>{value}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Feature highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 w-full max-w-5xl">
-          <FeatureCard
-            icon={<CheckCircle className="text-green-500" size={24} />}
-            title="Acne & Fungal Acne Safe"
-            description="Detects pore-clogging and fungal acne triggering ingredients — separated from general safety flags."
-          />
-          <FeatureCard
-            icon={<AlertTriangle className="text-amber-500" size={24} />}
-            title="Honest Scoring"
-            description="We distinguish 'assessed safe' from 'unknown' — and withhold scores when we don't have enough data."
-          />
-          <FeatureCard
-            icon={<Scale className="text-blue-500" size={24} />}
-            title="EU Regulatory Facts"
-            description="EU-banned and concentration-restricted ingredients are flagged separately from curated skin advice."
-          />
-        </div>
+      {/* Mobile nav */}
+      <div className="flex md:hidden" style={{ background: 'white', borderBottom: '1px solid var(--border)', padding: '8px 16px', gap: 6, overflowX: 'auto' }}>
+        {navItems.map(item => (
+          <button key={item.id} onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); }} className={`nav-tab ${activeTab === item.id ? 'active' : ''}`} style={{ flexShrink: 0 }}>{item.label}</button>
+        ))}
       </div>
 
-      {/* ── Medical disclaimer + version footer ──────────────────────────── */}
-      <footer className="w-full max-w-5xl mt-16 mb-8 px-4 space-y-3">
-        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl text-xs text-amber-800 dark:text-amber-300">
-          <Info size={14} className="flex-shrink-0 mt-0.5" />
-          <p>
-            <span className="font-bold">Not medical advice.</span> SkinGuard provides educational ingredient information only.
-            Always consult a dermatologist or healthcare professional, especially if you are pregnant, have a medical condition,
-            or are considering significant changes to your skincare routine.
-          </p>
-        </div>
-        <div className="flex items-center justify-between flex-wrap gap-2 px-1">
-          <div className="flex gap-4">
-            <a href="/privacy" className="text-[10px] text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Privacy Policy</a>
-            <a href="https://github.com/maithili39/SkinGuard" target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">GitHub</a>
+      {/* ─── Content ──────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
+
+        {/* ═══════════════════════════════════════════════
+            HOME PAGE
+            ═══════════════════════════════════════════════ */}
+        {activeTab === 'home' && (
+          <div className="animate-fade-up">
+
+            {/* ── EWG-style teal hero banner ── */}
+            <section style={{ background: 'var(--teal-header)', margin: '0 -20px', padding: '52px 20px 80px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 50, padding: '5px 16px', marginBottom: 20 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Nunito Sans', sans-serif" }}>Cosmetic Safety Database</span>
+                </div>
+                <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(32px, 5vw, 52px)', color: 'white', marginBottom: 20, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                  Know what&apos;s in<br />your skincare.
+                </h1>
+                <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.8)', maxWidth: 480, margin: '0 auto 36px', lineHeight: 1.65, fontFamily: "'Nunito Sans', sans-serif" }}>
+                  Decode ingredient labels. Flag EU-banned substances, allergens, comedogenics, and pregnancy risks — adjusted for your skin profile.
+                </p>
+
+                {/* EWG-style search box */}
+                <div style={{ background: 'white', borderRadius: 12, padding: 6, display: 'flex', gap: 6, maxWidth: 560, margin: '0 auto 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
+                  <textarea
+                    value={pastedIngredients}
+                    onChange={e => setPastedIngredients(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleManualInputSubmit(); }}
+                    rows={2}
+                    placeholder="Paste ingredient list here (comma-separated)..."
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, fontFamily: "'Nunito Sans', sans-serif", color: 'var(--text-dark)', resize: 'none', padding: '8px 12px', lineHeight: 1.5, background: 'transparent' }}
+                  />
+                  <button onClick={handleManualInputSubmit} className="ewg-search-btn" style={{ alignSelf: 'flex-end', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    Analyze
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <button onClick={handleTryDemo} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '9px 20px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Nunito Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <FlaskConical size={13} /> Try Demo Scan
+                  </button>
+                  <button onClick={() => { setInputMode('barcode'); document.getElementById('scan-widget')?.scrollIntoView({ behavior: 'smooth' }); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '9px 20px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Nunito Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Barcode size={13} /> Barcode Lookup
+                  </button>
+                </div>
+              </div>
+
+              {/* Decorative circles (EWG-inspired) */}
+              <div style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', bottom: -80, left: -80, width: 360, height: 360, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+            </section>
+
+            {/* Yuka-style wave separator */}
+            <div style={{ background: 'var(--teal-header)', margin: '0 -20px' }}>
+              <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
+                <path d="M0 0L1440 0L1440 20C1200 60 960 60 720 40C480 20 240 60 0 40L0 0Z" fill="var(--bg)" />
+              </svg>
+            </div>
+
+            {/* ── Skin Profile step ── */}
+            <section style={{ padding: '60px 0', textAlign: 'center' }}>
+              <div style={{ maxWidth: 640, margin: '0 auto' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Step 1</span>
+                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 28, color: 'var(--text-dark)', margin: '10px 0 12px' }}>Set your skin profile</h2>
+                <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: 32, fontFamily: "'Nunito Sans', sans-serif" }}>
+                  Select your skin conditions. Risk scoring adapts to your specific sensitivities.
+                </p>
+                <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
+              </div>
+            </section>
+
+            {/* Wave into section 2 */}
+            <div style={{ margin: '0 -20px' }}>
+              <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
+                <path d="M0 50L1440 50L1440 20C1200 0 960 40 720 20C480 0 240 40 0 20L0 50Z" fill="white" />
+              </svg>
+            </div>
+
+            {/* ── Scan Widget ── */}
+            <section id="scan-widget" style={{ background: 'white', margin: '0 -20px', padding: '60px 20px' }}>
+              <div style={{ maxWidth: 640, margin: '0 auto' }}>
+                <div style={{ textAlign: 'center', marginBottom: 36 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Step 2</span>
+                  <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 28, color: 'var(--text-dark)', margin: '10px 0 10px' }}>Upload or paste ingredients</h2>
+                  <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>Photo of the label, barcode lookup, or paste the list directly.</p>
+                </div>
+
+                {/* Mode selector */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 24, padding: 4, background: 'var(--bg-section)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                  {[
+                    { id: 'paste', label: 'Paste List', icon: <FileText size={13} /> },
+                    { id: 'upload', label: 'Photo / OCR', icon: <Upload size={13} /> },
+                    { id: 'barcode', label: 'Barcode', icon: <Barcode size={13} /> },
+                  ].map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => { setInputMode(m.id as any); setError(null); }}
+                      style={{
+                        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        padding: '10px 8px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                        fontSize: 12, fontWeight: 700, transition: 'all 0.18s',
+                        background: inputMode === m.id ? 'white' : 'transparent',
+                        color: inputMode === m.id ? 'var(--green-primary)' : 'var(--text-muted)',
+                        boxShadow: inputMode === m.id ? 'var(--shadow-sm)' : 'none',
+                        fontFamily: "'Nunito Sans', sans-serif",
+                      }}
+                    >
+                      {m.icon} {m.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Error */}
+                {error && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', background: '#fdeaea', border: '1px solid rgba(232,75,60,0.25)', borderRadius: 10, marginBottom: 16 }}>
+                    <AlertTriangle size={15} style={{ color: '#e84b3c', flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 13, color: '#9a1e18', fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.5 }}>{error}</span>
+                  </div>
+                )}
+
+                {/* Paste mode */}
+                {inputMode === 'paste' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <textarea
+                      value={pastedIngredients}
+                      onChange={e => setPastedIngredients(e.target.value)}
+                      rows={6}
+                      placeholder="Aqua, Glycerin, Niacinamide, Salicylic Acid, Fragrance, Ceramide NP..."
+                      className="input-field"
+                      style={{ fontSize: 13, fontFamily: "'Nunito Sans', monospace" }}
+                    />
+                    <button onClick={handleManualInputSubmit} className="btn-green" style={{ padding: '13px 24px', fontSize: 14, width: '100%' }}>
+                      <Layers size={15} /> Extract and Analyze Ingredients
+                    </button>
+                  </div>
+                )}
+
+                {/* Upload mode */}
+                {inputMode === 'upload' && (
+                  <div>
+                    {!previewUrl ? (
+                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, border: '2px dashed var(--border-dark)', borderRadius: 16, padding: '48px 24px', cursor: 'pointer', background: 'var(--bg-section)', textAlign: 'center', transition: 'all 0.18s' }}>
+                        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Upload size={22} style={{ color: 'var(--green-primary)' }} />
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', fontFamily: "'Nunito Sans', sans-serif" }}>Drop photo here or click to browse</p>
+                          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontFamily: "'Nunito Sans', sans-serif" }}>AI-powered OCR reads the ingredient block — JPG, PNG, WEBP up to 8MB</p>
+                        </div>
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) { setFile(f); if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(URL.createObjectURL(f)); setError(null); }
+                        }} />
+                      </label>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                          <img src={previewUrl} alt="Label preview" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#f8f8f8', display: 'block' }} />
+                          <button onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); setFile(null); setError(null); }}
+                            style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <X size={13} />
+                          </button>
+                        </div>
+                        <button onClick={handleExtractText} disabled={isExtracting} className="btn-green" style={{ padding: '13px 24px', fontSize: 14, width: '100%' }}>
+                          {isExtracting ? <><Loader2 size={15} className="animate-spin" /> Extracting text via OCR...</> : <><FileText size={15} /> Extract Ingredient Text</>}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Barcode mode */}
+                {inputMode === 'barcode' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        value={barcodeInput}
+                        onChange={e => setBarcodeInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleBarcodeLookup(barcodeInput); }}
+                        placeholder="Enter product barcode (e.g. 0748948000214)..."
+                        className="input-field"
+                        style={{ fontFamily: 'monospace', flex: 1 }}
+                      />
+                      <button onClick={() => handleBarcodeLookup(barcodeInput)} disabled={isBarcodeLookingUp} className="btn-green" style={{ padding: '0 20px', flexShrink: 0, fontSize: 13 }}>
+                        {isBarcodeLookingUp ? <Loader2 size={13} className="animate-spin" /> : 'Look up'}
+                      </button>
+                    </div>
+                    {barcodeProduct && (
+                      <div style={{ padding: '12px 16px', background: 'var(--green-light)', border: '1px solid rgba(30,122,78,0.2)', borderRadius: 10 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Product found</span>
+                        <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', marginTop: 2, fontFamily: "'Nunito Sans', sans-serif" }}>{barcodeProduct.name}</p>
+                        {barcodeProduct.brand && <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>{barcodeProduct.brand}</p>}
+                      </div>
+                    )}
+                    <div style={{ position: 'relative', textAlign: 'center' }}>
+                      <div style={{ position: 'absolute', inset: '50% 0 auto', height: 1, background: 'var(--border)' }} />
+                      <span style={{ position: 'relative', background: 'white', padding: '0 12px', fontSize: 11, color: 'var(--text-light)', fontFamily: "'Nunito Sans', sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em' }}>or</span>
+                    </div>
+                    <button onClick={() => setShowCameraScanner(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px', border: '1.5px solid var(--border-dark)', borderRadius: 12, background: 'white', cursor: 'pointer', fontFamily: "'Nunito Sans', sans-serif", transition: 'all 0.18s' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Camera size={16} style={{ color: 'var(--green-primary)' }} />
+                      </div>
+                      <div style={{ textAlign: 'left' }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dark)' }}>Open Camera Scanner</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Real-time ZXing barcode decoder</p>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Wave back to bg */}
+            <div style={{ margin: '0 -20px' }}>
+              <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
+                <path d="M0 0L1440 0L1440 30C1200 50 960 10 720 30C480 50 240 10 0 30L0 0Z" fill="white" />
+              </svg>
+            </div>
+
+            {/* ── How it works (Yuka-style 3-col) ── */}
+            <section style={{ padding: '60px 0 80px' }}>
+              <div style={{ textAlign: 'center', marginBottom: 48 }}>
+                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 28, color: 'var(--text-dark)' }}>How SkinGuard works</h2>
+                <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 10, fontFamily: "'Nunito Sans', sans-serif" }}>Evidence-based ingredient analysis in three steps.</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }} className="stagger">
+                {[
+                  { num: '01', title: 'Match the INCI', body: 'Each ingredient is matched against 24,000+ EU CosIng database entries using fuzzy search and semantic embeddings.' },
+                  { num: '02', title: 'Score by profile', body: 'Risk scoring adapts to your skin type. What is safe for normal skin may be flagged for acne-prone or pregnant skin.' },
+                  { num: '03', title: 'Get the verdict', body: 'Receive a safety score, ingredient-by-ingredient findings, safer alternatives, and sourced citations.' },
+                ].map((step, i) => (
+                  <div key={i} className="card card-hover" style={{ padding: '32px 28px' }}>
+                    <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 48, color: 'var(--green-light)', lineHeight: 1, marginBottom: 16 }}>{step.num}</div>
+                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 10 }}>{step.title}</h3>
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.7, fontFamily: "'Nunito Sans', sans-serif" }}>{step.body}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ── Sample analysis preview (Yuka-style card) ── */}
+            <section style={{ padding: '0 0 80px' }}>
+              <div style={{ background: 'white', borderRadius: 20, border: '1px solid var(--border)', padding: '36px', boxShadow: 'var(--shadow-md)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 32, alignItems: 'start' }}>
+                  <div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Sample Analysis — Hydrating Toner</span>
+                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--text-dark)', margin: '8px 0 20px' }}>What a report looks like</h3>
+
+                    {/* Ingredient rows (Yuka style) */}
+                    <div>
+                      {[
+                        { name: 'Niacinamide', desc: 'Brightening active — barrier repair', risk: 'good' },
+                        { name: 'Ceramide NP', desc: 'Skin-identical lipid — barrier support', risk: 'good' },
+                        { name: 'Salicylic Acid', desc: 'BHA exfoliant — pregnancy caution', risk: 'moderate' },
+                        { name: 'Alcohol Denat.', desc: 'Drying solvent — sensitises barrier', risk: 'moderate' },
+                        { name: 'Fragrance', desc: 'Contact allergen — EU SCCS concern', risk: 'bad' },
+                      ].map((ing, i) => (
+                        <div key={i} className="ingredient-row">
+                          <div className={`risk-dot risk-dot-${ing.risk}`} />
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', fontFamily: "'Nunito Sans', sans-serif" }}>{ing.name}</p>
+                            <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>{ing.desc}</p>
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 50, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Nunito Sans', sans-serif" }}
+                            className={`risk-badge-${ing.risk}`}>
+                            {ing.risk === 'good' ? 'Low risk' : ing.risk === 'moderate' ? 'Moderate' : 'High risk'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Score dial */}
+                  <div style={{ textAlign: 'center', minWidth: 140 }}>
+                    <div style={{ position: 'relative', width: 120, height: 120, margin: '0 auto 12px' }}>
+                      <svg viewBox="0 0 120 120" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                        <circle cx="60" cy="60" r="52" className="score-ring-track" strokeWidth="8" />
+                        <circle cx="60" cy="60" r="52" className="score-ring-fill" strokeWidth="8" stroke="#f0a832"
+                          strokeDasharray={2 * Math.PI * 52} strokeDashoffset={2 * Math.PI * 52 * (1 - 0.68)}
+                          style={{ filter: 'drop-shadow(0 0 6px rgba(240,168,50,0.4))' }} />
+                      </svg>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 30, fontWeight: 900, color: 'var(--text-dark)', lineHeight: 1, fontFamily: "'Nunito', sans-serif" }}>68</span>
+                        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Nunito Sans', sans-serif" }}>/ 100</span>
+                      </div>
+                    </div>
+                    <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 50, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Nunito Sans', sans-serif" }} className="risk-badge-moderate">Not Great</span>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5, fontFamily: "'Nunito Sans', sans-serif" }}>2 moderate concerns detected</p>
+                    <button onClick={handleTryDemo} className="btn-green" style={{ padding: '9px 18px', fontSize: 12, marginTop: 16, width: '100%' }}>
+                      Run real analysis
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-          {(appVersion || llmModel) && (
-            <p className="text-[10px] text-slate-400 dark:text-slate-600">
-              SkinGuard {appVersion && `v${appVersion}`}{appVersion && llmModel && ' · '}{llmModel && llmModel !== 'unavailable' && `AI: ${llmModel}`}
+        )}
+
+        {/* ═══════════════════════════════════════════════
+            ANALYZE — VERIFY INGREDIENTS
+            ═══════════════════════════════════════════════ */}
+        {activeTab === 'analyze' && !results && (
+          <div style={{ maxWidth: 700, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
+            <div style={{ marginBottom: 28 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Step 3</span>
+              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', margin: '8px 0 6px' }}>Verify Ingredients</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.6 }}>Review extracted ingredients. Correct any OCR errors or add missing items before running the safety audit.</p>
+            </div>
+
+            {error && (
+              <div style={{ display: 'flex', gap: 10, padding: '12px 16px', background: '#fdeaea', border: '1px solid rgba(232,75,60,0.25)', borderRadius: 10, marginBottom: 16 }}>
+                <AlertTriangle size={15} style={{ color: '#e84b3c', flexShrink: 0, marginTop: 1 }} />
+                <span style={{ fontSize: 13, color: '#9a1e18', fontFamily: "'Nunito Sans', sans-serif" }}>{error}</span>
+              </div>
+            )}
+
+            <div className="card" style={{ padding: '24px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {extractedIngredients.map((ing, idx) => (
+                  <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1.5px solid var(--border-dark)', borderRadius: 50, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: 'var(--text-body)', fontFamily: "'Nunito Sans', sans-serif", cursor: 'default' }}>
+                    {editIndex === idx ? (
+                      <input value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => { const u = [...extractedIngredients]; u[idx] = editValue.trim(); setExtractedIngredients(u); setEditIndex(null); }} onKeyDown={e => { if (e.key === 'Enter') { const u = [...extractedIngredients]; u[idx] = editValue.trim(); setExtractedIngredients(u); setEditIndex(null); } }} autoFocus style={{ border: 'none', outline: 'none', width: 90, fontFamily: "'Nunito Sans', sans-serif", fontSize: 12, background: 'transparent', color: 'var(--text-dark)' }} />
+                    ) : (
+                      <span style={{ cursor: 'pointer' }} onClick={() => { setEditIndex(idx); setEditValue(ing); }}>{ing}</span>
+                    )}
+                    <button onClick={() => setExtractedIngredients(extractedIngredients.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 0, lineHeight: 1 }}>
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={addIngredientInput} onChange={e => setAddIngredientInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} placeholder="Add missing ingredient..." className="input-field" style={{ fontSize: 13 }} />
+                <button onClick={() => { if (addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>
+                  <Plus size={13} /> Add
+                </button>
+              </div>
+            </div>
+
+            <button onClick={handleRunAnalysis} disabled={isAnalyzing || extractedIngredients.length === 0} className="btn-green" style={{ padding: '14px 24px', fontSize: 15, width: '100%' }}>
+              {isAnalyzing ? <><Loader2 size={16} className="animate-spin" /> Running safety audit...</> : <><ShieldCheck size={16} /> Run Safety Audit ({extractedIngredients.length} ingredients)</>}
+            </button>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════
+            RESULTS
+            ═══════════════════════════════════════════════ */}
+        {activeTab === 'analyze' && results && (
+          <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Safety Report</span>
+                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', margin: '6px 0 0' }}>Ingredient Safety Audit</h2>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => toggleSave(results.summary?.split(' ')[0] || 'Product')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e84b3c' : 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>
+                  <Heart size={13} fill={savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e84b3c' : 'none'} /> Save
+                </button>
+                <button onClick={() => { setResults(null); setActiveTab('home'); }} style={{ padding: '9px 16px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-body)', fontFamily: "'Nunito Sans', sans-serif" }}>
+                  New Scan
+                </button>
+              </div>
+            </div>
+            <ResultsDashboard results={results} onReanalyze={text => { setPastedIngredients(text); const p = text.split(',').map(s => s.trim()).filter(Boolean); setExtractedIngredients(p); setResults(null); setActiveTab('analyze'); }} />
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════
+            ROUTINE LAYERING
+            ═══════════════════════════════════════════════ */}
+        {activeTab === 'routine' && (
+          <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
+            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', marginBottom: 6 }}>Routine Layering Checker</h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, fontFamily: "'Nunito Sans', sans-serif" }}>Detect dangerous active ingredient conflicts across your full skincare routine.</p>
+            <div className="card" style={{ padding: 24 }}>
+              <RoutineAnalyzer scans={scans} />
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════
+            PRODUCT COMPARE
+            ═══════════════════════════════════════════════ */}
+        {activeTab === 'compare' && (
+          <div style={{ maxWidth: 960, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
+            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', marginBottom: 6 }}>Product Compare</h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, fontFamily: "'Nunito Sans', sans-serif" }}>Compare safety scores and ingredient profiles of two products side by side.</p>
+            <ComparePanel currentAnalysis={results} scans={scans} />
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════
+            ENCYCLOPEDIA
+            ═══════════════════════════════════════════════ */}
+        {activeTab === 'learn' && (
+          <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
+            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', marginBottom: 6 }}>Ingredient Encyclopedia</h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 32, fontFamily: "'Nunito Sans', sans-serif" }}>Search INCI definitions, clinical data, and skincare terminology.</p>
+
+            {/* INCI search */}
+            <div className="card" style={{ padding: 28, marginBottom: 24 }}>
+              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: 'var(--text-dark)', marginBottom: 16 }}>INCI Registry Lookup</h3>
+              <form onSubmit={handleSearchEncyclopedia} style={{ display: 'flex', gap: 8, marginBottom: 0 }}>
+                <input value={encyclopediaSearch} onChange={e => setEncyclopediaSearch(e.target.value)} placeholder="Enter ingredient name (e.g. Niacinamide, Retinol...)" className="input-field" style={{ fontSize: 13 }} />
+                <button type="submit" disabled={encyclopediaLoading} className="btn-green" style={{ padding: '0 20px', flexShrink: 0, fontSize: 13, height: 46 }}>
+                  {encyclopediaLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                </button>
+              </form>
+              {encyclopediaResult && (
+                <div style={{ marginTop: 20, padding: '20px', background: 'var(--bg-section)', borderRadius: 12, border: '1px solid var(--border)' }} className="animate-fade-up">
+                  <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Registry Profile</span>
+                  <h4 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: 'var(--text-dark)', margin: '6px 0 16px' }}>{encyclopediaResult.name}</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    {[
+                      { label: 'What it is', val: encyclopediaResult.description },
+                      { label: 'Primary function', val: encyclopediaResult.benefits },
+                      { label: 'Risks and side effects', val: encyclopediaResult.sideEffects },
+                      { label: 'Suitable skin types', val: encyclopediaResult.types },
+                    ].map((f, i) => (
+                      <div key={i}>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, fontFamily: "'Nunito Sans', sans-serif" }}>{f.label}</p>
+                        <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.65, fontFamily: "'Nunito Sans', sans-serif" }}>{f.val}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 10, color: 'var(--text-light)', marginTop: 16, fontFamily: "'Nunito Sans', sans-serif" }}>Source: {encyclopediaResult.sources}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Glossary */}
+            <div className="card" style={{ padding: 28 }}>
+              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: 'var(--text-dark)', marginBottom: 16 }}>Skincare Glossary</h3>
+              <div style={{ position: 'relative', marginBottom: 20 }}>
+                <input value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)} placeholder="Search terms..." className="input-field" style={{ paddingRight: 44 }} />
+                <Search size={14} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)', pointerEvents: 'none' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12, maxHeight: 380, overflowY: 'auto' }} className="custom-scroll">
+                {filteredGlossary.map((item, i) => (
+                  <div key={i} style={{ padding: '14px 16px', background: 'var(--bg-section)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                    <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-dark)', marginBottom: 5, fontFamily: "'Nunito', sans-serif" }}>{item.term}</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.65, fontFamily: "'Nunito Sans', sans-serif" }}>{item.definition}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════
+            MY VANITY
+            ═══════════════════════════════════════════════ */}
+        {activeTab === 'vanity' && (
+          <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
+            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', marginBottom: 6 }}>My Skincare Vanity</h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 32, fontFamily: "'Nunito Sans', sans-serif" }}>Your saved products and safety audit history.</p>
+
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
+              {[
+                { label: 'Scans performed', value: scans.length, desc: 'Total safety checks' },
+                { label: 'Saved products', value: savedProducts.length, desc: 'In your cabinet' },
+                { label: 'Flagged scans', value: scans.filter(s => s.safety_score !== null && s.safety_score < 80).length, desc: 'Moderate or worse', alert: true },
+              ].map((stat, i) => (
+                <div key={i} className="card" style={{ padding: '20px 24px' }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Nunito Sans', sans-serif" }}>{stat.label}</p>
+                  <p style={{ fontSize: 32, fontWeight: 900, color: stat.alert && stat.value > 0 ? 'var(--risk-bad)' : 'var(--text-dark)', lineHeight: 1.1, margin: '4px 0 2px', fontFamily: "'Nunito', sans-serif" }}>{stat.value}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-light)', fontFamily: "'Nunito Sans', sans-serif" }}>{stat.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Skin profile */}
+            <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 16 }}>My Skin Profile</h3>
+              <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
+            </div>
+
+            {/* Avoid list */}
+            <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 8 }}>Personal Avoid List</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, fontFamily: "'Nunito Sans', sans-serif" }}>Ingredients flagged in your personal analyses.</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {allergies.map((a, i) => (
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 50, fontSize: 12, fontWeight: 700, fontFamily: "'Nunito Sans', sans-serif" }} className="risk-badge-bad">
+                    {a}
+                    <button onClick={() => { const next = allergies.filter((_, idx) => idx !== i); setAllergies(next); saveProfileToBackend(profile, next); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={10} /></button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={newAllergyInput} onChange={e => setNewAllergyInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newAllergyInput.trim()) { const next = [...allergies, newAllergyInput.trim()]; setAllergies(next); saveProfileToBackend(profile, next); setNewAllergyInput(''); } }} placeholder="Add ingredient to avoid..." className="input-field" style={{ fontSize: 13 }} />
+                <button onClick={() => { if (newAllergyInput.trim()) { const next = [...allergies, newAllergyInput.trim()]; setAllergies(next); saveProfileToBackend(profile, next); setNewAllergyInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13 }}>Add</button>
+              </div>
+            </div>
+
+            {/* Saved products */}
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 14 }}>Saved Products</h3>
+              {savedProducts.length === 0 ? (
+                <div className="card" style={{ padding: '40px 24px', textAlign: 'center' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: "'Nunito Sans', sans-serif" }}>No saved products yet. Run an analysis and save results here.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+                  {savedProducts.map(p => (
+                    <div key={p.id} className="card card-hover" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div>
+                        <span style={{ fontSize: 10, color: 'var(--text-light)', fontFamily: "'Nunito Sans', sans-serif" }}>Saved {p.date}</span>
+                        <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', marginTop: 2, fontFamily: "'Nunito', sans-serif" }}>{p.name}</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: p.score >= 80 ? 'var(--risk-good)' : p.score >= 50 ? 'var(--risk-moderate)' : 'var(--risk-bad)', fontFamily: "'Nunito', sans-serif" }}>Score: {p.score}/100</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => { setResults(p.result); setActiveTab('analyze'); }} className="btn-green" style={{ flex: 1, padding: '8px', fontSize: 12 }}>Open</button>
+                        <button onClick={() => { const n = savedProducts.filter(x => x.id !== p.id); setSavedProducts(n); if (user) localStorage.setItem(`sg_saved_${user.email}`, JSON.stringify(n)); }} style={{ padding: '8px 12px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', color: 'var(--risk-bad)', display: 'flex' }}>
+                          <X size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Scan history */}
+            <div>
+              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 14 }}>Analysis History</h3>
+              {scans.length === 0 ? (
+                <div className="card" style={{ padding: '40px 24px', textAlign: 'center' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: "'Nunito Sans', sans-serif" }}>No analyses performed yet.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {scans.map((scan, idx) => (
+                    <div key={idx} className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: scan.safety_score >= 80 ? 'var(--risk-good-bg)' : scan.safety_score >= 50 ? 'var(--risk-moderate-bg)' : 'var(--risk-bad-bg)' }}>
+                        <span style={{ fontSize: 16, fontWeight: 900, color: scan.safety_score >= 80 ? 'var(--risk-good)' : scan.safety_score >= 50 ? 'var(--risk-moderate)' : 'var(--risk-bad)', fontFamily: "'Nunito', sans-serif", lineHeight: 1 }}>{scan.safety_score ?? '—'}</span>
+                        <span style={{ fontSize: 8, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>/100</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Nunito', sans-serif" }}>{scan.summary || 'Ingredient Scan'}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>{new Date(scan.created_at || Date.now()).toLocaleDateString()}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        {scan.result && <button onClick={() => { setResults(scan.result); setActiveTab('analyze'); }} className="btn-green" style={{ padding: '7px 14px', fontSize: 11 }}>Open</button>}
+                        <button onClick={() => setScans(prev => prev.filter(s => s.id !== scan.id))} style={{ padding: '7px 10px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', color: 'var(--risk-bad)', display: 'flex' }}>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Footer ────────────────────────────────────────────────────────── */}
+      <footer style={{ background: '#1a2e1e', color: 'rgba(255,255,255,0.6)', padding: '40px 20px 32px', marginTop: 40 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 32, alignItems: 'start', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <ShieldCheck size={18} color="white" />
+                <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 16, color: 'white' }}>SkinGuard</span>
+              </div>
+              <p style={{ fontSize: 12, lineHeight: 1.65, maxWidth: 240, fontFamily: "'Nunito Sans', sans-serif" }}>Evidence-based cosmetic ingredient safety checker using EU CosIng database.</p>
+            </div>
+            <div />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'right' }}>
+              <p style={{ fontSize: 11, fontFamily: "'Nunito Sans', sans-serif" }}>EU CosIng Inventory</p>
+              <p style={{ fontSize: 11, fontFamily: "'Nunito Sans', sans-serif" }}>Dermatology Consensus Data</p>
+              <p style={{ fontSize: 11, fontFamily: "'Nunito Sans', sans-serif" }}>SCCS Scientific Opinions</p>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 28, paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            <p style={{ fontSize: 11, fontFamily: "'Nunito Sans', sans-serif" }}>
+              <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Educational use only.</strong> SkinGuard does not constitute medical advice. Consult a dermatologist for personal concerns.
             </p>
-          )}
+            <div style={{ display: 'flex', gap: 16 }}>
+              <a href="#" style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: "'Nunito Sans', sans-serif" }}>Privacy</a>
+              <a href="#" style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: "'Nunito Sans', sans-serif" }}>Methodology</a>
+            </div>
+          </div>
         </div>
       </footer>
 
-      {/* ── Modals ────────────────────────────────────────────────────────── */}
+      {/* ─── Auth Modal ────────────────────────────────────────────────────── */}
       {showLoginModal && (
-        <LoginModal initialMode={loginModalMode} onLogin={handleLogin} onClose={() => setShowLoginModal(false)} />
-      )}
-      {showHistory && user && (
-        <HistoryDrawer
-          email={user.email}
-          onClose={() => setShowHistory(false)}
-          onSelectScan={handleReanalyze}
-        />
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowLoginModal(false); setAuthError(null); } }}>
+          <div className="modal-box">
+            <div style={{ background: 'var(--teal-header)', padding: '28px 28px 24px', textAlign: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <ShieldCheck size={22} color="white" />
+              </div>
+              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: 'white', marginBottom: 4 }}>
+                {authMode === 'login' ? 'Sign in to SkinGuard' : authMode === 'signup' ? 'Create account' : 'Reset password'}
+              </h3>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: "'Nunito Sans', sans-serif" }}>
+                {authMode === 'login' ? 'Access your scan history and profile.' : authMode === 'signup' ? 'Personalize your skin profile and track products.' : 'Enter your email to receive a reset link.'}
+              </p>
+              <button onClick={() => { setShowLoginModal(false); setAuthError(null); }} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAuthSubmit} style={{ padding: '24px 28px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {authError && <div style={{ padding: '10px 14px', background: '#fdeaea', border: '1px solid rgba(232,75,60,0.25)', borderRadius: 8, fontSize: 12, color: '#9a1e18', fontFamily: "'Nunito Sans', sans-serif" }}>{authError}</div>}
+
+              {authMode === 'signup' && <input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Full name" className="input-field" />}
+              <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="Email address" className="input-field" />
+              {authMode !== 'forgot' && <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Password" className="input-field" />}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontFamily: "'Nunito Sans', sans-serif" }}>
+                {authMode === 'login' && <button type="button" onClick={() => setAuthMode('forgot')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--green-primary)', fontWeight: 600 }}>Forgot password?</button>}
+                <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--green-primary)', fontWeight: 600, marginLeft: 'auto' }}>
+                  {authMode === 'login' ? 'Create account' : 'Sign in instead'}
+                </button>
+              </div>
+
+              <button type="submit" className="btn-green" style={{ padding: '13px 24px', fontSize: 14, width: '100%' }}>
+                {authMode === 'login' ? 'Sign In' : authMode === 'signup' ? 'Create Account' : 'Send Reset Link'}
+              </button>
+
+              {authMode === 'login' && (
+                <button type="button" onClick={() => handleLoginMock('demo@skinguard.app', 'Demo User')} style={{ padding: '12px 24px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-body)', fontFamily: "'Nunito Sans', sans-serif" }}>
+                  Continue as Demo User
+                </button>
+              )}
+            </form>
+          </div>
+        </div>
       )}
     </main>
   );

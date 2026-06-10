@@ -65,7 +65,7 @@ RULES: list[Rule] = [
         kind="advice",
         profile_gate=lambda p: p.pregnant,
         predicate=lambda i: i.pregnancy_safe == "no",
-        message=lambda i: f"{i.inci_name} is not recommended during pregnancy.",
+        message=lambda i: f"{i.inci_name} - Avoid entirely (all trimesters): contraindicated due to potential teratogenic or developmental risks.",
     ),
     Rule(
         concern="pregnancy",
@@ -73,7 +73,7 @@ RULES: list[Rule] = [
         kind="advice",
         profile_gate=lambda p: p.pregnant,
         predicate=lambda i: i.pregnancy_safe == "caution",
-        message=lambda i: f"{i.inci_name}: use with caution during pregnancy - check with your doctor.",
+        message=lambda i: f"{i.inci_name} - Limited data: consult doctor (especially during 1st trimester) before using.",
     ),
     Rule(
         concern="fungal_acne",
@@ -249,6 +249,16 @@ GOOD_BONUS_CAP = 12
 DANGER_CAP = 50
 
 
+KNOWN_FILLERS = {"aqua", "water", "glycerin", "purified water"}
+KNOWN_PRESERVATIVES = {
+    "phenoxyethanol", "methylparaben", "ethylparaben", "propylparaben", 
+    "butylparaben", "isobutylparaben", "sodium benzoate", "potassium sorbate", 
+    "benzyl alcohol", "dmdm hydantoin", "methylisothiazolinone", 
+    "methylchloroisothiazolinone", "chlorphenesin", "quaternium-15",
+    "diazolidinyl urea", "imidazolidinyl urea"
+}
+
+
 def _position_factor(index: int, total: int) -> float:
     """Ingredients are listed by descending concentration, so an issue near the
     top of the list matters more than one near the end. Front of list -> 1.0,
@@ -269,7 +279,13 @@ def evaluate(ingredients: list[Ingredient], profile: Profile) -> dict:
     avoid = {a.lower() for a in profile.avoid_list}
 
     for index, ing in enumerate(ingredients):
-        pos = _position_factor(index, total)
+        name_lower = ing.inci_name.lower() if ing else ""
+        if name_lower in KNOWN_FILLERS:
+            pos = 0.5  # under-weight fillers if they trigger alerts
+        elif name_lower in KNOWN_PRESERVATIVES:
+            pos = 0.9  # avoid muting preservatives at the end of the label
+        else:
+            pos = _position_factor(index, total)
 
         def _record(level, concern, message, source, kind):
             nonlocal penalty, has_danger

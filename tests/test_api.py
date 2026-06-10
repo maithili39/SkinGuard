@@ -582,5 +582,77 @@ def test_password_complexity_validator():
             sys.modules["pytest"] = original_pytest
 
 
+def test_analyze_routine_new_conflicts(client, test_db_session):
+    # 1. Register a fermented ingredient in the test database so matcher can resolve it.
+    ing = Ingredient(
+        inci_name="BIFIDA FERMENT LYSATE",
+        function="skin conditioning",
+        comedogenic=None,
+        fungal_acne_safe="yes",
+        pregnancy_safe="yes",
+        irritant="no",
+        regulatory_status="allowed",
+    )
+    test_db_session.add(ing)
+    test_db_session.add(Alias(name="Bifida Ferment Lysate", ingredient=ing))
+    test_db_session.commit()
+
+    # Rebuild matcher so it picks up the new ingredient
+    from app.matching import Matcher
+    from app.main import app, get_matcher
+    new_matcher = Matcher(test_db_session)
+    app.dependency_overrides[get_matcher] = lambda: new_matcher
+
+    # 2. Test Double AHA Exfoliation (Glycolic Acid + Lactic Acid)
+    r = client.post(
+        "/analyze/routine",
+        json={
+            "products": [
+                {"name": "AHA Toner", "text": "Glycolic Acid"},
+                {"name": "Lactic Serum", "text": "Lactic Acid"}
+            ]
+        }
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["compatible"] is False
+    double_aha = next(c for c in data["conflicts"] if c["conflict_type"] == "Double AHA Exfoliation")
+    assert double_aha["severity"] == "warning"
+    assert "Double AHA" in double_aha["conflict_type"]
+
+    # 3. Test Multiple Exfoliants (Glycolic Acid [AHA] + Salicylic Acid [BHA])
+    r = client.post(
+        "/analyze/routine",
+        json={
+            "products": [
+                {"name": "AHA Toner", "text": "Glycolic Acid"},
+                {"name": "BHA Serum", "text": "Salicylic Acid"}
+            ]
+        }
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["compatible"] is False
+    mult_exf = next(c for c in data["conflicts"] if c["conflict_type"] == "Multiple Exfoliants")
+    assert mult_exf["severity"] == "warning"
+
+    # 4. Test Fermented + low-pH active (Bifida Ferment Lysate + Glycolic Acid)
+    r = client.post(
+        "/analyze/routine",
+        json={
+            "products": [
+                {"name": "Ferment Essence", "text": "Bifida Ferment Lysate"},
+                {"name": "AHA Toner", "text": "Glycolic Acid"}
+            ]
+        }
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["compatible"] is False
+    ferment_aha = next(c for c in data["conflicts"] if c["conflict_type"] == "Fermented + AHA")
+    assert ferment_aha["severity"] == "warning"
+
+
+
 
 

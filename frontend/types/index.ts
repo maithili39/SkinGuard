@@ -49,7 +49,7 @@ export interface AnalysisResult {
   summary: string;
   findings: Finding[];
   matched: { raw: string; ingredient: string; confidence: number }[];
-  unmatched: { raw: string; best_confidence: number; best_candidate?: string }[];
+  unmatched: { raw: string; best_confidence: number; best_candidate?: string; category: string }[];
   found_ingredients: {
     matched_name: string;
     confidence: number;

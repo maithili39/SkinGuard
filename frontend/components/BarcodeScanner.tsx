@@ -1,153 +1,214 @@
 'use client';
 
-/**
- * BarcodeScanner — live camera barcode / QR scanner.
- *
- * Uses html5-qrcode under the hood (dynamically imported so Next.js SSR
- * doesn't break). On a phone the rear camera is preferred; on a desktop the
- * user is prompted to choose a camera.
- *
- * Props
- * ─────
- *   onScan   – called once when a barcode is successfully decoded.
- *   onClose  – called when the user dismisses the scanner panel.
- */
-
-import { useEffect, useRef, useState } from 'react';
-import { Loader2, X, AlertCircle, ScanLine } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { X, Camera, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface Props {
-  onScan: (barcode: string) => void;
+  onDetected: (code: string) => void;
   onClose: () => void;
 }
 
-// Unique DOM id for the html5-qrcode mount target.
-const SCANNER_ELEMENT_ID = 'sg-live-barcode-scanner';
+type ScannerState = 'requesting' | 'active' | 'error';
 
-export function BarcodeScanner({ onScan, onClose }: Props) {
-  const scannerRef = useRef<any>(null);
-  const calledRef  = useRef(false);          // prevent double-fire on same code
-  const [status, setStatus]   = useState<'loading' | 'scanning' | 'error'>('loading');
+export function BarcodeScanner({ onDetected, onClose }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const readerRef = useRef<any>(null);
+  const [state, setState] = useState<ScannerState>('requesting');
   const [errorMsg, setErrorMsg] = useState('');
+  const [lastResult, setLastResult] = useState('');
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    if (readerRef.current) {
+      try { readerRef.current.reset(); } catch (e) {}
+      readerRef.current = null;
+    }
+  }, []);
+
+  const startScanner = useCallback(async () => {
+    stopStream();
+    setState('requesting');
+    setErrorMsg('');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      // Dynamic import to avoid SSR issues
+      const { BrowserMultiFormatReader } = await import('@zxing/library');
+      const reader = new BrowserMultiFormatReader();
+      readerRef.current = reader;
+
+      setState('active');
+
+      // Decode from video stream continuously
+      const decode = async () => {
+        if (!videoRef.current || !readerRef.current) return;
+        try {
+          const result = await readerRef.current.decodeFromVideoElement(videoRef.current);
+          if (result) {
+            const code = result.getText();
+            setLastResult(code);
+            stopStream();
+            onDetected(code);
+          }
+        } catch (e: any) {
+          // NotFoundException is normal (no barcode yet), keep scanning
+          if (e?.name !== 'NotFoundException') {
+            console.warn('Scan error:', e);
+          }
+          // Schedule next frame
+          if (streamRef.current) {
+            setTimeout(decode, 200);
+          }
+        }
+      };
+
+      decode();
+
+    } catch (err: any) {
+      stopStream();
+      if (err.name === 'NotAllowedError') {
+        setErrorMsg('Camera access denied. Please allow camera permission in your browser settings.');
+      } else if (err.name === 'NotFoundError') {
+        setErrorMsg('No camera found. Please connect a camera or enter the barcode manually.');
+      } else {
+        setErrorMsg(`Camera error: ${err.message || 'Unknown error'}`);
+      }
+      setState('error');
+    }
+  }, [facingMode, stopStream, onDetected]);
 
   useEffect(() => {
-    let mounted = true;
-
-    async function startScanner() {
-      try {
-        // Dynamic import keeps html5-qrcode out of the SSR bundle.
-        const { Html5Qrcode } = await import('html5-qrcode');
-
-        if (!mounted) return;
-
-        const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
-        scannerRef.current = scanner;
-
-        await scanner.start(
-          { facingMode: 'environment' },           // prefer rear camera on mobile
-          {
-            fps: 12,
-            qrbox: { width: 260, height: 110 },    // wide box suits 1D barcodes
-            aspectRatio: 1.777,                     // 16:9
-          },
-          (decodedText: string) => {
-            if (calledRef.current) return;
-            calledRef.current = true;
-            onScan(decodedText.trim());
-          },
-          () => { /* per-frame decode errors are expected — silently ignore */ },
-        );
-
-        if (mounted) setStatus('scanning');
-      } catch (err: unknown) {
-        if (!mounted) return;
-        const msg: string = err instanceof Error ? err.message : String(err);
-        // Friendly messages for the most common failure modes.
-        if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')) {
-          setErrorMsg('Camera permission denied. Please allow camera access in your browser settings and try again.');
-        } else if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('no camera')) {
-          setErrorMsg('No camera detected on this device.');
-        } else {
-          setErrorMsg(msg || 'Unable to start the camera scanner.');
-        }
-        setStatus('error');
-      }
-    }
-
     startScanner();
+    return () => stopStream();
+  }, [startScanner]);
 
-    return () => {
-      mounted = false;
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {/* ignore cleanup errors */});
-        scannerRef.current = null;
-      }
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const handleFlipCamera = () => {
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+  };
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between w-full">
-        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
-          <ScanLine size={18} className="text-primary-500" />
-          <span className="text-sm font-semibold">Point camera at barcode</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+      <div className="relative w-full max-w-lg mx-4 bg-[#0c140d] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+          <div>
+            <h3 className="text-white font-semibold text-sm tracking-tight">Scan Barcode</h3>
+            <p className="text-[#BACBBA]/50 text-[11px] mt-0.5">Point your camera at the product barcode</p>
+          </div>
+          <button
+            onClick={() => { stopStream(); onClose(); }}
+            className="p-2 rounded-full text-[#BACBBA]/60 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <X size={16} />
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-          title="Close scanner"
-        >
-          <X size={18} />
-        </button>
+
+        {/* Camera Viewfinder */}
+        <div className="relative bg-black aspect-video overflow-hidden">
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            playsInline
+            muted
+            autoPlay
+          />
+
+          {/* Scanner overlay */}
+          {state === 'active' && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {/* Dimming corners */}
+              <div className="absolute inset-0 bg-black/40" style={{
+                clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 15% 25%, 15% 75%, 85% 75%, 85% 25%, 15% 25%)'
+              }} />
+              {/* Scan box */}
+              <div className="relative w-64 h-40 border-2 border-[#BACBBA]/80 rounded-xl">
+                {/* Corner marks */}
+                <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#BACBBA] rounded-tl-lg" />
+                <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-[#BACBBA] rounded-tr-lg" />
+                <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-[#BACBBA] rounded-bl-lg" />
+                <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-[#BACBBA] rounded-br-lg" />
+                {/* Scanning line animation */}
+                <div className="absolute left-0 right-0 h-0.5 bg-[#BACBBA]/80 shadow-[0_0_8px_rgba(186,203,186,0.8)] animate-scan-line" />
+              </div>
+              <p className="absolute bottom-4 text-[11px] text-white/60 font-medium tracking-wide">
+                Align barcode within the frame
+              </p>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {state === 'requesting' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80">
+              <div className="w-8 h-8 border-2 border-[#BACBBA]/30 border-t-[#BACBBA] rounded-full animate-spin" />
+              <p className="text-[#BACBBA]/70 text-xs">Requesting camera access...</p>
+            </div>
+          )}
+
+          {/* Error state */}
+          {state === 'error' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/90 px-6 text-center">
+              <div className="p-3 bg-rose-500/10 rounded-full">
+                <AlertTriangle size={24} className="text-rose-400" />
+              </div>
+              <div>
+                <p className="text-white text-sm font-semibold mb-1">Camera Unavailable</p>
+                <p className="text-[#BACBBA]/60 text-xs leading-relaxed">{errorMsg}</p>
+              </div>
+              <button
+                onClick={startScanner}
+                className="flex items-center gap-2 px-4 py-2 bg-[#BACBBA]/10 border border-[#BACBBA]/20 text-[#BACBBA] text-xs font-semibold rounded-full hover:bg-[#BACBBA]/20 transition-colors"
+              >
+                <RefreshCw size={12} />
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center justify-between px-5 py-4">
+          <button
+            onClick={handleFlipCamera}
+            className="flex items-center gap-2 text-[#BACBBA]/60 hover:text-white text-xs font-medium transition-colors"
+          >
+            <RefreshCw size={14} />
+            Flip Camera
+          </button>
+          {state === 'active' && (
+            <span className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Scanning
+            </span>
+          )}
+        </div>
+
       </div>
 
-      {/* Camera viewport */}
-      <div className="relative w-full rounded-2xl overflow-hidden border-2 border-dashed border-primary-300 dark:border-primary-700 bg-black min-h-[220px] flex items-center justify-center">
-        {/* html5-qrcode renders its own <video> inside this div */}
-        <div id={SCANNER_ELEMENT_ID} className="w-full" />
-
-        {/* Loading overlay */}
-        {status === 'loading' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 gap-3 z-10">
-            <Loader2 className="animate-spin text-primary-400" size={36} />
-            <p className="text-sm text-slate-300 font-medium">Starting camera…</p>
-          </div>
-        )}
-
-        {/* Scanning guide overlay */}
-        {status === 'scanning' && (
-          <div className="absolute inset-0 pointer-events-none z-10">
-            {/* Corner markers */}
-            <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-primary-400 rounded-tl-sm" />
-            <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-primary-400 rounded-tr-sm" />
-            <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-primary-400 rounded-bl-sm" />
-            <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-primary-400 rounded-br-sm" />
-            {/* Animated scan line */}
-            <div className="absolute left-6 right-6 top-1/2 h-px bg-primary-400/70 shadow-[0_0_8px_2px_rgba(99,102,241,0.6)] animate-scan-line" />
-          </div>
-        )}
-
-        {/* Error state */}
-        {status === 'error' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-black/80 z-10 gap-3">
-            <AlertCircle className="text-rose-400" size={36} />
-            <p className="text-sm text-rose-300 font-medium text-center">{errorMsg}</p>
-            <button
-              onClick={onClose}
-              className="mt-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs rounded-lg transition-colors"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-      </div>
-
-      {status === 'scanning' && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
-          Hold steady — barcode will be detected automatically.
-        </p>
-      )}
+      <style jsx>{`
+        @keyframes scan-line {
+          0% { top: 10%; }
+          50% { top: 85%; }
+          100% { top: 10%; }
+        }
+        .animate-scan-line {
+          animation: scan-line 2s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

@@ -33,7 +33,7 @@ Isopropyl Palmitate,,emollient,4,yes,yes,no,Comedogenic emollient.,Fulton 1989 /
 Myristyl Myristate,,emollient,5,no,yes,no,Comedogenic and fungal-acne trigger.,Fulton 1989 / compiled comedogenicity data,
 Lauric Acid,,emollient,4,no,yes,no,Fatty acid - feeds Malassezia.,Simple Skincare Science fungal-acne-safe list,
 Oleic Acid,,emollient,2,no,yes,yes,Fatty acid - fungal-acne trigger; can disrupt barrier.,Simple Skincare Science fungal-acne-safe list,
-Stearic Acid,,emulsifier,2,yes,yes,no,Fatty acid emulsifier; generally fine.,Fulton 1989 / compiled comedogenicity data,
+Stearic Acid,Octadecanoic Acid,emulsifier,2,yes,yes,no,Fatty acid used as emollient and emulsifier; generally well-tolerated,Fulton 1989,
 Palmitic Acid,,emulsifier,2,yes,yes,no,Fatty acid; low risk.,Fulton 1989 / compiled comedogenicity data,
 Polysorbate 20,,emulsifier,0,no,yes,no,Polysorbate - potential Malassezia trigger.,Simple Skincare Science fungal-acne-safe list,
 Polysorbate 60,,emulsifier,0,no,yes,no,Polysorbate - potential fungal-acne trigger.,Simple Skincare Science fungal-acne-safe list,
@@ -282,3 +282,68 @@ Bithionol,,antimicrobial,,,no,yes,Chlorinated antimicrobial. Banned in EU cosmet
 Zinc Pyrithione,Pyrithione Zinc|ZPT,antimicrobial,,,caution,no,Anti-dandruff agent. EU restricted to rinse-off hair products only at max 1%; banned in leave-on products since 2022.,EU Reg 1223/2009 Annex III entry 101,restricted
 Piroctone Olamine,Octopirox,antimicrobial,,,caution,no,"Anti-dandruff agent. EU restricted to rinse-off hair products at max 1%, face products at max 0.5%.",EU Reg 1223/2009 Annex III entry 92,restricted
 Chlorhexidine Digluconate,Chlorhexidine|CHG,antimicrobial,,,caution,yes,"Broad-spectrum antimicrobial. EU restricted: max 0.1% general use, 0.5% oral hygiene. Avoid eye contact; anaphylaxis risk reported.",EU Reg 1223/2009 Annex III entry 43,restricted
+Retinal,Retinaldehyde|Vitamin A Aldehyde,anti-ageing,1,yes,no,yes,Direct aldehyde form of Vitamin A; more potent than retinol but gentler than tretinoin. Avoid in pregnancy.,dermatology consensus,
+Hydroxypinacolone Retinoate,HPR|Granactive Retinoid,anti-ageing,1,yes,no,yes,Ester of retinoic acid; effective retinoid with less irritation. Avoid in pregnancy.,dermatology consensus,
+Sodium Hyaluronate,Hyaluronic Acid Sodium Salt,humectant,0,yes,yes,no,Smaller HA molecule that penetrates slightly deeper into the epidermis.,dermatology consensus,
+Polyglyceryl-3 Diisostearate,,emulsifier,1,no,yes,no,Fatty ester emulsifier; potential fungal acne trigger,Simple Skincare Science,
+Isostearic Acid,,emollient,2,no,yes,no,Branched fatty acid emollient; fungal acne trigger,Simple Skincare Science,
+Polyglyceryl-10 Stearate,,emulsifier,1,no,yes,no,Gentle emulsifier; fungal acne trigger,Simple Skincare Science,
+Sodium Lauryl Glucose Carboxylate,,surfactant,0,yes,yes,no,Mild sugar-derived surfactant,common knowledge,
+Cocamide DEA,Cocamide Diethanolamine,surfactant,0,yes,yes,yes,Surfactant; EU restricted as potential nitrosamine precursor,EU Reg 1223/2009 Annex III,restricted
+Cocamide MEA,,surfactant,0,yes,yes,yes,Foaming agent; can release nitrosamines,EU Reg 1223/2009 Annex III,restricted
+Behentrimonium Methosulfate,BTMS,conditioning agent,1,yes,yes,no,Hair conditioning emulsifier; mild for skin,dermatology consensus,
+Cetrimonium Chloride,,conditioning agent,0,yes,yes,yes,Cationic surfactant; mild contact sensitiser,EU CosIng,
+Stearamidopropyl Dimethylamine,,conditioning agent,1,no,yes,no,Hair and skin conditioning; fungal acne trigger,Simple Skincare Science,
+Succinic Acid,,pH adjuster,0,yes,yes,no,Mild organic acid; helps balance sebum,dermatology consensus,
+Acetyl Glucosamine,,skin conditioning,0,yes,yes,no,N-Acetyl Glucosamine; reduces hyperpigmentation and hydrates,dermatology consensus,
+Glucoronolactone,,antioxidant,0,yes,yes,no,Antioxidant metabolite; detoxifying properties,dermatology consensus,
+Inositol,,humectant,0,yes,yes,no,B-vitamin derivative; calming and hydrating for scalp and skin,dermatology consensus,
+Linoleic Acid,Vitamin F,emollient,0,yes,yes,no,Omega-6 fatty acid; supports barrier function and reduces comedones,dermatology consensus,
+Alpha Linolenic Acid,ALA|Omega-3,emollient,0,yes,yes,no,Omega-3 fatty acid; anti-inflammatory and barrier-supporting,dermatology consensus,
+Gamma Linolenic Acid,GLA|Borage GLA,emollient,0,yes,yes,no,Omega-6 GLA; helps soothe eczema and dry skin,dermatology consensus,
+Sphingolipid,,barrier repair,0,yes,yes,no,Natural skin lipid; supports barrier integrity,dermatology consensus,
+Pseudoceramide,,barrier repair,0,yes,yes,no,Synthetic ceramide analog; barrier repair,dermatology consensus,
+Sodium PCA Zinc,,skin conditioning,0,yes,yes,no,Zinc salt of natural moisturizing factor; sebum control,dermatology consensus,
+Silica,Silicon Dioxide,absorbent,0,yes,yes,no,Oil absorbent and mattifying powder,common knowledge,
+Mica,,colorant,0,yes,yes,no,Natural mineral used as shimmer pigment,common knowledge,
+Iron Oxides,,colorant,0,yes,yes,no,Mineral pigments for cosmetic tinting; generally very safe,common knowledge,
+Titanium Dioxide (Nano),,UV filter,1,yes,yes,no,Nano-grade mineral sunscreen; EU requires labeling of nano form,EU Reg 1223/2009 Annex VI (nano: label required),restricted
+Carbon Black,,colorant,,,yes,no,Pigment used in cosmetics; EU permitted in specific products only,EU Reg 1223/2009 Annex IV entry 126,restricted
+Dihydroxyacetone,DHA,skin tanning,0,yes,yes,yes,Self-tanning agent; can cause contact dermatitis in sensitive skin,dermatology consensus,
+Erythrulose,,skin tanning,0,yes,yes,no,Gentler alternative to DHA; natural self-tanner from red raspberries,dermatology consensus,
+Ethylhexyl Salicylate,Octyl Salicylate,UV filter,0,yes,caution,no,UVB chemical filter; pregnancy caution at high doses,EU Reg 1223/2009 Annex VI entry 12 (max 5%),restricted
+Benzophenone-4,Sulisobenzone,UV filter,0,yes,caution,yes,UV filter; potential endocrine concern debated,EU Reg 1223/2009 Annex VI,restricted
+Drometrizole,,UV filter,0,yes,yes,no,UV absorber for product protection,EU Reg 1223/2009 Annex VI,restricted
+Aminomethyl Propanol,,pH adjuster,0,yes,yes,no,Alkaline pH adjuster,EU CosIng,
+Triethanolamine,TEA,pH adjuster,0,yes,yes,yes,pH adjuster; can irritate eyes; potential nitrosamine concern,EU Reg 1223/2009 Annex III entry 61 (max 2.5%),restricted
+Sodium Citrate,,pH adjuster,0,yes,yes,no,Buffer and chelating agent,common knowledge,
+Disodium EDTA,,chelating agent,0,yes,yes,no,Preservative booster and chelating agent; improves preservative efficacy,EU CosIng,
+Tetrasodium EDTA,,chelating agent,0,yes,yes,no,Strong chelator and preservative booster,EU CosIng,
+Phytantriol,,emollient,0,yes,yes,no,Branched phytol derivative; non-comedogenic emollient,dermatology consensus,
+Isohexadecane,,emollient,0,yes,yes,no,Lightweight synthetic hydrocarbon emollient,Fulton 1989,
+Sodium Cocoyl Glutamate,,surfactant,0,yes,yes,no,Mild amino acid-derived surfactant,dermatology consensus,
+Sodium Lauroyl Lactylate,,emulsifier,0,yes,yes,no,Gentle lecithin-based emulsifier,dermatology consensus,
+Polyquaternium-10,,conditioning agent,0,yes,yes,no,Film-forming conditioning polymer for hair and skin,EU CosIng,
+Glycol Distearate,,emollient,2,no,yes,no,Pearl-effect wax; fungal acne trigger,Fulton 1989,
+Ethylhexyl Cocoate,,emollient,4,no,yes,no,Coconut-derived ester; highly comedogenic and fungal acne trigger,Fulton 1989,
+Myristoyl/Palmitoyl Oxostearamide/Arachamide MEA,,skin conditioning,0,yes,yes,no,Ceramide-mimicking lipid blend,dermatology consensus,
+Hydrolyzed Collagen,Collagen Peptides,skin conditioning,0,yes,yes,no,Hydrolyzed protein film-former; hydrating,dermatology consensus,
+Hydrolyzed Keratin,,skin conditioning,0,yes,yes,no,Protein for hair and skin smoothing,dermatology consensus,
+Hydrolyzed Silk,Silk Amino Acids,skin conditioning,0,yes,yes,no,Lightweight protein film-former; hydrating and smoothing,dermatology consensus,
+Hydrolyzed Wheat Protein,,skin conditioning,0,yes,yes,yes,Wheat-derived protein; common allergen for wheat-sensitive individuals,dermatology consensus,
+Propolis Extract,,antimicrobial,1,yes,yes,yes,Bee-derived extract; antibacterial but potential allergen,dermatology consensus,
+Royal Jelly,,skin conditioning,1,no,yes,yes,Bee-derived; potential allergen and fungal acne trigger,dermatology consensus,
+Tocopherol Acetate,Vitamin E Acetate,antioxidant,0,yes,yes,no,Esterified Vitamin E; more stable than pure tocopherol; less comedogenic,dermatology consensus,
+Sodium Benzoate (as preservative),,preservative,0,yes,yes,yes,Benzoate salt; forms benzene with ascorbic acid in acidic formulas — potential concern,EU Reg 1223/2009 Annex III entry 1 (max 0.5%),restricted
+Methyl Gluceth-20,,humectant,0,yes,yes,no,Methyl glucose polymer humectant,common knowledge,
+Hydroxylated Lecithin,,emollient,0,yes,yes,no,Barrier-friendly phospholipid emollient,dermatology consensus,
+Magnesium Aluminum Silicate,,viscosity modifier,0,yes,yes,no,Natural clay thickener; absorbent,common knowledge,
+Hydroxypropyl Methylcellulose,HPMC,thickener,0,yes,yes,no,Film-forming cellulose derivative,common knowledge,
+Carbomer 940,Polyacrylic Acid,thickener,0,yes,yes,no,Cross-linked polyacrylate gel thickener,common knowledge,
+Acrylates/C10-30 Alkyl Acrylate Crosspolymer,,thickener,0,yes,yes,no,Carbomer alternative thickener,common knowledge,
+Hydroxypropyl Guar,,thickener,0,yes,yes,no,Natural guar-derived thickener,common knowledge,
+Methylene Bis-Benzotriazolyl Tetramethylbutylphenol,Tinosorb M,UV filter,0,yes,yes,no,Broad-spectrum particulate UV filter (hybrid); highly stable,EU Reg 1223/2009 Annex VI (max 10%),restricted
+Ectoin,,skin conditioning,0,yes,yes,no,Extremolyte; protects skin cells from UV and heat stress,dermatology consensus,
+Ergothioneine,,antioxidant,0,yes,yes,no,Naturally occurring amino acid; protects skin mitochondria,dermatology consensus,
+Phlorotannins,Brown Algae Extract,antioxidant,0,yes,yes,no,Marine polyphenol antioxidants from brown seaweed,dermatology consensus,
+Fucoidan,,soothing,0,yes,yes,no,Marine polysaccharide; anti-inflammatory and hydrating,dermatology consensus,

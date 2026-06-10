@@ -11,12 +11,23 @@ from app.explain import explain_ingredient
 from app.matching import Matcher
 from app.models import Ingredient
 from app.rules import Profile, evaluate, get_alternatives, has_risk_data
+import re
 
 DISCLAIMER = (
     "SkinGuard provides ingredient information for educational purposes only and "
     "is not medical advice. Consult a dermatologist or doctor for personal "
     "concerns, especially during pregnancy."
 )
+
+
+def categorize_unmatched(raw_token: str, best_candidate: str | None, best_confidence: int) -> str:
+    if best_candidate and best_confidence >= 50:
+        return "ocr_error"
+    if any(char.isdigit() or char in "@#$^*()_+={}[]|\\:;<>?/" for char in raw_token):
+        return "ocr_error"
+    if re.search(r'\b[A-Z][a-z]+', raw_token) or any(kw in raw_token.lower() for kw in ["tm", "trademark", "extract of"]):
+        return "brand_name"
+    return "unknown_inci"
 
 
 def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher | None = None) -> dict:
@@ -112,7 +123,8 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
             {
                 "raw": m.raw,
                 "best_confidence": m.confidence,
-                "best_candidate": m.best_candidate,  # "Did you mean?" hint
+                "best_candidate": m.best_candidate,
+                "category": categorize_unmatched(m.raw, m.best_candidate, m.confidence)
             }
             for m in unmatched
         ],

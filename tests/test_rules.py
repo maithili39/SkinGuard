@@ -119,3 +119,38 @@ def test_rosacea_rule_does_not_fire_for_safe_ingredients():
     res = evaluate([glycerin], Profile(rosacea=True))
     assert not any(f.concern == "rosacea" for f in res["findings"])
 
+
+def test_trimester_specific_pregnancy_warnings():
+    """Test pregnancy classification levels (danger for 'no', warning for 'caution')."""
+    avoid_ing = _ing("AvoidIngredient", pregnancy_safe="no")
+    caution_ing = _ing("CautionIngredient", pregnancy_safe="caution")
+
+    res_avoid = evaluate([avoid_ing], Profile(pregnant=True))
+    avoid_finding = next(f for f in res_avoid["findings"] if f.concern == "pregnancy")
+    assert avoid_finding.level == "danger"
+    assert "Avoid entirely" in avoid_finding.message
+
+    res_caution = evaluate([caution_ing], Profile(pregnant=True))
+    caution_finding = next(f for f in res_caution["findings"] if f.concern == "pregnancy")
+    assert caution_finding.level == "warning"
+    assert "Limited data" in caution_finding.message
+
+
+def test_weight_scaling_adjustments():
+    """Test that fillers are under-weighted (0.5) and preservatives are preserved (0.9) in safety score calculation."""
+    # A standard irritant at position 0 should have pos = 1.0.
+    # Penalty: 10 * 1.0 = 10 -> Score: 90
+    normal = _ing("NormalIngredient", irritant="yes")
+    assert evaluate([normal], Profile(sensitive_skin=True))["score"] == 90
+
+    # A filler (Purified Water) should have pos = 0.5.
+    # Penalty: 10 * 0.5 = 5 -> Score: 95
+    filler = _ing("Purified Water", irritant="yes")
+    assert evaluate([filler], Profile(sensitive_skin=True))["score"] == 95
+
+    # A preservative (Phenoxyethanol) should have pos = 0.9.
+    # Penalty: 10 * 0.9 = 9 -> Score: 91
+    preservative = _ing("Phenoxyethanol", irritant="yes")
+    assert evaluate([preservative], Profile(sensitive_skin=True))["score"] == 91
+
+

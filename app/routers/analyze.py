@@ -40,6 +40,11 @@ _CATEGORIES: dict[str, set[str]] = {
         "copper tripeptide-1", "dipeptide diaminobutyroyl benzylamide diacetate",
         "tripeptide-1", "tetrapeptide-21",
     },
+    "Fermented": {
+        "bifida ferment lysate", "galactomyces ferment filtrate", "saccharomyces ferment filtrate",
+        "lactobacillus ferment", "yeast ferment extract", "bifida ferment filtrate",
+        "saccharomyces ferment", "lactobacillus ferment filtrate"
+    },
 }
 
 
@@ -180,6 +185,61 @@ def analyze_routine(
                      f"increase irritation, especially on sensitive skin. "
                      f"Tip: Use Vitamin C in the morning and Retinol at night."
                  ))
+
+            # Multiple Exfoliants (AHA + BHA)
+            _add("AHA", "BHA", "Multiple Exfoliants", "warning",
+                 lambda a, b: (
+                     f"Layering AHA ({a}) and BHA ({b}) in the same routine increases the risk of over-exfoliation, "
+                     f"dryness, and breaking your skin's moisture barrier. "
+                     f"Tip: Alternate their use on different days, or use BHA in the morning and AHA at night."
+                 ))
+
+            # Fermented + Low-pH actives (AHA, BHA, Vitamin C)
+            _add("Fermented", "AHA", "Fermented + AHA", "warning",
+                 lambda a, b: (
+                     f"Combining fermented ingredients ({a}) with low-pH Alpha Hydroxy Acids ({b}) can cause "
+                     f"temporary skin irritation, stinging, or redness, as the low pH can alter the active ferment proteins. "
+                     f"Tip: Use your fermented essence first, wait 15-20 minutes, or apply them in separate routines."
+                 ))
+
+            _add("Fermented", "BHA", "Fermented + BHA", "warning",
+                 lambda a, b: (
+                     f"Combining fermented ingredients ({a}) with low-pH Beta Hydroxy Acids ({b}) can lead to "
+                     f"irritation or compromise the soothing benefits of the ferment. "
+                     f"Tip: Alternate days, or use BHA in the morning and fermented products at night."
+                 ))
+
+            _add("Fermented", "Vitamin C", "Fermented + Vitamin C", "warning",
+                 lambda a, b: (
+                     f"Combining fermented ingredients ({a}) with highly acidic Vitamin C ({b}) can disrupt "
+                     f"the stability of both actives and cause skin flushing or irritation. "
+                     f"Tip: Apply Vitamin C in the morning and fermented ingredients at night."
+                 ))
+
+            # Double Exfoliation check (same category across different products)
+            if "AHA" in a1 and "AHA" in a2:
+                conflicts.append({
+                    "product_a": p1, "product_b": p2,
+                    "ingredient_a": a1["AHA"], "ingredient_b": a2["AHA"],
+                    "conflict_type": "Double AHA Exfoliation", "severity": "warning",
+                    "message": (
+                        f"Both products contain Alpha Hydroxy Acids (AHAs): {a1['AHA']} in {p1} and {a2['AHA']} in {p2}. "
+                        f"Using multiple AHA products together can cause severe over-exfoliation and barrier damage. "
+                        f"Tip: Choose only one AHA product per routine, or use them on separate days."
+                    )
+                })
+
+            if "BHA" in a1 and "BHA" in a2:
+                conflicts.append({
+                    "product_a": p1, "product_b": p2,
+                    "ingredient_a": a1["BHA"], "ingredient_b": a2["BHA"],
+                    "conflict_type": "Double BHA Exfoliation", "severity": "warning",
+                    "message": (
+                        f"Both products contain Beta Hydroxy Acids (BHAs): {a1['BHA']} in {p1} and {a2['BHA']} in {p2}. "
+                        f"Layering multiple BHA products can severely dry out your skin and cause irritation. "
+                        f"Tip: Use only one BHA product in your routine."
+                    )
+                })
 
             # Vitamin C + AHA/BHA (symmetric, written explicitly to avoid lambda capture issues)
             for acid_cat in ("AHA", "BHA"):

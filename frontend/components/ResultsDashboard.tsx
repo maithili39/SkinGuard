@@ -1,400 +1,410 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  ShieldCheck, CheckCircle, AlertTriangle, XCircle, Scale, Lightbulb,
-  Info, ChevronDown, ChevronUp, Sparkles,
+  CheckCircle, AlertTriangle, XCircle, Lightbulb,
+  ChevronDown, ExternalLink, Info, Shield
 } from 'lucide-react';
-import type { AnalysisResult } from '../types';
-import { depthColor } from '../types';
-import { ScoreDisplay } from './ScoreDisplay';
-import { AssessmentDepthBanner } from './AssessmentDepthBanner';
-import { FindingCard } from './FindingCard';
+import type { AnalysisResult, Finding } from '../types';
 
 interface Props {
   results: AnalysisResult;
   onReanalyze?: (newText: string) => void;
 }
 
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const BENEFICIAL_MAP: Record<string, string> = {
+  "niacinamide": "brightening, oil control and barrier repair",
+  "hyaluronic acid": "deep multi-layer hydration",
+  "glycerin": "gentle skin-identical humectant",
+  "ceramide np": "barrier repair and reinforcement",
+  "panthenol": "soothing, anti-inflammatory and hydrating",
+  "centella asiatica extract": "calming botanical, redness and sensitivity",
+  "azelaic acid": "acne, hyperpigmentation and rosacea",
+  "zinc oxide": "broad-spectrum mineral UV and anti-inflammatory",
+  "bakuchiol": "plant-based retinol alternative — pregnancy-friendly",
+  "ascorbic acid": "Vitamin C — antioxidant and brightening",
+  "squalane": "lightweight non-comedogenic emollient",
+};
+
+const CIRCUMFERENCE = 2 * Math.PI * 52;
+
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function IngredientRow({ ing, idx }: { ing: any; idx: number }) {
+function RiskDot({ level }: { level: string }) {
+  const cls = level === 'danger' ? 'risk-dot risk-dot-bad' : level === 'warning' ? 'risk-dot risk-dot-moderate' : 'risk-dot risk-dot-good';
+  return <div className={cls} />;
+}
+
+function IngredientRow({ ing, idx, finding, alertLevel }: { ing: any; idx: number; finding: Finding | undefined; alertLevel: string }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(ing.explanation);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!ing.explanation && ing.matched_name) {
+    if (isOpen && !explanation && ing.matched_name) {
       setLoading(true);
       fetch(`/api/explain/${encodeURIComponent(ing.matched_name)}?llm=true`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.explanation) {
-            setExplanation(data.explanation);
-          }
-        })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.explanation) setExplanation(d.explanation); })
         .catch(() => {})
         .finally(() => setLoading(false));
-    } else {
-      setExplanation(ing.explanation);
     }
-  }, [ing.explanation, ing.matched_name]);
+  }, [isOpen, explanation, ing.matched_name]);
+
+  const badgeClass = alertLevel === 'danger' ? 'risk-badge-bad' : alertLevel === 'warning' ? 'risk-badge-moderate' : 'risk-badge-good';
+  const badgeLabel = alertLevel === 'danger' ? 'High risk' : alertLevel === 'warning' ? 'Moderate' : 'Low risk';
+
+  let sourceLabel = 'Standard ingredient';
+  if (finding) {
+    if (finding.kind === 'regulatory') sourceLabel = 'EU Regulatory';
+    else if (finding.source?.includes('curated')) sourceLabel = 'Curated data';
+    else sourceLabel = 'Safety registry';
+  } else if (BENEFICIAL_MAP[ing.matched_name?.toLowerCase()]) {
+    sourceLabel = 'Active ingredient';
+  }
 
   return (
-    <div
-      className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 flex items-start justify-between gap-2 card-hover animate-fade-in-up"
-      style={{ animationDelay: `${idx * 40}ms` }}
-    >
-      <div className="pr-2 min-w-0 flex-1">
-        <p className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-1.5">
-          {ing.matched_name}
-          {loading && <span className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-ping" />}
-        </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-          {explanation || ing.ingredient?.function || 'Skincare ingredient'}
-        </p>
-      </div>
-      <div className="flex flex-col gap-1 flex-shrink-0 items-end">
-        {ing.ingredient?.comedogenic && (
-          <span className="bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-amber-200/60 dark:border-amber-700/40">
-            Pore-clogging
+    <div style={{ borderBottom: '1px solid var(--border)', animationDelay: `${idx * 20}ms` }} className="animate-fade-up">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="ingredient-row"
+        style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
+      >
+        <RiskDot level={alertLevel} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', fontFamily: "'Nunito', sans-serif" }}>
+              {ing.matched_name}
+              {loading && <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--green-primary)', marginLeft: 6, animation: 'pulse 1s infinite', verticalAlign: 'middle' }} />}
+            </span>
+            <span className={badgeClass} style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 50, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Nunito Sans', sans-serif" }}>
+              {badgeLabel}
+            </span>
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', fontFamily: "'Nunito Sans', sans-serif" }}>
+            {ing.ingredient?.function || 'Cosmetic ingredient'}
           </span>
-        )}
-        {ing.ingredient?.irritant === 'yes' && (
-          <span className="bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-rose-200/60 dark:border-rose-700/40">
-            Irritant
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <span style={{ fontSize: 10, color: 'var(--text-light)', background: 'var(--bg-section)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: 6, fontFamily: "'Nunito Sans', sans-serif" }}>
+            {ing.confidence}% match
           </span>
-        )}
-        {!ing.ingredient?.comedogenic && ing.ingredient?.irritant !== 'yes' && (
-          <span className="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-emerald-200/60 dark:border-emerald-700/40">
-            Safe
-          </span>
-        )}
-        <span className="text-[9px] text-slate-400 text-right mt-1">
-          {ing.confidence}%
-        </span>
-      </div>
+          <ChevronDown size={13} style={{ color: 'var(--text-light)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        </div>
+      </button>
+
+      {isOpen && (
+        <div style={{ paddingLeft: 28, paddingBottom: 16, paddingTop: 4 }} className="animate-fade-in">
+          <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.7, marginBottom: 10, fontFamily: "'Nunito Sans', sans-serif" }}>
+            {explanation || 'Analyzed against cosmetic safety databases.'}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 11 }}>
+            <span style={{ background: 'var(--bg-section)', border: '1px solid var(--border)', padding: '3px 10px', borderRadius: 6, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>
+              Source: {sourceLabel}
+            </span>
+            {finding?.source && (
+              <span style={{ color: 'var(--text-light)', fontFamily: "'Nunito Sans', sans-serif" }}>Ref: {finding.source}</span>
+            )}
+          </div>
+          {finding?.alternatives && finding.alternatives.length > 0 && (
+            <div style={{ marginTop: 10, padding: '10px 14px', background: 'var(--green-light)', border: '1px solid rgba(30,122,78,0.2)', borderRadius: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 3, fontFamily: "'Nunito Sans', sans-serif" }}>Safer alternatives</span>
+              <span style={{ fontSize: 12, color: '#1a4a2e', fontFamily: "'Nunito Sans', sans-serif" }}>{finding.alternatives.join(' · ')}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-
 export function ResultsDashboard({ results, onReanalyze }: Props) {
-  const [showAllIngredients, setShowAllIngredients] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'flagged' | 'beneficial'>('all');
+  const dialRef = useRef<SVGCircleElement>(null);
 
-  const handleAcceptSuggestion = (rawToken: string, bestCandidate: string) => {
+  const score = results.safety_score;
+  const isPregnancyFlagged = results.pregnancy_alerts?.length > 0;
+  const dangerFindings = results.findings.filter(f => f.level === 'danger');
+  const warningFindings = results.findings.filter(f => f.level === 'warning');
+
+  useEffect(() => {
+    if (!dialRef.current) return;
+    const s = score ?? 0;
+    const offset = CIRCUMFERENCE * (1 - s / 100);
+    dialRef.current.style.strokeDashoffset = String(CIRCUMFERENCE);
+    const raf = requestAnimationFrame(() => {
+      if (dialRef.current) {
+        dialRef.current.style.transition = 'stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1)';
+        dialRef.current.style.strokeDashoffset = String(offset);
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [score]);
+
+  const handleAcceptSuggestion = (rawToken: string, best: string) => {
     if (!onReanalyze) return;
-    let updatedText = results.original_text;
-    const regex = new RegExp(escapeRegExp(rawToken), 'i');
-    if (regex.test(updatedText)) {
-      updatedText = updatedText.replace(regex, bestCandidate);
-    } else {
-      updatedText = `${updatedText}, ${bestCandidate}`;
-    }
-    onReanalyze(updatedText);
+    let updated = results.original_text;
+    const rx = new RegExp(escapeRegExp(rawToken), 'i');
+    updated = rx.test(updated) ? updated.replace(rx, best) : `${updated}, ${best}`;
+    onReanalyze(updated);
   };
 
   if (results.matched_count === 0) {
     return (
-      <div className="w-full max-w-2xl mt-12 animate-fade-in-up">
-        <div className="glass-panel rounded-3xl p-8 border border-amber-250/45 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/15 via-transparent to-transparent shadow-glass text-center space-y-6">
-          <div className="flex justify-center">
-            <div className="p-4 bg-amber-50/80 dark:bg-amber-950/35 rounded-full">
-              <AlertTriangle size={36} className="text-amber-500 animate-pulse" />
-            </div>
-          </div>
-          
-          <div className="space-y-2 max-w-md mx-auto">
-            <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg">
-              No Ingredients Recognized
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              We couldn&apos;t identify any standard cosmetic ingredients in the text you provided. Let&apos;s make sure the input is correct.
-            </p>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800/60 rounded-2xl p-5 text-left space-y-3 max-w-md mx-auto">
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Tips for a successful analysis:</p>
-            <ul className="text-xs text-slate-500 dark:text-slate-450 space-y-2 list-disc list-inside">
-              <li>
-                <strong className="text-slate-700 dark:text-slate-200">Check the text:</strong> Make sure you are pasting a standard INCI ingredients list (e.g., starting with <code className="bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded text-rose-500 font-semibold font-mono">Aqua / Water</code>, <code className="bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded text-rose-500 font-semibold font-mono">Glycerin</code>, etc.).
-              </li>
-              <li>
-                <strong className="text-slate-700 dark:text-slate-200">Improve photo quality:</strong> If uploading a photo, ensure it is in focus, well-lit, and cropped closely to the ingredients block.
-              </li>
-              <li>
-                <strong className="text-slate-700 dark:text-slate-205 dark:text-slate-200">Avoid description text:</strong> Do not paste full marketing claims, usage directions, or general product copy.
-              </li>
-            </ul>
-          </div>
+      <div className="card" style={{ padding: '48px 32px', textAlign: 'center' }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--risk-moderate-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <AlertTriangle size={24} style={{ color: 'var(--risk-moderate)' }} />
         </div>
+        <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: 'var(--text-dark)', marginBottom: 8 }}>No Ingredients Recognized</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.7, maxWidth: 360, margin: '0 auto', fontFamily: "'Nunito Sans', sans-serif" }}>
+          No standard INCI ingredients were identified from the scanned text. Check image quality or spelling and try again.
+        </p>
       </div>
     );
   }
 
-  const dangerFindings  = results.findings.filter((f) => f.level === 'danger');
-  const warningFindings = results.findings.filter((f) => f.level === 'warning');
-  const goodFindings    = results.findings.filter((f) => f.level === 'good');
-  const allFindings     = [...dangerFindings, ...warningFindings, ...goodFindings];
+  /* Score verdict */
+  let verdictLabel = 'Excellent';
+  let verdictDesc = 'No high or moderate risk ingredients detected. Very safe formula.';
+  let verdictBadgeClass = 'risk-badge-good';
+  let dialColor = '#3dba4e';
+  let VerdictIcon = CheckCircle;
 
-  const ingredientsToShow = showAllIngredients
-    ? results.found_ingredients
-    : results.found_ingredients?.slice(0, 6);
+  if (score === null) {
+    verdictLabel = 'Insufficient data';
+    verdictDesc = 'Insufficient data to calculate a safety score.';
+    verdictBadgeClass = '';
+    dialColor = '#c0c0c0';
+    VerdictIcon = Info;
+  } else if (score < 50) {
+    verdictLabel = 'Bad';
+    verdictDesc = isPregnancyFlagged
+      ? 'Contains ingredients contraindicated during pregnancy.'
+      : `Contains ${dangerFindings.length} high-risk ingredient${dangerFindings.length !== 1 ? 's' : ''}.`;
+    verdictBadgeClass = 'risk-badge-bad';
+    dialColor = '#e84b3c';
+    VerdictIcon = XCircle;
+  } else if (score < 80) {
+    verdictLabel = 'Not Great';
+    verdictDesc = `Contains ${warningFindings.length} moderate-risk ingredient${warningFindings.length !== 1 ? 's' : ''}.`;
+    verdictBadgeClass = 'risk-badge-moderate';
+    dialColor = '#f0a832';
+    VerdictIcon = AlertTriangle;
+  } else if (score < 95) {
+    verdictLabel = 'Good';
+    verdictDesc = 'Formula is generally safe with minor potential concerns.';
+    verdictBadgeClass = 'risk-badge-good';
+    dialColor = '#3dba4e';
+    VerdictIcon = CheckCircle;
+  }
+
+  /* Sort ingredients */
+  const allList: any[] = [];
+  const watchList: any[] = [];
+  const beneficialList: any[] = [];
+
+  results.found_ingredients?.forEach((ing, index) => {
+    const finding = results.findings.find(f => f.ingredient.toLowerCase() === ing.matched_name.toLowerCase());
+    const isWatch = finding && (finding.level === 'danger' || finding.level === 'warning');
+    const isBeneficial = Boolean(BENEFICIAL_MAP[ing.matched_name?.toLowerCase()]);
+    const alertLevel = isWatch ? finding!.level : 'safe';
+    const item = { ing: { ...ing, originalIndex: index }, finding, alertLevel };
+
+    allList.push(item);
+    if (isWatch) watchList.push(item);
+    if (isBeneficial) beneficialList.push(item);
+  });
+
+  const sortFn = (a: any, b: any) => {
+    const av = a.alertLevel === 'danger' ? 2 : a.alertLevel === 'warning' ? 1 : 0;
+    const bv = b.alertLevel === 'danger' ? 2 : b.alertLevel === 'warning' ? 1 : 0;
+    return av !== bv ? bv - av : a.ing.originalIndex - b.ing.originalIndex;
+  };
+
+  allList.sort(sortFn); watchList.sort(sortFn); beneficialList.sort(sortFn);
+  const displayList = activeTab === 'flagged' ? watchList : activeTab === 'beneficial' ? beneficialList : allList;
+
+  const ocrErrors = results.unmatched?.filter(u => u.category === 'ocr_error') || [];
+  const brandNames = results.unmatched?.filter(u => u.category === 'brand_name') || [];
+  const genuineUnknowns = results.unmatched?.filter(u => u.category === 'unknown_inci') || [];
 
   return (
-    <div className="w-full max-w-4xl mt-12 animate-fade-in-up">
-      {/* ── Header card ─────────────────────────────────────────────────────── */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 shadow-glass border border-white/50 dark:border-white/10 mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="bg-gradient-to-br from-primary-500 to-emerald-500 p-2 rounded-xl shadow-lg shadow-primary-500/30">
-                <ShieldCheck size={20} className="text-white" />
-              </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                Analysis Results
-              </h2>
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm max-w-lg">
-              {results.summary}
-            </p>
-            {/* Coverage pill */}
-            <span className={`inline-block mt-3 text-xs font-semibold px-3 py-1 rounded-full ${
-              results.coverage_percent >= 80
-                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                : results.coverage_percent >= 50
-                  ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                  : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
-            }`}>
-              {results.coverage_percent}% of label recognised
-            </span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Score card */}
+      <div className="card" style={{ padding: '32px', display: 'flex', gap: 32, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* Dial */}
+        <div style={{ position: 'relative', width: 130, height: 130, flexShrink: 0, margin: '0 auto' }}>
+          <svg viewBox="0 0 120 120" style={{ width: '100%', height: '100%' }}>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#f0f0f0" strokeWidth="8" />
+            <circle
+              ref={dialRef}
+              cx="60" cy="60" r="52"
+              fill="none"
+              stroke={dialColor}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={CIRCUMFERENCE}
+              className="score-ring-fill"
+              style={{ filter: `drop-shadow(0 0 8px ${dialColor}55)`, transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
+            />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 34, fontWeight: 900, color: 'var(--text-dark)', lineHeight: 1, fontFamily: "'Nunito', sans-serif" }}>{score ?? '—'}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Nunito Sans', sans-serif" }}>/ 100</span>
           </div>
-          {/* Score ring */}
-          <div className="flex-shrink-0">
-            <ScoreDisplay score={results.safety_score} basis={results.score_basis} />
+        </div>
+
+        {/* Verdict */}
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <span className={verdictBadgeClass} style={{ fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 50, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-block', marginBottom: 10, fontFamily: "'Nunito Sans', sans-serif" }}>
+            {verdictLabel}
+          </span>
+          <p style={{ fontSize: 14, color: 'var(--text-body)', lineHeight: 1.65, marginBottom: 16, fontFamily: "'Nunito Sans', sans-serif" }}>{verdictDesc}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[
+              { label: 'Matched', val: `${results.matched_count} / ${results.assessed_count || results.matched_count}` },
+              { label: 'Coverage', val: `${results.coverage_percent}%` },
+            ].map((s, i) => (
+              <div key={i} style={{ padding: '10px 14px', background: 'var(--bg-section)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Nunito Sans', sans-serif" }}>{s.label}</p>
+                <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-dark)', lineHeight: 1.2, fontFamily: "'Nunito', sans-serif" }}>{s.val}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ── Assessment depth ─────────────────────────────────────────────────── */}
-      <div className="mb-6">
-        <AssessmentDepthBanner
-          assessedCount={results.assessed_count}
-          matchedCount={results.matched_count}
-          depthPct={results.assessment_depth_percent}
-        />
-      </div>
-
-      {/* ── Stats row ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          {
-            label: 'Ingredients Found',
-            value: results.found_ingredients?.length ?? 0,
-            icon: <CheckCircle size={18} className="text-emerald-500" />,
-            bg: 'from-emerald-50 to-transparent dark:from-emerald-950/30',
-            border: 'border-emerald-200/60 dark:border-emerald-800/40',
-          },
-          {
-            label: 'Pore-clogging',
-            value: results.comedogenic_alerts?.length ?? 0,
-            icon: <AlertTriangle size={18} className="text-amber-500" />,
-            bg: 'from-amber-50 to-transparent dark:from-amber-950/30',
-            border: 'border-amber-200/60 dark:border-amber-800/40',
-          },
-          {
-            label: 'Irritants',
-            value: results.irritant_alerts?.length ?? 0,
-            icon: <XCircle size={18} className="text-rose-500" />,
-            bg: 'from-rose-50 to-transparent dark:from-rose-950/30',
-            border: 'border-rose-200/60 dark:border-rose-800/40',
-          },
-        ].map(({ label, value, icon, bg, border }) => (
-          <div key={label} className={`rounded-2xl border ${border} bg-gradient-to-br ${bg} p-4 flex flex-col items-center gap-1 text-center`}>
-            {icon}
-            <span className="text-2xl font-black text-slate-800 dark:text-slate-100">{value}</span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-tight">{label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Pregnancy alert (if any) ─────────────────────────────────────────── */}
-      {results.pregnancy_alerts?.length > 0 && (
-        <div className="mb-6 rounded-2xl bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/40 border border-rose-200/80 dark:border-rose-800/50 p-5 flex gap-3 animate-fade-in-up shadow-sm">
-          <div className="p-2 bg-rose-100 dark:bg-rose-900/40 rounded-xl flex-shrink-0">
-            <AlertTriangle size={18} className="text-rose-600 dark:text-rose-400" />
-          </div>
+      {/* Pregnancy alert */}
+      {isPregnancyFlagged && (
+        <div style={{ display: 'flex', gap: 12, padding: '14px 18px', background: '#fdeaea', border: '1px solid rgba(232,75,60,0.25)', borderRadius: 12 }}>
+          <AlertTriangle size={17} style={{ color: '#e84b3c', flexShrink: 0, marginTop: 1 }} />
           <div>
-            <h4 className="font-bold text-rose-800 dark:text-rose-300 text-sm mb-1">Pregnancy Warning</h4>
-            <p className="text-rose-700 dark:text-rose-400 text-xs leading-relaxed">
-              Not recommended during pregnancy:{' '}
-              <strong>{results.pregnancy_alerts.map((a) => a.matched_name).join(', ')}</strong>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#9a1e18', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 3, fontFamily: "'Nunito Sans', sans-serif" }}>Pregnancy Safety Alert</span>
+            <p style={{ fontSize: 13, color: '#7a1510', lineHeight: 1.6, fontFamily: "'Nunito Sans', sans-serif" }}>
+              Contains compounds flagged as pregnancy risks: <strong>{results.pregnancy_alerts.map(a => a.matched_name).join(', ')}</strong>
+            </p>
+            <p style={{ fontSize: 11, color: '#9a4040', marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(232,75,60,0.15)', lineHeight: 1.5, fontFamily: "'Nunito Sans', sans-serif" }}>
+              Systemic absorption rates vary. Consult your dermatologist or obstetrician before use.
             </p>
           </div>
         </div>
       )}
 
-      {/* ── Main grid ────────────────────────────────────────────────────────── */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Left: Findings */}
-        <div className="glass-panel rounded-3xl p-5 shadow-glass border border-white/50 dark:border-white/10">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary-500 inline-block" />
-              Findings ({results.findings.length})
-            </h3>
-            <div className="flex gap-1.5">
-              {dangerFindings.length > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300">
-                  {dangerFindings.length} danger
-                </span>
-              )}
-              {warningFindings.length > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">
-                  {warningFindings.length} warning
-                </span>
-              )}
-            </div>
-          </div>
-
-          {results.findings.length === 0 ? (
-            <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-transparent dark:from-emerald-950/30 p-5 flex items-center gap-3">
-              <CheckCircle size={20} className="text-emerald-500 flex-shrink-0" />
-              <div>
-                <p className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">No concerns flagged</p>
-                <p className="text-emerald-600 dark:text-emerald-500 text-xs mt-0.5">
-                  No issues found for your skin profile.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scroll pr-1">
-              {allFindings.map((f, i) => (
-                <FindingCard key={`f-${i}`} f={f} index={i} />
-              ))}
-            </div>
-          )}
-
-          {/* Legend */}
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
-              <Scale size={9} />EU Regulation — legal fact
-            </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/50">
-              <Lightbulb size={9} />Expert Guidance — curated
-            </span>
-          </div>
+      {/* Ingredient list */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        {/* Tabs */}
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 6 }}>
+          {[
+            { id: 'all', label: `All (${allList.length})` },
+            { id: 'flagged', label: `Concerns (${watchList.length})` },
+            { id: 'beneficial', label: `Actives (${beneficialList.length})` },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`filter-pill ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Right: Ingredients */}
-        <div className="space-y-4">
-          {/* Unmatched tokens */}
-          {results.unmatched?.length > 0 && (
-            <div className="rounded-2xl border border-amber-200/80 dark:border-amber-800/50 bg-gradient-to-br from-amber-50 to-transparent dark:from-amber-950/30 p-4 animate-fade-in-up">
-              <h4 className="text-amber-800 dark:text-amber-300 font-bold mb-1.5 flex items-center gap-2 text-sm">
-                <AlertTriangle size={14} />
-                Couldn&apos;t identify ({results.unmatched.length})
-              </h4>
-              <p className="text-amber-700 dark:text-amber-400 text-xs mb-3">
-                Not in database — possibly OCR errors or rare ingredients.
-              </p>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {results.unmatched.map((u, idx) => (
-                    <span key={idx} className="bg-white dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-xs px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-800/50">
-                      {u.raw}
-                    </span>
-                  ))}
-                </div>
-                {onReanalyze && results.unmatched.some(u => u.best_candidate && u.best_confidence >= 50) && (
-                  <div className="mt-1 pt-2.5 border-t border-amber-200/40 dark:border-amber-800/30">
-                    <p className="text-[11px] text-amber-700 dark:text-amber-400 font-bold mb-1.5 flex items-center gap-1">
-                      Suggestions:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {results.unmatched
-                        .filter(u => u.best_candidate && u.best_confidence >= 50)
-                        .map((u, idx) => (
-                          <button
-                            key={`sug-${idx}`}
-                            onClick={() => handleAcceptSuggestion(u.raw, u.best_candidate!)}
-                            className="inline-flex items-center gap-1.5 bg-white hover:bg-amber-50 dark:bg-amber-900/25 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px] px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-800/60 transition-all font-semibold shadow-sm cursor-pointer hover:scale-[1.02]"
-                          >
-                            <span>Did you mean <strong className="text-amber-900 dark:text-amber-200">{u.best_candidate}</strong>?</span>
-                            <span className="text-[9px] opacity-75 font-normal">({u.best_confidence}%)</span>
-                            <span className="ml-0.5 bg-amber-500 dark:bg-amber-600 text-white text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider">Accept</span>
-                          </button>
-                        ))}
-                    </div>
+        {/* Ingredient rows */}
+        <div style={{ padding: '0 20px' }}>
+          {displayList.length === 0 ? (
+            <p style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, fontFamily: "'Nunito Sans', sans-serif", fontStyle: 'italic' }}>No ingredients matched this filter.</p>
+          ) : (
+            displayList.map((item, idx) => (
+              <IngredientRow key={idx} ing={item.ing} idx={idx} finding={item.finding} alertLevel={item.alertLevel} />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Unrecognized tokens */}
+      {results.unmatched?.length > 0 && (
+        <div className="card" style={{ padding: '20px 24px' }}>
+          <h4 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 16, color: 'var(--text-dark)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 7 }}>
+            <AlertTriangle size={14} style={{ color: 'var(--risk-moderate)' }} /> Unrecognized Ingredients ({results.unmatched.length})
+          </h4>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.6 }}>
+            These terms could not be matched to the database. Correct any typos or search external sources.
+          </p>
+
+          {ocrErrors.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--risk-moderate)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8, fontFamily: "'Nunito Sans', sans-serif" }}>Possible Spelling Errors</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                {ocrErrors.map((u, i) => (
+                  <div key={i} style={{ background: 'var(--bg-section)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', display: 'block', marginBottom: 6 }}>{u.raw}</span>
+                    {u.best_candidate && (
+                      <button onClick={() => handleAcceptSuggestion(u.raw, u.best_candidate!)} style={{ width: '100%', background: 'var(--green-light)', border: '1px solid rgba(30,122,78,0.2)', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', cursor: 'pointer', textAlign: 'left', fontFamily: "'Nunito Sans', sans-serif", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Correct to: <strong>{u.best_candidate}</strong></span>
+                        <span style={{ background: 'var(--green-primary)', color: 'white', padding: '1px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700 }}>Accept</span>
+                      </button>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
             </div>
           )}
 
-          {/* Ingredient cards */}
-          <div className="glass-panel rounded-3xl p-5 shadow-glass border border-white/50 dark:border-white/10">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <Sparkles size={14} className="text-primary-500" />
-                Analysed Ingredients
-              </h4>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${depthColor(results.assessment_depth_percent)}`}>
-                {results.assessed_count} assessed
-              </span>
+          {brandNames.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8, fontFamily: "'Nunito Sans', sans-serif" }}>Proprietary Blends</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {brandNames.map((u, i) => (
+                  <span key={i} style={{ background: '#e8f0fe', color: '#2a5298', border: '1px solid rgba(42,82,152,0.2)', padding: '3px 10px', borderRadius: 50, fontSize: 11, fontWeight: 600, fontFamily: "'Nunito Sans', sans-serif" }}>{u.raw}</span>
+                ))}
+              </div>
             </div>
+          )}
 
-            <div className="space-y-2">
-              {ingredientsToShow?.map((ing, idx) => (
-                <IngredientRow key={idx} ing={ing} idx={idx} />
-              ))}
+          {genuineUnknowns.length > 0 && (
+            <div>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8, fontFamily: "'Nunito Sans', sans-serif" }}>Unknown INCI</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                {genuineUnknowns.map((u, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-section)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>{u.raw}</span>
+                    <a href={`https://www.google.com/search?q=${encodeURIComponent(u.raw + ' skincare INCI')}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: 'var(--green-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0, fontFamily: "'Nunito Sans', sans-serif" }}>
+                      Search <ExternalLink size={9} />
+                    </a>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
+        </div>
+      )}
 
-            {/* Show more / less toggle */}
-            {(results.found_ingredients?.length ?? 0) > 6 && (
-              <button
-                onClick={() => setShowAllIngredients(!showAllIngredients)}
-                className="mt-4 w-full flex items-center justify-center gap-2 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 py-2 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
-              >
-                {showAllIngredients ? (
-                  <><ChevronUp size={14} /> Show fewer</>
-                ) : (
-                  <><ChevronDown size={14} /> Show all {results.found_ingredients.length} ingredients</>
-                )}
-              </button>
-            )}
+      {/* Safer alternatives tip */}
+      {results.findings.some(f => f.level === 'danger' || f.level === 'warning') && (
+        <div style={{ display: 'flex', gap: 14, padding: '16px 20px', background: 'var(--green-light)', border: '1px solid rgba(30,122,78,0.2)', borderRadius: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(30,122,78,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Lightbulb size={16} style={{ color: 'var(--green-primary)' }} />
           </div>
-
-          {/* Extracted text (collapsible raw) */}
-          <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 p-4">
-            <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-              Extracted Text
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono bg-white dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700/50 h-16 overflow-y-auto custom-scroll leading-relaxed">
-              {results.original_text || 'No text extracted'}
+          <div>
+            <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>Recommended Safer Alternatives</p>
+            <p style={{ fontSize: 13, color: '#1a4a2e', lineHeight: 1.6, fontFamily: "'Nunito Sans', sans-serif" }}>
+              Look for products formulated with: <strong>Squalane</strong> (instead of comedogenic oils) · <strong>Azelaic Acid</strong> (instead of high-strength acids) · Fragrance-free formulas.
             </p>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ── Disclaimer ────────────────────────────────────────────────────────── */}
-      <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/50 flex gap-2.5">
-        <Info size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{results.disclaimer}</p>
+      {/* Raw extracted text */}
+      <div style={{ padding: '14px 18px', background: 'var(--bg-section)', borderRadius: 10, border: '1px solid var(--border)' }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, fontFamily: "'Nunito Sans', sans-serif" }}>Extracted label text</p>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', lineHeight: 1.6, maxHeight: 64, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {results.original_text || 'No text extracted'}
+        </p>
       </div>
-    </div>
-  );
-}
-
-export function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="glass-panel rounded-3xl p-6 shadow-card border border-white/50 dark:border-white/10 flex flex-col items-center text-center card-hover group">
-      <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 p-4 rounded-2xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-        {icon}
-      </div>
-      <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">{title}</h4>
-      <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{description}</p>
     </div>
   );
 }
