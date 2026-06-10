@@ -123,8 +123,8 @@ export function RoutineAnalyzer({ scans }: Props) {
                 value={p.name}
                 onChange={(e) => handleProductChange(idx, 'name', e.target.value)}
                 placeholder={`Product ${idx + 1} Name`}
-                style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700 }}
-                className="text-base text-[#1a1a1a] bg-transparent border-b border-[#e8e4dc] focus:border-[#4caf50] outline-none pb-1 transition-colors"
+                style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: '1.25rem' }}
+                className="text-[#1a1a1a] bg-transparent outline-none pb-1 transition-colors"
               />
               
               <div className="flex items-center gap-2">
