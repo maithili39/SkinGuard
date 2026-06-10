@@ -5,6 +5,8 @@ import {
   ShieldCheck, Loader2, AlertTriangle, Heart, Trash2, Search,
   Plus, X, Barcode, Layers, LogOut, Upload, Camera,
   FileText, Menu, FlaskConical, Zap, Sparkles,
+  Droplets, Baby, Bug, CheckCircle, Activity,
+  Twitter, Instagram, Github, ArrowRight
 } from 'lucide-react';
 import type { SkinProfile, UserState, AnalysisResult } from '../types';
 import { RoutineAnalyzer } from '../components/RoutineAnalyzer';
@@ -416,13 +418,13 @@ export default function Home() {
       )}
 
       {/* ─── Navbar ──────────────────────────────────────────────────────────── */}
-      <header style={{ background: 'white', borderBottom: '1px solid #ebebeb', position: 'sticky', top: 0, zIndex: 50, height: 64 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <header style={{ background: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(0,0,0,0.04)', position: 'sticky', top: 0, zIndex: 50, height: 64 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 2 }}>
 
           {/* Logo */}
           <button onClick={() => { setResults(null); setExtractedIngredients([]); setActiveTab('home'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
             <img src="/logo.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', background: '#f0ede6' }} />
-            <span style={{ fontFamily: "'Satisfy', cursive", fontWeight: 700, fontSize: 24, color: '#1b4332', display: 'inline-block', transform: 'translateY(-2px)' }}>SkinGuard</span>
+            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 24, color: '#1a1a1a', display: 'inline-block', transform: 'translateY(-2px)' }}>SkinGuard</span>
           </button>
 
           {/* Desktop nav */}
@@ -483,82 +485,84 @@ export default function Home() {
         <div>
 
           {/* ── HERO ────────────────────────────────────────────────────────── */}
-          <section style={{ 
-            background: '#EAE4DA', 
-            padding: '70px 24px 100px', 
-            position: 'relative', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            width: '100%', 
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)', zIndex: 0 }} />
-            
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center w-full max-w-6xl" style={{ position: 'relative', zIndex: 1 }}>
-              {/* Left Column (Hero Content) */}
-              <div className="col-span-1 md:col-span-7 flex flex-col gap-6 text-center md:text-left items-center md:items-start w-full">
-                <div style={{ display: 'inline-block', background: 'rgba(76,175,80,0.08)', border: '1px solid rgba(76,175,80,0.15)', color: '#388e3c', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Outfit', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                  COSMETIC SAFETY DATABASE
-                </div>
-   
-                <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(36px, 5vw, 56px)', color: '#37302f', lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0 }}>
-                  Decode Your Skincare<br />
-                  <span style={{ fontFamily: "'Satisfy', cursive", color: '#4caf50', display: 'inline-block', fontSize: '1.25em', transform: 'rotate(-1.5deg)', marginTop: 4 }}>
-                    Ingredients
-                  </span>
-                </h1>
-   
-                <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, color: '#5c5351', lineHeight: 1.6, maxWidth: 580, margin: 0 }}>
-                  Get instant insights into ingredient safety, compatibility, and potential risks before adding a product to your routine.
+          <section style={{ background: '#EAE4DA', width: '100%', overflow: 'hidden' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 48px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 56, alignItems: 'end' }}>
+
+              {/* ── Left ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 72 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#9e9189', letterSpacing: '2px', textTransform: 'uppercase', margin: 0 }}>
+                  EU CosIng · 24,000+ Ingredients
                 </p>
-   
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 }}>
-                  <button 
-                    onClick={() => scrollTo('analyzer')} 
-                    className="btn-green"
-                    style={{ 
-                      padding: '14px 36px', 
-                      fontSize: 16,
-                      fontWeight: 700,
-                      borderRadius: 30,
-                      boxShadow: '0 8px 20px rgba(76,175,80,0.25)'
-                    }}
+
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(36px, 4.2vw, 58px)', fontWeight: 700, color: '#1c1917', lineHeight: 1.1, letterSpacing: '-0.01em', margin: 0 }}>
+                  Read what's actually<br />
+                  <em style={{ fontStyle: 'italic', color: '#3d6b45' }}>in your skincare.</em>
+                </h1>
+
+                <p style={{ fontSize: 16, color: '#5c5045', lineHeight: 1.75, maxWidth: 440, margin: 0 }}>
+                  Most ingredient lists are written to be ignored. SkinGuard translates every ingredient — flags irritants, allergens, pore-cloggers, and pregnancy risks — matched to your skin type.
+                </p>
+
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setActiveTab('analyze')}
+                    style={{ padding: '13px 30px', fontSize: 15, fontWeight: 700, background: '#3d6b45', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}
                   >
-                    Start Analysis
+                    Check an ingredient list
+                  </button>
+                  <button
+                    onClick={() => scrollTo('how-it-works')}
+                    style={{ padding: '13px 20px', fontSize: 14, fontWeight: 500, background: 'transparent', border: '1.5px solid rgba(92,80,69,0.3)', color: '#5c5045', borderRadius: 8, cursor: 'pointer' }}
+                  >
+                    How it works
                   </button>
                 </div>
+
+                <p style={{ fontSize: 13, color: '#b0a89e', margin: 0 }}>
+                  Free to use · Sign up to save your history
+                </p>
               </div>
 
-              {/* Right Column (Mockup Image) */}
-              <div className="col-span-1 md:col-span-5 hidden md:flex justify-center items-center">
-                <img 
-                  src="/yuka-mockup.png" 
-                  alt="Skincare safety analysis mockup" 
-                  style={{ 
-                    width: '100%', 
-                    maxWidth: 440, 
-                    height: 'auto', 
-                    objectFit: 'contain',
-                    filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.08))'
-                  }} 
-                />
+              {/* ── Right — editorial image collage ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'auto auto', gap: 12, alignItems: 'end' }}>
+
+                {/* Main illustration — spans left column, both rows */}
+                <div style={{ gridColumn: '1', gridRow: '1 / 3', borderRadius: '16px 16px 0 0', overflow: 'hidden', background: '#d8d0c5' }}>
+                  <img
+                    src="/onskin1.png"
+                    alt="Person inspecting skincare products"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+
+                {/* Bottle 1 */}
+                <div style={{ gridColumn: '2', gridRow: '1', borderRadius: 16, overflow: 'hidden', aspectRatio: '1', background: '#c8c0b5' }}>
+                  <img
+                    src="/small-bottle-1.png"
+                    alt="Skincare serum"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+
+                {/* Bottle 2 */}
+                <div style={{ gridColumn: '2', gridRow: '2', borderRadius: '0 0 16px 0', overflow: 'hidden', aspectRatio: '1', background: '#2d4a35' }}>
+                  <img
+                    src="/small-bottle-2.png"
+                    alt="Calm serum bottle"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
               </div>
             </div>
 
-            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
-              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
-                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#faf9f6"></path>
-              </svg>
-            </div>
+            <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', marginTop: 0 }} />
           </section>
 
           {/* ── ANALYZER SECTION ────────────────────────────────────────────── */}
-          <section id="analyzer" style={{ background: '#faf9f6', padding: '80px 24px' }}>
+          <section id="analyzer" style={{ background: '#faf9f6', padding: '80px 24px', position: 'relative' }}>
             <div style={{ maxWidth: 760, margin: '0 auto' }}>
               <div className="section-reveal" style={{ textAlign: 'center', marginBottom: 32 }}>
-                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 44, color: '#1a1a1a', marginBottom: 12 }}>Analyze your skincare</h2>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 44, color: '#1a1a1a', marginBottom: 12 }}>Analyze your skincare</h2>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#6b6b6b' }}>Set your skin profile, then paste or upload your ingredients.</p>
               </div>
 
@@ -602,7 +606,7 @@ export default function Home() {
                         placeholder="Aqua, Glycerin, Niacinamide, Salicylic Acid, Fragrance, Ceramide NP..."
                         className="input-field" style={{ fontSize: 15 }} />
                       <button onClick={handleManualInputSubmit} className="btn-green" style={{ padding: '16px', fontSize: 17, width: '100%', borderRadius: 28 }}>
-                        <Layers size={16}/> Analyze Ingredients
+                        Analyze Ingredients
                       </button>
                     </div>
                   )}
@@ -668,66 +672,18 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </section>
-
-          {/* ── INDEPENDENCE ────────────────────────────────────────────────── */}
-          <section className="section-reveal" style={{ background: '#f0ede6', padding: '80px 24px' }}>
-            <div style={{ maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
-              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', marginBottom: 48 }}>A 100% independent tool</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 40 }}>
-                {[
-                  {
-                    icon: (
-                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 3L4 7v7c0 5.5 4.2 10.7 10 12 5.8-1.3 10-6.5 10-12V7L14 3z"/>
-                        <line x1="9" y1="14" x2="19" y2="14"/>
-                        <line x1="14" y1="9" x2="14" y2="14"/>
-                      </svg>
-                    ),
-                    title: 'No brand influence',
-                    body: 'No brand or manufacturer can affect our ingredient scores or recommendations.',
-                  },
-                  {
-                    icon: (
-                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 6L6 22M6 6l16 16M10 6H4v6M18 22h6v-6"/>
-                      </svg>
-                    ),
-                    title: 'No ads, ever',
-                    body: "We don't sell ad space. No brand can pay to be shown here.",
-                  },
-                  {
-                    icon: (
-                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="4" y="4" width="20" height="20" rx="3"/>
-                        <line x1="4" y1="10" x2="24" y2="10"/>
-                        <line x1="10" y1="10" x2="10" y2="24"/>
-                      </svg>
-                    ),
-                    title: 'Fully open source',
-                    body: 'Our data sources, methodology, and code are all public on GitHub.',
-                  },
-                ].map((col, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
-                      {col.icon}
-                    </div>
-                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 18, color: '#1a1a1a' }}>{col.title}</h3>
-                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: '#6b6b6b', lineHeight: 1.6, maxWidth: 220, textAlign: 'center' }}>{col.body}</p>
-                  </div>
-                ))}
-              </div>
-              <a href="#" style={{ display: 'inline-block', marginTop: 40, color: '#4caf50', fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 15 }}>
-                Learn about our data sources →
-              </a>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
+              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
+                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="white"></path>
+              </svg>
             </div>
           </section>
 
           {/* ── WHAT'S IN EVERY ANALYSIS ────────────────────────────────── */}
-          <section className="section-reveal" style={{ background: 'white', padding: '80px 24px' }}>
+          <section className="section-reveal" style={{ background: 'white', padding: '80px 24px', position: 'relative' }}>
             <div style={{ maxWidth: 1100, margin: '0 auto' }}>
               <div style={{ textAlign: 'center', marginBottom: 52 }}>
-                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 'clamp(28px,3vw,40px)', color: '#1a1a1a', marginBottom: 14 }}>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 'clamp(28px,3vw,40px)', color: '#1a1a1a', marginBottom: 14 }}>
                   Six checks run on every scan
                 </h2>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#6b6b6b', maxWidth: 520, margin: '0 auto' }}>
@@ -737,29 +693,34 @@ export default function Home() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
                 {[
-                  { dot: '#43a047', bg: '#e8f5e9', title: 'Safety Score', body: 'An overall 0–100 score calculated from flagged ingredients, weighted by severity and adapted to your selected skin conditions.' },
-                  { dot: '#e53935', bg: '#fdeaea', title: 'Irritants & Allergens', body: 'Detects EU SCCS-listed contact allergens, known sensitisers, and ingredients classified as irritants — especially relevant for sensitive skin.' },
-                  { dot: '#f57c00', bg: '#fff3e0', title: 'Comedogenic Rating', body: 'Identifies pore-clogging ingredients rated 3 or higher on the 0–5 comedogenic scale. Automatically flagged when your profile includes acne-prone skin.' },
-                  { dot: '#9c27b0', bg: '#f3e5f5', title: 'Pregnancy Safety', body: 'Warns on retinoids, high-concentration salicylates, and EU-restricted substances. Active only when your pregnancy profile toggle is on.' },
-                  { dot: '#00897b', bg: '#e0f2f1', title: 'Fungal Acne Triggers', body: 'Scans for fatty acids, esters, and oils known to feed Malassezia yeast — the root cause of fungal acne (Malassezia folliculitis).' },
-                  { dot: '#1565c0', bg: '#e3f2fd', title: 'Routine Conflict Checker', body: 'Paste multiple products and detect active-ingredient clashes — e.g. retinol layered with AHAs, or vitamin C with niacinamide at high concentrations.' },
+                  { icon: <ShieldCheck size={20} color="#43a047" />, bg: '#e8f5e9', title: 'Safety Score', body: 'An overall 0–100 score calculated from flagged ingredients, weighted by severity and adapted to your selected skin conditions.' },
+                  { icon: <AlertTriangle size={20} color="#e53935" />, bg: '#fdeaea', title: 'Irritants & Allergens', body: 'Detects EU SCCS-listed contact allergens, known sensitisers, and ingredients classified as irritants — especially relevant for sensitive skin.' },
+                  { icon: <Droplets size={20} color="#f57c00" />, bg: '#fff3e0', title: 'Comedogenic Rating', body: 'Identifies pore-clogging ingredients rated 3 or higher on the 0–5 comedogenic scale. Automatically flagged when your profile includes acne-prone skin.' },
+                  { icon: <Baby size={20} color="#9c27b0" />, bg: '#f3e5f5', title: 'Pregnancy Safety', body: 'Warns on retinoids, high-concentration salicylates, and EU-restricted substances. Active only when your pregnancy profile toggle is on.' },
+                  { icon: <Bug size={20} color="#00897b" />, bg: '#e0f2f1', title: 'Fungal Acne Triggers', body: 'Scans for fatty acids, esters, and oils known to feed Malassezia yeast — the root cause of fungal acne (Malassezia folliculitis).' },
+                  { icon: <FlaskConical size={20} color="#1565c0" />, bg: '#e3f2fd', title: 'Routine Conflict Checker', body: 'Paste multiple products and detect active-ingredient clashes — e.g. retinol layered with AHAs, or vitamin C with niacinamide at high concentrations.' },
                 ].map((f, i) => (
-                  <div key={i} style={{ background: '#faf9f6', border: '1px solid #e8e4dc', borderRadius: 18, padding: '28px 28px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 38, height: 38, borderRadius: 10, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <div style={{ width: 14, height: 14, borderRadius: '50%', background: f.dot }} />
+                  <div key={i} className="card card-hover" style={{ background: '#ffffff', border: '1px solid #e8e4dc', borderRadius: 24, padding: '32px', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 14, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {f.icon}
                       </div>
-                      <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 17, color: '#1a1a1a', margin: 0 }}>{f.title}</h3>
+                      <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 19, color: '#1a1a1a', margin: 0 }}>{f.title}</h3>
                     </div>
-                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#6b6b6b', lineHeight: 1.65, margin: 0 }}>{f.body}</p>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: '#6b6b6b', lineHeight: 1.6, margin: 0 }}>{f.body}</p>
                   </div>
                 ))}
               </div>
             </div>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
+              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
+                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#f0ede6"></path>
+              </svg>
+            </div>
           </section>
 
           {/* ── STATS ───────────────────────────────────────────────────────── */}
-          <section ref={statsRef} style={{ background: '#f0ede6', padding: '64px 24px' }}>
+          <section ref={statsRef} style={{ background: '#f0ede6', padding: '64px 24px', position: 'relative' }}>
             <div style={{ maxWidth: 900, margin: '0 auto' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 32, textAlign: 'center', marginBottom: 40 }}>
                 {[
@@ -775,7 +736,6 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <div style={{ width: 200, height: 1, background: '#d4c9b8', margin: '0 auto 20px' }}/>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <Stars n={5}/>
@@ -783,10 +743,15 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
+              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
+                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#eff5f2"></path>
+              </svg>
+            </div>
           </section>
 
           {/* ── TESTIMONIALS ────────────────────────────────────────────────── */}
-          <section className="section-reveal" style={{ background: '#faf9f6', padding: '80px 24px', position: 'relative', overflow: 'hidden' }}>
+          <section className="section-reveal" style={{ background: '#eff5f2', padding: '80px 24px', position: 'relative', overflow: 'hidden' }}>
             {/* Decorative blobs */}
             <svg style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, pointerEvents: 'none' }} width="200" height="160" viewBox="0 0 200 160">
               <path d="M80,20 C120,5 180,40 170,90 C160,140 100,155 50,135 C0,115 -10,70 20,40 C50,10 40,35 80,20Z" fill="#e8f5e9" opacity="0.5"/>
@@ -796,7 +761,7 @@ export default function Home() {
             </svg>
 
             <div style={{ maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', textAlign: 'center', marginBottom: 48 }}>What users are saying</h2>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', textAlign: 'center', marginBottom: 48 }}>What users are saying</h2>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center w-full">
                 {/* Left Column (Illustration) */}
@@ -841,12 +806,17 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
+              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
+                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="white"></path>
+              </svg>
+            </div>
           </section>
 
           {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
-          <section id="how-it-works" className="section-reveal" style={{ background: 'white', padding: '80px 24px' }}>
+          <section id="how-it-works" className="section-reveal" style={{ background: 'white', padding: '80px 24px', position: 'relative' }}>
             <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
-              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', marginBottom: 12 }}>Three steps to cleaner skincare</h2>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', marginBottom: 12 }}>Three steps to cleaner skincare</h2>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: '#6b6b6b', marginBottom: 60 }}>No account needed to analyze. Sign up only to save your history.</p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 0, position: 'relative' }}>
@@ -893,7 +863,6 @@ export default function Home() {
                   },
                 ].map((step, i) => (
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 24px' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#4caf50', marginBottom: 16 }}>{step.num}</div>
                     <div style={{ marginBottom: 14 }}>{step.icon}</div>
                     <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 18, color: '#1a1a1a', marginBottom: 10 }}>{step.title}</h3>
                     <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: '#6b6b6b', lineHeight: 1.6, maxWidth: 200 }}>{step.body}</p>
@@ -901,27 +870,14 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          </section>
-
-          {/* ── IMPACT BANNER ───────────────────────────────────────────────── */}
-          <section style={{ background: '#4caf50', padding: '64px 24px', position: 'relative', overflow: 'hidden' }}>
-            {/* Decorative leaves */}
-            <svg style={{ position: 'absolute', left: 40, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="80" height="80" viewBox="0 0 80 80">
-              <path d="M20 60 Q40 10 70 20 Q60 50 20 60Z" fill="rgba(255,255,255,0.18)"/>
-              <path d="M10 70 Q35 30 60 40 Q50 65 10 70Z" fill="rgba(255,255,255,0.12)"/>
-              <path d="M30 55 Q55 15 75 30 Q65 55 30 55Z" fill="rgba(255,255,255,0.09)"/>
-            </svg>
-            <svg style={{ position: 'absolute', right: 40, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="60" height="80" viewBox="0 0 60 80">
-              <rect x="25" y="10" width="10" height="50" rx="5" fill="rgba(255,255,255,0.15)"/>
-              <ellipse cx="30" cy="20" rx="16" ry="24" fill="rgba(255,255,255,0.12)"/>
-            </svg>
-
-            <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-              <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 64, color: 'white', lineHeight: 1 }}>1 in 3</div>
-              <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 24, color: 'white', margin: '12px 0 8px' }}>products analyzed contain at least one flagged ingredient</div>
-              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: 'rgba(255,255,255,0.8)' }}>Based on SkinGuard analyses using EU CosIng data</div>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
+              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
+                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#ffffff"></path>
+              </svg>
             </div>
           </section>
+
+
 
         </div>
       )}
@@ -995,40 +951,55 @@ export default function Home() {
 
       {/* ── ROUTINE ──────────────────────────────────────────────────────────── */}
       {activeTab === 'routine' && (
-        <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
-          <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', marginBottom: 6 }}>Routine Layering Checker</h2>
-          <p style={{ fontSize: 13, color: '#6b6b6b', marginBottom: 24 }}>Detect dangerous active ingredient conflicts across your full skincare routine.</p>
-          <div className="card" style={{ padding: 24 }}><RoutineAnalyzer scans={scans}/></div>
+        <div style={{ maxWidth: 960, margin: '60px auto', padding: '0 24px 60px' }} className="animate-fade-up text-center">
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 36, color: '#1a1a1a', marginBottom: 12 }}>Routine Analyzer</h2>
+          <p style={{ fontSize: 16, color: '#6b6b6b', marginBottom: 32, fontFamily: "'Inter', sans-serif" }}>Detect dangerous active ingredient conflicts across your full skincare routine.</p>
+          <div className="text-left">
+            <RoutineAnalyzer scans={scans}/>
+          </div>
         </div>
       )}
 
       {/* ── COMPARE ──────────────────────────────────────────────────────────── */}
       {activeTab === 'compare' && (
-        <div style={{ maxWidth: 960, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
-          <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', marginBottom: 6 }}>Product Compare</h2>
-          <p style={{ fontSize: 13, color: '#6b6b6b', marginBottom: 24 }}>Compare safety scores and ingredient profiles of two products side by side.</p>
-          <ComparePanel currentAnalysis={results} scans={scans}/>
+        <div style={{ maxWidth: 960, margin: '60px auto', padding: '0 24px 60px' }} className="animate-fade-up text-center">
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 36, color: '#1a1a1a', marginBottom: 12 }}>Product Compare</h2>
+          <p style={{ fontSize: 16, color: '#6b6b6b', marginBottom: 32, fontFamily: "'Inter', sans-serif" }}>Compare safety scores and ingredient profiles of two products side by side.</p>
+          <div className="text-left">
+            <ComparePanel currentAnalysis={results} scans={scans}/>
+          </div>
         </div>
       )}
 
       {/* ── ENCYCLOPEDIA ─────────────────────────────────────────────────────── */}
       {activeTab === 'learn' && (
-        <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
-          <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', marginBottom: 6 }}>Ingredient Encyclopedia</h2>
-          <p style={{ fontSize: 13, color: '#6b6b6b', marginBottom: 32 }}>Search INCI definitions, clinical data, and skincare terminology.</p>
-          <div className="card" style={{ padding: 28, marginBottom: 24 }}>
-            <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: '#1a1a1a', marginBottom: 16 }}>INCI Registry Lookup</h3>
-            <form onSubmit={handleSearchEncyclopedia} style={{ display: 'flex', gap: 8, marginBottom: 0 }}>
-              <input value={encyclopediaSearch} onChange={e => setEncyclopediaSearch(e.target.value)} placeholder="Enter ingredient name (e.g. Niacinamide, Retinol...)" className="input-field" style={{ fontSize: 13 }} />
-              <button type="submit" disabled={encyclopediaLoading} className="btn-green" style={{ padding: '0 20px', flexShrink: 0, fontSize: 13, height: 46 }}>
-                {encyclopediaLoading ? <Loader2 size={14} className="animate-spin"/> : <Search size={14}/>}
+        <div style={{ maxWidth: 800, margin: '60px auto', padding: '0 24px 60px' }} className="animate-fade-up">
+          <div className="text-center mb-10">
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 36, color: '#1a1a1a', marginBottom: 12 }}>Ingredient Encyclopedia</h2>
+            <p style={{ fontSize: 16, color: '#6b6b6b', fontFamily: "'Inter', sans-serif" }}>Search INCI definitions, clinical data, and skincare terminology.</p>
+          </div>
+          
+          <div style={{ background: 'white', borderRadius: 24, padding: 32, border: '1px solid #e8e4dc', boxShadow: '0 12px 40px rgba(0,0,0,0.06)', marginBottom: 32 }}>
+            <div className="flex items-center gap-4 mb-6 pb-4 border-b border-[#e8e4dc]">
+              <div className="p-3 bg-[#e8f5e9] rounded-2xl text-[#4caf50]">
+                <Search size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#1a1a1a]" style={{ fontFamily: "'Playfair Display', serif" }}>INCI Registry Lookup</h3>
+                <p className="text-xs text-[#6b6b6b] mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>Official cosmetics ingredient definitions</p>
+              </div>
+            </div>
+            <form onSubmit={handleSearchEncyclopedia} style={{ display: 'flex', gap: 12, marginBottom: 0 }}>
+              <input value={encyclopediaSearch} onChange={e => setEncyclopediaSearch(e.target.value)} placeholder="Enter ingredient name (e.g. Niacinamide)..." style={{ flex: 1, padding: '14px 16px', borderRadius: 12, border: '1px solid #e8e4dc', background: '#faf9f6', outline: 'none', fontFamily: "'Inter', sans-serif", fontSize: 14 }} className="focus:border-[#4caf50] focus:ring-1 focus:ring-[#4caf50] transition" />
+              <button type="submit" disabled={encyclopediaLoading} style={{ background: '#4caf50', color: 'white', border: 'none', borderRadius: 12, padding: '0 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} className="hover:bg-[#43a047] disabled:opacity-60">
+                {encyclopediaLoading ? <Loader2 size={18} className="animate-spin"/> : <Search size={18}/>}
               </button>
             </form>
             {encyclopediaResult && (
-              <div style={{ marginTop: 20, padding: '20px', background: '#faf9f6', borderRadius: 12, border: '1px solid #e8e4dc' }} className="animate-fade-up">
-                <span style={{ fontSize: 9, fontWeight: 700, color: '#388e3c', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Registry Profile</span>
-                <h4 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#1a1a1a', margin: '6px 0 16px' }}>{encyclopediaResult.name}</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ marginTop: 24, padding: '24px', background: '#faf9f6', borderRadius: 16, border: '1px solid #e8e4dc' }} className="animate-fade-up">
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#388e3c', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Inter', sans-serif" }}>Registry Profile</span>
+                <h4 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 24, color: '#1a1a1a', margin: '8px 0 20px' }}>{encyclopediaResult.name}</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {[
                     { label: 'What it is', val: encyclopediaResult.description },
                     { label: 'Primary function', val: encyclopediaResult.benefits },
@@ -1036,26 +1007,37 @@ export default function Home() {
                     { label: 'Suitable skin types', val: encyclopediaResult.types },
                   ].map((f, i) => (
                     <div key={i}>
-                      <p style={{ fontSize: 10, fontWeight: 700, color: '#6b6b6b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{f.label}</p>
-                      <p style={{ fontSize: 13, color: '#1a1a1a', lineHeight: 1.65 }}>{f.val}</p>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: '#6b6b6b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, fontFamily: "'Inter', sans-serif" }}>{f.label}</p>
+                      <p style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.6, fontFamily: "'Inter', sans-serif" }}>{f.val}</p>
                     </div>
                   ))}
                 </div>
-                <p style={{ fontSize: 10, color: '#9e9e9e', marginTop: 16 }}>Source: {encyclopediaResult.sources}</p>
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed #d4c9b8' }}>
+                  <p style={{ fontSize: 11, color: '#9e9e9e', fontFamily: "'Inter', sans-serif" }}>Source: {encyclopediaResult.sources}</p>
+                </div>
               </div>
             )}
           </div>
-          <div className="card" style={{ padding: 28 }}>
-            <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: '#1a1a1a', marginBottom: 16 }}>Skincare Glossary</h3>
-            <div style={{ position: 'relative', marginBottom: 20 }}>
-              <input value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)} placeholder="Search terms..." className="input-field" style={{ paddingRight: 44 }} />
-              <Search size={14} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: '#9e9e9e', pointerEvents: 'none' }} />
+          
+          <div style={{ background: 'white', borderRadius: 24, padding: 32, border: '1px solid #e8e4dc', boxShadow: '0 12px 40px rgba(0,0,0,0.06)' }}>
+            <div className="flex items-center gap-4 mb-6 pb-4 border-b border-[#e8e4dc]">
+              <div className="p-3 bg-[#e8f5e9] rounded-2xl text-[#4caf50]">
+                <FileText size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#1a1a1a]" style={{ fontFamily: "'Playfair Display', serif" }}>Skincare Glossary</h3>
+                <p className="text-xs text-[#6b6b6b] mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>Common terms and definitions</p>
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 12, maxHeight: 380, overflowY: 'auto' }} className="custom-scroll">
+            <div style={{ position: 'relative', marginBottom: 24 }}>
+              <input value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)} placeholder="Search terminology..." style={{ width: '100%', padding: '14px 16px', paddingRight: 48, borderRadius: 12, border: '1px solid #e8e4dc', background: '#faf9f6', outline: 'none', fontFamily: "'Inter', sans-serif", fontSize: 14 }} className="focus:border-[#4caf50] focus:ring-1 focus:ring-[#4caf50] transition" />
+              <Search size={18} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: '#9e9e9e', pointerEvents: 'none' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 12, maxHeight: 400, overflowY: 'auto', paddingRight: 8 }} className="custom-scroll">
               {filteredGlossary.map((item, i) => (
-                <div key={i} style={{ padding: '14px 16px', background: '#faf9f6', borderRadius: 10, border: '1px solid #e8e4dc' }}>
-                  <p style={{ fontWeight: 700, fontSize: 13, color: '#1a1a1a', marginBottom: 5, fontFamily: "'Nunito', sans-serif" }}>{item.term}</p>
-                  <p style={{ fontSize: 12, color: '#6b6b6b', lineHeight: 1.65 }}>{item.definition}</p>
+                <div key={i} style={{ padding: '16px', background: '#faf9f6', borderRadius: 12, border: '1px solid #e8e4dc', transition: 'all 0.2s' }} className="hover:border-[#4caf50] hover:shadow-sm">
+                  <p style={{ fontWeight: 700, fontSize: 15, color: '#1a1a1a', marginBottom: 6, fontFamily: "'Nunito', sans-serif" }}>{item.term}</p>
+                  <p style={{ fontSize: 13, color: '#6b6b6b', lineHeight: 1.6, fontFamily: "'Inter', sans-serif" }}>{item.definition}</p>
                 </div>
               ))}
             </div>
@@ -1165,47 +1147,78 @@ export default function Home() {
       )}
 
       {/* ─── FOOTER ──────────────────────────────────────────────────────────── */}
-      <footer style={{ background: '#f0ede6', borderTop: '1px solid #e8e4dc' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px 32px' }}>
-          {/* Top row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 48, paddingBottom: 48, borderBottom: '1px solid #e8e4dc' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <img src="/logo.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover' }} />
-                <span style={{ fontFamily: "'Satisfy', cursive", fontWeight: 700, fontSize: 24, color: '#1b4332' }}>SkinGuard</span>
+      <footer style={{ background: '#1b4332', position: 'relative', overflow: 'hidden' }}>
+        {/* Wave transition from white section above */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, transform: 'rotate(180deg)' }}>
+          <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
+            <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#ffffff"></path>
+          </svg>
+        </div>
+
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '100px 24px 32px', position: 'relative', zIndex: 1 }}>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12" style={{ paddingBottom: 48, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            
+            {/* Brand Col */}
+            <div className="col-span-1 md:col-span-4 flex flex-col gap-4">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <img src="/logo.png" alt="SkinGuard" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover' }} />
+                <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 26, color: '#ffffff' }}>SkinGuard</span>
               </div>
-              <p style={{ fontSize: 14, color: '#6b6b6b', fontFamily: "'Inter', sans-serif", lineHeight: 1.6, maxWidth: 200 }}>
-                Free ingredient safety analysis backed by EU CosIng data. No ads. No brand influence.
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.7)', fontFamily: "'Inter', sans-serif", lineHeight: 1.6, maxWidth: 320 }}>
+                Free ingredient safety analysis backed by EU CosIng data. No ads. No brand influence. Just transparent science.
               </p>
+              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                {[Twitter, Instagram, Github].map((Icon, i) => (
+                  <a key={i} href="#" style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#4caf50'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}>
+                    <Icon size={18} />
+                  </a>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 32 }}>
+
+            {/* Links Col */}
+            <div className="col-span-1 md:col-span-4 grid grid-cols-2 gap-8">
               {[
-                { heading: 'Tool', links: ['Purity Check', 'Routine Checker', 'Compare Products', 'Ingredient Encyclopedia'] },
-                { heading: 'Project', links: ['How It Works', 'Our Data Sources', 'Open Source', 'GitHub ↗'] },
-                { heading: 'Legal', links: ['Privacy Policy', 'Terms of Use', 'Data Sources', 'Contact'] },
+                { heading: 'Platform', links: ['Home', 'Routine Checker', 'Encyclopedia', 'Compare'] },
+                { heading: 'Legal', links: ['Privacy Policy', 'Terms of Use', 'Data Sources', 'Contact Us'] },
               ].map(col => (
                 <div key={col.heading}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16, fontFamily: "'Inter', sans-serif" }}>{col.heading}</p>
-                  {col.links.map(link => (
-                    <a key={link} href="#" style={{ display: 'block', fontSize: 14, color: '#6b6b6b', fontFamily: "'Inter', sans-serif", marginBottom: 12 }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#1b4332')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#6b6b6b')}>
-                      {link}
-                    </a>
-                  ))}
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20, fontFamily: "'Inter', sans-serif" }}>{col.heading}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {col.links.map(link => (
+                      <a key={link} href="#" style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', fontFamily: "'Inter', sans-serif", transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#ffffff'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}>
+                        {link}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
+
+            {/* Newsletter Col */}
+            <div className="col-span-1 md:col-span-4 flex flex-col gap-4">
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Inter', sans-serif" }}>Stay Updated</p>
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.7)', fontFamily: "'Inter', sans-serif", lineHeight: 1.6 }}>
+                Join 10,000+ users getting our weekly skincare science digest.
+              </p>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <input type="email" placeholder="Enter your email" style={{ flex: 1, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '14px 18px', color: 'white', fontSize: 15, fontFamily: "'Inter', sans-serif", outline: 'none', transition: 'border 0.2s' }} onFocus={e => e.currentTarget.style.borderColor = '#4caf50'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'} />
+                <button style={{ background: '#4caf50', border: 'none', borderRadius: 12, padding: '0 20px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#43a047'} onMouseLeave={e => e.currentTarget.style.background = '#4caf50'}>
+                  <ArrowRight size={20} />
+                </button>
+              </div>
+            </div>
+
           </div>
 
           {/* Bottom bar */}
-          <div style={{ paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-            <p style={{ fontSize: 13, color: '#9e9e9e', fontFamily: "'Inter', sans-serif" }}>
-              © 2025 SkinGuard · Not medical advice · Educational use only
+          <div style={{ paddingTop: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', fontFamily: "'Inter', sans-serif" }}>
+              © 2026 SkinGuard · Not medical advice · Educational use only
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4caf50' }} />
-              <p style={{ fontSize: 13, color: '#9e9e9e', fontFamily: "'Inter', sans-serif" }}>Built with EU CosIng data</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', padding: '8px 16px', borderRadius: 50 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4caf50', boxShadow: '0 0 10px #4caf50' }} />
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)', fontFamily: "'Inter', sans-serif" }}>Powered by EU CosIng Database</p>
             </div>
           </div>
         </div>
