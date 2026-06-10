@@ -32,8 +32,8 @@ def test_build_batch_prompt():
 
 @patch("app.cache.get_cached")
 @patch("app.cache.set_cached")
-@patch("app.llm.is_available")
-@patch("app.llm.ask_batch_explanations")
+@patch("app.explain.is_available")
+@patch("app.explain.ask_batch_explanations")
 def test_explain_ingredients_llm_batch_all_cached(
     mock_ask, mock_is_available, mock_set_cached, mock_get_cached
 ):
@@ -63,8 +63,8 @@ def test_explain_ingredients_llm_batch_all_cached(
 
 @patch("app.cache.get_cached")
 @patch("app.cache.set_cached")
-@patch("app.llm.is_available")
-@patch("app.llm.ask_batch_explanations")
+@patch("app.explain.is_available")
+@patch("app.explain.ask_batch_explanations")
 def test_explain_ingredients_llm_batch_cache_miss(
     mock_ask, mock_is_available, mock_set_cached, mock_get_cached
 ):
@@ -99,8 +99,8 @@ def test_explain_ingredients_llm_batch_cache_miss(
 
 @patch("app.cache.get_cached")
 @patch("app.cache.set_cached")
-@patch("app.llm.is_available")
-@patch("app.llm.ask_batch_explanations")
+@patch("app.explain.is_available")
+@patch("app.explain.ask_batch_explanations")
 def test_explain_ingredients_llm_batch_fallback(
     mock_ask, mock_is_available, mock_set_cached, mock_get_cached
 ):

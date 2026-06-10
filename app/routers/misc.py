@@ -21,7 +21,7 @@ router = APIRouter(tags=["misc"])
 @router.get("/health")
 def health():
     from app.deps import _embedding_matcher, _matcher
-    from app.llm import get_model_name, is_available as llm_ok
+    from app.explain import get_model_name, is_available as llm_ok
     return {
         "status": "ok",
         "matcher_aliases": len(_matcher._choices) if _matcher else 0,
@@ -93,7 +93,7 @@ def chat(
     matcher: Matcher = Depends(get_matcher),
 ):
     """RAG-grounded Q&A about a product's ingredients (rate-limited — LLM calls are expensive)."""
-    from app.llm import ask, build_ingredient_context, get_model_name, is_available
+    from app.explain import ask, build_ingredient_context, get_model_name, is_available
 
     found = payload.analysis_context.get("found_ingredients", [])
     grounding = (

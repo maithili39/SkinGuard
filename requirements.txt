@@ -12,8 +12,6 @@ pytesseract==0.3.10
 Pillow==10.0.1
 # Rate limiting
 slowapi==0.1.9
-# DB migrations
-alembic==1.13.2
 # Auth: password hashing + JWT
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2

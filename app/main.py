@@ -51,7 +51,7 @@ if _SENTRY_DSN:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if os.environ.get("SKIP_LIFESPAN") != "1":
-        from app.llm import is_available as llm_ok
+        from app.explain import is_available as llm_ok
         if not llm_ok():
             logger.warning(
                 "GEMINI_API_KEY is not set or invalid. "
