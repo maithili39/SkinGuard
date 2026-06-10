@@ -484,7 +484,7 @@ export default function Home() {
 
           {/* ── HERO ────────────────────────────────────────────────────────── */}
           <section style={{ 
-            background: '#FAF6F0', 
+            background: '#EAE4DA', 
             padding: '70px 24px 100px', 
             position: 'relative', 
             display: 'flex', 
@@ -492,26 +492,25 @@ export default function Home() {
             alignItems: 'center', 
             justifyContent: 'center', 
             width: '100%', 
-            overflow: 'hidden',
-            borderBottom: '1px solid #eae5db'
+            overflow: 'hidden'
           }}>
-            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(76,175,80,0.06) 0%, transparent 70%)', zIndex: 0 }} />
+            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)', zIndex: 0 }} />
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center w-full max-w-6xl" style={{ position: 'relative', zIndex: 1 }}>
               {/* Left Column (Hero Content) */}
               <div className="col-span-1 md:col-span-7 flex flex-col gap-6 text-center md:text-left items-center md:items-start w-full">
-                <div style={{ display: 'inline-block', background: 'rgba(76,175,80,0.08)', border: '1px solid rgba(76,175,80,0.15)', color: '#388e3c', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                <div style={{ display: 'inline-block', background: 'rgba(76,175,80,0.08)', border: '1px solid rgba(76,175,80,0.15)', color: '#388e3c', borderRadius: 20, padding: '6px 18px', fontSize: 12, fontFamily: "'Outfit', sans-serif", fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
                   COSMETIC SAFETY DATABASE
                 </div>
    
-                <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(36px, 5vw, 56px)', color: '#37302f', lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0 }}>
+                <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(36px, 5vw, 56px)', color: '#37302f', lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0 }}>
                   Decode Your Skincare<br />
-                  <span style={{ fontFamily: "'Caveat', cursive", color: '#4caf50', display: 'inline-block', fontSize: '1.25em', transform: 'rotate(-1.5deg)', marginTop: 4 }}>
+                  <span style={{ fontFamily: "'Satisfy', cursive", color: '#4caf50', display: 'inline-block', fontSize: '1.25em', transform: 'rotate(-1.5deg)', marginTop: 4 }}>
                     Ingredients
                   </span>
                 </h1>
    
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#5c5351', lineHeight: 1.6, maxWidth: 580, margin: 0 }}>
+                <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, color: '#5c5351', lineHeight: 1.6, maxWidth: 580, margin: 0 }}>
                   Get instant insights into ingredient safety, compatibility, and potential risks before adding a product to your routine.
                 </p>
    
@@ -532,83 +531,19 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Right Column (Yuka-style Illustration Mockup) */}
-              <div className="col-span-1 md:col-span-5 flex justify-center items-center relative" style={{ minHeight: 360 }}>
-                {/* Background decorative blob */}
-                <div style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', background: 'rgba(76,175,80,0.06)', zIndex: 0 }} />
-                
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, width: '100%' }}>
-                  
-                  {/* Skincare Bottle */}
-                  <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', transition: 'all 0.3s ease' }}>
-                    <img 
-                      src="/hero-bottle.png" 
-                      alt="Skincare safety bottle mockup" 
-                      style={{ 
-                        height: 300, 
-                        objectFit: 'contain', 
-                        filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.12))'
-                      }} 
-                    />
-                    
-                    {/* Floating Yuka-style score badge */}
-                    <div style={{ 
-                      position: 'absolute', 
-                      top: 20, 
-                      right: -30, 
-                      background: 'white', 
-                      borderRadius: 20, 
-                      padding: '6px 14px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 8, 
-                      boxShadow: '0 4px 15px rgba(0,0,0,0.1)', 
-                      border: '1px solid #e8e4dc',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: '#1a1a1a',
-                      fontFamily: "'Nunito', sans-serif"
-                    }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff9800' }}></span>
-                      Poor – 35/100
-                    </div>
-                  </div>
-
-                  {/* Highlights Stack on the right */}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: 12, 
-                    marginLeft: 20,
-                    zIndex: 2
-                  }} className="hidden sm:flex">
-                    {[
-                      { icon: <FlaskConical size={14} style={{ color: '#c62828' }} />, text: "2 potential endocrine disruptors", bg: '#fdeaea', color: '#c62828' },
-                      { icon: <Zap size={14} style={{ color: '#e65100' }} />, text: "3 Irritants", bg: '#fff3e0', color: '#e65100' },
-                      { icon: <Sparkles size={14} style={{ color: '#2e7d32' }} />, text: "5 Allergens", bg: '#e8f5e9', color: '#2e7d32' }
-                    ].map((item, idx) => (
-                      <div key={idx} style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 8, 
-                        padding: '8px 14px', 
-                        background: item.bg, 
-                        color: item.color,
-                        borderRadius: 20, 
-                        border: '1px solid rgba(0,0,0,0.03)',
-                        fontSize: 11, 
-                        fontWeight: 600,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                        whiteSpace: 'nowrap',
-                        fontFamily: "'Inter', sans-serif"
-                      }}>
-                        {item.icon}
-                        <span>{item.text}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                </div>
+              {/* Right Column (Mockup Image) */}
+              <div className="col-span-1 md:col-span-5 hidden md:flex justify-center items-center">
+                <img 
+                  src="/yuka-mockup.png" 
+                  alt="Skincare safety analysis mockup" 
+                  style={{ 
+                    width: '100%', 
+                    maxWidth: 440, 
+                    height: 'auto', 
+                    objectFit: 'contain',
+                    filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.08))'
+                  }} 
+                />
               </div>
             </div>
 
