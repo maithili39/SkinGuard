@@ -71,7 +71,7 @@ function Stars({ n = 5 }: { n?: number }) {
     <div style={{ display: 'flex', gap: 3 }}>
       {Array.from({ length: n }).map((_, i) => (
         <svg key={i} width="14" height="14" viewBox="0 0 14 14" fill="#f9a825">
-          <path d="M7 1l1.54 3.12 3.46.5-2.5 2.44.59 3.44L7 8.77 3.91 10.5l.59-3.44L2 4.62l3.46-.5z"/>
+          <path d="M7 1l1.54 3.12 3.46.5-2.5 2.44.59 3.44L7 8.77 3.91 10.5l.59-3.44L2 4.62l3.46-.5z" />
         </svg>
       ))}
     </div>
@@ -151,9 +151,9 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      fetch('/api/auth/scans').then(r => r.ok ? r.json() : null).then(d => { if (d?.scans) setScans(d.scans); }).catch(() => {});
+      fetch('/api/auth/scans').then(r => r.ok ? r.json() : null).then(d => { if (d?.scans) setScans(d.scans); }).catch(() => { });
       const savedKey = `sg_saved_${user.email}`;
-      try { const d = localStorage.getItem(savedKey); if (d) setSavedProducts(JSON.parse(d)); } catch {}
+      try { const d = localStorage.getItem(savedKey); if (d) setSavedProducts(JSON.parse(d)); } catch { }
     } else { setScans([]); setSavedProducts([]); }
   }, [user]);
 
@@ -212,7 +212,7 @@ export default function Home() {
       await fetch(`/api/users/${encodeURIComponent(user.email)}/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...p, avoid_list: a }) });
       const u = { ...user, profile: { ...p, avoid_list: a } };
       setUser(u); localStorage.setItem(LS_USER_KEY, JSON.stringify(u));
-    } catch {}
+    } catch { }
   };
 
   const handleLoginMock = (email: string, fullName: string) => {
@@ -235,7 +235,7 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch { }
     setUser(null); localStorage.removeItem(LS_USER_KEY); setActiveTab('home');
   };
 
@@ -418,7 +418,7 @@ export default function Home() {
       )}
 
       {/* ─── Navbar ──────────────────────────────────────────────────────────── */}
-      <header style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderBottom: '1px solid rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 50, height: 76 }}>
+      <header style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderBottom: '1px solid rgba(0,0,0,0.04)', boxShadow: '0 4px 24px rgba(0,0,0,0.02)', position: 'sticky', top: 0, zIndex: 50, height: 76 }}>
         <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 28px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
 
           {/* Logo */}
@@ -441,8 +441,8 @@ export default function Home() {
                   onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = '#1a1a1a'; }}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                    fontSize: 14, fontFamily: "'Inter', sans-serif", fontWeight: 600, transition: 'color 0.15s',
-                    color: isActive ? '#2d4a35' : '#5c5045', letterSpacing: '0.02em', textTransform: 'uppercase'
+                    fontSize: 15.5, fontFamily: "'Nunito', sans-serif", fontWeight: 700, transition: 'all 0.2s',
+                    color: isActive ? '#2d4a35' : '#6b6b6b'
                   }}
                 >
                   {item.label}
@@ -525,26 +525,28 @@ export default function Home() {
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 48px 0', display: 'grid', gridTemplateColumns: '50fr 50fr', gap: 48, alignItems: 'center', minHeight: 620 }}>
 
               {/* ── Left ── */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 28, paddingBottom: 96 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 28, paddingBottom: 96, alignItems: 'flex-start' }}>
 
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#a07850', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
-                  Ingredient Safety · EU CosIng Database
-                </span>
+                <div style={{ background: '#2d4a35', padding: '8px 18px', borderRadius: 50, boxShadow: '0 4px 12px rgba(45,74,53,0.15)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: "'Outfit', sans-serif" }}>
+                    Ingredient Safety · EU CosIng Database
+                  </span>
+                </div>
 
-                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(40px, 4.8vw, 64px)', fontWeight: 700, color: '#1c1917', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
+                <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(40px, 4.8vw, 64px)', fontWeight: 800, color: '#1c1917', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
                   Read what's actually<br />
-                  <em style={{ fontStyle: 'italic', color: '#3d6b45' }}>in your skincare.</em>
+                  <em style={{ fontStyle: 'normal', color: '#3d6b45' }}>in your skincare.</em>
                 </h1>
 
-                <p style={{ fontSize: 17, color: '#5c5045', lineHeight: 1.75, maxWidth: 460, margin: 0 }}>
+                <p style={{ fontFamily: "'Nunito', sans-serif", fontSize: 18, color: '#5c5045', lineHeight: 1.75, maxWidth: 460, margin: 0, fontWeight: 600 }}>
                   Most ingredient lists are written to be ignored. SkinGuard translates every ingredient — flags irritants, allergens, pore-cloggers, and pregnancy risks — matched to your skin type.
                 </p>
 
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
-                  <button onClick={() => setActiveTab('analyze')} className="btn-green" style={{ padding: '15px 36px', fontSize: 16, fontWeight: 700, borderRadius: 10, boxShadow: '0 6px 20px rgba(61,107,69,0.28)' }}>
+                  <button onClick={() => setActiveTab('analyze')} className="btn-green" style={{ padding: '15px 36px', fontSize: 16, fontFamily: "'Outfit', sans-serif", fontWeight: 700, borderRadius: 50, boxShadow: '0 6px 20px rgba(61,107,69,0.28)' }}>
                     Check an ingredient list
                   </button>
-                  <button onClick={() => scrollTo('how-it-works')} style={{ padding: '15px 24px', fontSize: 15, fontWeight: 500, background: 'rgba(255,255,255,0.5)', border: '1.5px solid rgba(92,80,69,0.2)', color: '#5c5045', borderRadius: 10, cursor: 'pointer' }}>
+                  <button onClick={() => scrollTo('how-it-works')} style={{ padding: '15px 24px', fontSize: 15, fontFamily: "'Outfit', sans-serif", fontWeight: 600, background: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', color: '#1a1a1a', borderRadius: 50, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
                     How it works
                   </button>
                 </div>
@@ -603,12 +605,13 @@ export default function Home() {
                 {/* Tab row */}
                 <div style={{ display: 'flex', gap: 4, padding: '16px 20px 0', background: 'white', borderBottom: '1px solid #f0ede8' }}>
                   {[
-                    { id: 'paste', label: 'Paste List', icon: <FileText size={13}/> },
-                    { id: 'upload', label: 'Photo / OCR', icon: <Upload size={13}/> },
-                    { id: 'barcode', label: 'Barcode', icon: <Barcode size={13}/> },
+                    { id: 'paste', label: 'Paste List', icon: <FileText size={13} /> },
+                    { id: 'upload', label: 'Photo / OCR', icon: <Upload size={13} /> },
+                    { id: 'barcode', label: 'Barcode', icon: <Barcode size={13} /> },
                   ].map(m => (
                     <button key={m.id} onClick={() => { setInputMode(m.id as any); setError(null); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: "'Nunito', sans-serif", fontWeight: 700, transition: 'all 0.15s',
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: "'Nunito', sans-serif", fontWeight: 700, transition: 'all 0.15s',
                         background: inputMode === m.id ? '#2d4a35' : 'transparent',
                         color: inputMode === m.id ? 'white' : '#9e9e9e',
                         marginBottom: inputMode === m.id ? -1 : 0,
@@ -661,12 +664,12 @@ export default function Home() {
                           <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e4dc' }}>
                             <img src={previewUrl} alt="Label preview" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#f8f8f8', display: 'block' }} />
                             <button onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); setFile(null); setError(null); }} style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <X size={13}/>
+                              <X size={13} />
                             </button>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
                             <button onClick={handleExtractText} disabled={isExtracting} className="btn-green" style={{ padding: '14px 40px', fontSize: 16, borderRadius: 28 }}>
-                              {isExtracting ? <><Loader2 size={15} className="animate-spin"/> Extracting text via OCR...</> : <><FileText size={15}/> Extract Ingredient Text</>}
+                              {isExtracting ? <><Loader2 size={15} className="animate-spin" /> Extracting text via OCR...</> : <><FileText size={15} /> Extract Ingredient Text</>}
                             </button>
                           </div>
                         </div>
@@ -681,7 +684,7 @@ export default function Home() {
                         <input value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleBarcodeLookup(barcodeInput); }}
                           placeholder="Enter product barcode (e.g. 0748948000214)..." className="input-field" style={{ fontFamily: 'monospace', flex: 1 }} />
                         <button onClick={() => handleBarcodeLookup(barcodeInput)} disabled={isBarcodeLookingUp} className="btn-green" style={{ padding: '0 20px', flexShrink: 0, fontSize: 13 }}>
-                          {isBarcodeLookingUp ? <Loader2 size={13} className="animate-spin"/> : 'Look up'}
+                          {isBarcodeLookingUp ? <Loader2 size={13} className="animate-spin" /> : 'Look up'}
                         </button>
                       </div>
                       {barcodeProduct && (
@@ -707,51 +710,7 @@ export default function Home() {
             </div>
             <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, overflow: 'hidden', lineHeight: 0, zIndex: 10 }}>
               <svg viewBox="0 0 1200 60" preserveAspectRatio="none" style={{ display: 'block', width: 'calc(100% + 1.3px)', height: 44 }}>
-                <path d="M0,30 C300,60 600,0 900,40 C1050,55 1150,20 1200,30 L1200,60 L0,60 Z" fill="#fdf6ee" />
-              </svg>
-            </div>
-          </section>
-
-          {/* ── SIX CHECKS ──────────────────────────────────────────────────── */}
-          <section className="section-reveal" style={{ background: '#fdf6ee', padding: '80px 24px 80px', position: 'relative' }}>
-            <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-              <div style={{ textAlign: 'center', marginBottom: 56 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#a07850', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: 14 }}>Every Scan</span>
-                <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(28px,3vw,42px)', color: '#1a1a1a', marginBottom: 16, letterSpacing: '-0.01em' }}>
-                  Six checks on every ingredient list
-                </h2>
-                <p style={{ fontSize: 17, color: '#7a6f65', maxWidth: 500, margin: '0 auto', lineHeight: 1.65 }}>
-                  Paste your list once — SkinGuard runs all of these automatically for your skin profile.
-                </p>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18 }}>
-                {[
-                  { icon: <ShieldCheck size={22} color="#2e7d32" />, bg: '#e8f5e9', title: 'Safety Score', body: 'An overall score calculated from flagged ingredients, weighted by severity and adapted to your skin conditions.' },
-                  { icon: <AlertTriangle size={22} color="#c62828" />, bg: '#fdeaea', title: 'Irritants & Allergens', body: 'Detects EU SCCS-listed contact allergens, known sensitisers, and irritants — especially relevant for sensitive skin.' },
-                  { icon: <Droplets size={22} color="#e65100" />, bg: '#fff3e0', title: 'Comedogenic Rating', body: 'Identifies pore-clogging ingredients rated 3+ on the 0–5 scale. Auto-flagged when your profile includes acne-prone skin.' },
-                  { icon: <Baby size={22} color="#6a1b9a" />, bg: '#f3e5f5', title: 'Pregnancy Safety', body: 'Warns on retinoids, high-dose salicylates, and EU-restricted substances when your pregnancy toggle is on.' },
-                  { icon: <Bug size={22} color="#00695c" />, bg: '#e0f2f1', title: 'Fungal Acne Triggers', body: 'Scans for fatty acids, esters, and oils that feed Malassezia yeast — the root cause of fungal acne.' },
-                  { icon: <FlaskConical size={22} color="#1565c0" />, bg: '#e3f2fd', title: 'Routine Conflict Checker', body: 'Detect active-ingredient clashes across products — retinol with AHAs, or high-dose vitamin C with niacinamide.' },
-                ].map((f, i) => (
-                  <div key={i}
-                    style={{ background: 'white', border: '1px solid #ede6da', borderRadius: 20, padding: '28px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', transition: 'transform 0.18s, box-shadow 0.18s', cursor: 'default' }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 10px 32px rgba(0,0,0,0.09)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 16px rgba(0,0,0,0.04)'; }}
-                  >
-                    <div style={{ width: 48, height: 48, borderRadius: 14, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {f.icon}
-                    </div>
-                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: '#1a1a1a', margin: 0 }}>{f.title}</h3>
-                    <p style={{ fontSize: 14, color: '#7a6f65', lineHeight: 1.65, margin: 0 }}>{f.body}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Wave out — to stats #f0ede6 */}
-            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, overflow: 'hidden', lineHeight: 0, zIndex: 10 }}>
-              <svg viewBox="0 0 1200 80" preserveAspectRatio="none" style={{ display: 'block', width: 'calc(100% + 1.3px)', height: 56 }}>
-                <path d="M0,0 C150,60 350,80 600,50 C850,20 1050,70 1200,40 L1200,80 L0,80 Z" fill="#f0ede6"/>
+                <path d="M0,30 C300,60 600,0 900,40 C1050,55 1150,20 1200,30 L1200,60 L0,60 Z" fill="#f0ede6" />
               </svg>
             </div>
           </section>
@@ -771,7 +730,7 @@ export default function Home() {
                 ].map((s, i) => (
                   <div key={i}>
                     <div style={{ fontFamily: "'Inter', sans-serif", fontWeight: 900, fontSize: 56, color: '#1b4332', lineHeight: 1, letterSpacing: '-0.03em' }}>
-                      <StatCounter target={s.target} suffix={s.suffix} running={statsRunning}/>
+                      <StatCounter target={s.target} suffix={s.suffix} running={statsRunning} />
                     </div>
                     <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: '#5c5045', marginTop: 12, lineHeight: 1.5 }}>{s.label}</p>
                   </div>
@@ -787,7 +746,7 @@ export default function Home() {
             {/* Wave out — to testimonials #eff5f2 */}
             <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, overflow: 'hidden', lineHeight: 0, zIndex: 10 }}>
               <svg viewBox="0 0 1200 80" preserveAspectRatio="none" style={{ display: 'block', width: 'calc(100% + 1.3px)', height: 56 }}>
-                <path d="M0,80 L0,50 C200,80 400,20 600,55 C800,90 1000,30 1200,60 L1200,80 Z" fill="#eff5f2"/>
+                <path d="M0,80 L0,50 C200,80 400,20 600,55 C800,90 1000,30 1200,60 L1200,80 Z" fill="#eff5f2" />
               </svg>
             </div>
           </section>
@@ -796,10 +755,10 @@ export default function Home() {
           <section className="section-reveal" style={{ background: '#eff5f2', padding: '64px 24px 80px', position: 'relative', overflow: 'hidden' }}>
             {/* Decorative blobs */}
             <svg style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, pointerEvents: 'none' }} width="200" height="160" viewBox="0 0 200 160">
-              <path d="M80,20 C120,5 180,40 170,90 C160,140 100,155 50,135 C0,115 -10,70 20,40 C50,10 40,35 80,20Z" fill="#e8f5e9" opacity="0.5"/>
+              <path d="M80,20 C120,5 180,40 170,90 C160,140 100,155 50,135 C0,115 -10,70 20,40 C50,10 40,35 80,20Z" fill="#e8f5e9" opacity="0.5" />
             </svg>
             <svg style={{ position: 'absolute', top: -20, right: -20, zIndex: 0, pointerEvents: 'none' }} width="180" height="150" viewBox="0 0 180 150">
-              <path d="M90,15 C130,5 175,35 165,80 C155,130 90,148 45,128 C0,108 -5,65 20,35 C45,5 50,25 90,15Z" fill="#e8f5e9" opacity="0.5"/>
+              <path d="M90,15 C130,5 175,35 165,80 C155,130 90,148 45,128 C0,108 -5,65 20,35 C45,5 50,25 90,15Z" fill="#e8f5e9" opacity="0.5" />
             </svg>
 
             <div style={{ maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
@@ -808,16 +767,16 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center w-full">
                 {/* Left Column (Illustration) */}
                 <div className="col-span-1 md:col-span-5 hidden md:flex justify-center">
-                  <img 
-                    src="/onskin2.png" 
-                    alt="Happy users sharing reviews" 
-                    style={{ 
-                      width: '100%', 
-                      maxWidth: 360, 
-                      height: 'auto', 
+                  <img
+                    src="/onskin2.png"
+                    alt="Happy users sharing reviews"
+                    style={{
+                      width: '100%',
+                      maxWidth: 360,
+                      height: 'auto',
                       objectFit: 'contain',
                       filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.08))'
-                    }} 
+                    }}
                   />
                 </div>
 
@@ -832,7 +791,7 @@ export default function Home() {
                       {/* Quote mark & quote */}
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                         <svg width="24" height="18" viewBox="0 0 28 22" fill="#2d4a35" style={{ flexShrink: 0, marginTop: 4 }}>
-                          <path d="M0 22V12.5C0 5.5 4.5 1.5 13.5 0l1.5 2.5C10 3.5 7.5 6 7 10H12V22H0zm16 0V12.5C16 5.5 20.5 1.5 29.5 0L31 2.5C26 3.5 23.5 6 23 10H28V22H16z"/>
+                          <path d="M0 22V12.5C0 5.5 4.5 1.5 13.5 0l1.5 2.5C10 3.5 7.5 6 7 10H12V22H0zm16 0V12.5C16 5.5 20.5 1.5 29.5 0L31 2.5C26 3.5 23.5 6 23 10H28V22H16z" />
                         </svg>
                         <p style={{ fontFamily: "'Nunito', sans-serif", fontStyle: 'italic', fontSize: 15, color: '#1a1a1a', lineHeight: 1.5, margin: 0 }}>{t.quote}</p>
                       </div>
@@ -840,7 +799,7 @@ export default function Home() {
                         <div style={{ width: 32, height: 32, borderRadius: '50%', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: 'white', flexShrink: 0 }}>{t.initial}</div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <p style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 13, color: '#1b4332', margin: 0 }}>{t.name}</p>
-                          <Stars n={5}/>
+                          <Stars n={5} />
                         </div>
                       </div>
                     </div>
@@ -867,13 +826,13 @@ export default function Home() {
                     num: '1',
                     icon: (
                       <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#1b4332" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="8" y="4" width="24" height="32" rx="3"/>
-                        <line x1="14" y1="13" x2="26" y2="13"/>
-                        <line x1="14" y1="19" x2="26" y2="19"/>
-                        <line x1="14" y1="25" x2="20" y2="25"/>
-                        <circle cx="28" cy="30" r="6" fill="#e8f5e9" stroke="#1b4332"/>
-                        <line x1="25" y1="30" x2="31" y2="30"/>
-                        <line x1="28" y1="27" x2="28" y2="33"/>
+                        <rect x="8" y="4" width="24" height="32" rx="3" />
+                        <line x1="14" y1="13" x2="26" y2="13" />
+                        <line x1="14" y1="19" x2="26" y2="19" />
+                        <line x1="14" y1="25" x2="20" y2="25" />
+                        <circle cx="28" cy="30" r="6" fill="#e8f5e9" stroke="#1b4332" />
+                        <line x1="25" y1="30" x2="31" y2="30" />
+                        <line x1="28" y1="27" x2="28" y2="33" />
                       </svg>
                     ),
                     title: 'Paste or photograph',
@@ -883,10 +842,10 @@ export default function Home() {
                     num: '2',
                     icon: (
                       <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#1b4332" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="6" y="6" width="12" height="12" rx="2"/>
-                        <rect x="22" y="6" width="12" height="12" rx="2"/>
-                        <rect x="6" y="22" width="12" height="12" rx="2"/>
-                        <rect x="22" y="22" width="12" height="12" rx="2"/>
+                        <rect x="6" y="6" width="12" height="12" rx="2" />
+                        <rect x="22" y="6" width="12" height="12" rx="2" />
+                        <rect x="6" y="22" width="12" height="12" rx="2" />
+                        <rect x="22" y="22" width="12" height="12" rx="2" />
                       </svg>
                     ),
                     title: 'Matched against EU data',
@@ -896,8 +855,8 @@ export default function Home() {
                     num: '3',
                     icon: (
                       <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#1b4332" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 4L8 9v10c0 9 5.5 17.5 12 20 6.5-2.5 12-11 12-20V9L20 4z"/>
-                        <polyline points="14,20 18,24 26,16"/>
+                        <path d="M20 4L8 9v10c0 9 5.5 17.5 12 20 6.5-2.5 12-11 12-20V9L20 4z" />
+                        <polyline points="14,20 18,24 26,16" />
                       </svg>
                     ),
                     title: 'Your personalised verdict',
@@ -946,7 +905,7 @@ export default function Home() {
                     <span style={{ cursor: 'pointer' }} onClick={() => { setEditIndex(idx); setEditValue(ing); }}>{ing}</span>
                   )}
                   <button onClick={() => setExtractedIngredients(extractedIngredients.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b6b6b', display: 'flex', padding: 0 }}>
-                    <X size={11}/>
+                    <X size={11} />
                   </button>
                 </div>
               ))}
@@ -954,13 +913,13 @@ export default function Home() {
             <div style={{ display: 'flex', gap: 8 }}>
               <input value={addIngredientInput} onChange={e => setAddIngredientInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} placeholder="Add missing ingredient..." className="input-field" style={{ fontSize: 13 }} />
               <button onClick={() => { if (addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>
-                <Plus size={13}/> Add
+                <Plus size={13} /> Add
               </button>
             </div>
           </div>
 
           <button onClick={handleRunAnalysis} disabled={isAnalyzing || extractedIngredients.length === 0} className="btn-green" style={{ padding: '14px 24px', fontSize: 15, width: '100%' }}>
-            {isAnalyzing ? <><Loader2 size={16} className="animate-spin"/> Running safety audit...</> : <><ShieldCheck size={16}/> Run Safety Audit ({extractedIngredients.length} ingredients)</>}
+            {isAnalyzing ? <><Loader2 size={16} className="animate-spin" /> Running safety audit...</> : <><ShieldCheck size={16} /> Run Safety Audit ({extractedIngredients.length} ingredients)</>}
           </button>
         </div>
       )}
@@ -975,7 +934,7 @@ export default function Home() {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => toggleSave(results.summary?.split(' ')[0] || 'Product')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e53935' : '#6b6b6b' }}>
-                <Heart size={13} fill={savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e53935' : 'none'}/> Save
+                <Heart size={13} fill={savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e53935' : 'none'} /> Save
               </button>
               <button onClick={() => { setResults(null); setActiveTab('home'); }} style={{ padding: '9px 16px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>
                 New Scan
@@ -992,7 +951,7 @@ export default function Home() {
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 36, color: '#1a1a1a', marginBottom: 12 }}>Routine Analyzer</h2>
           <p style={{ fontSize: 16, color: '#6b6b6b', marginBottom: 32, fontFamily: "'Inter', sans-serif" }}>Detect dangerous active ingredient conflicts across your full skincare routine.</p>
           <div className="text-left">
-            <RoutineAnalyzer scans={scans}/>
+            <RoutineAnalyzer scans={scans} />
           </div>
         </div>
       )}
@@ -1003,7 +962,7 @@ export default function Home() {
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 36, color: '#1a1a1a', marginBottom: 12 }}>Product Compare</h2>
           <p style={{ fontSize: 16, color: '#6b6b6b', marginBottom: 32, fontFamily: "'Inter', sans-serif" }}>Compare safety scores and ingredient profiles of two products side by side.</p>
           <div className="text-left">
-            <ComparePanel currentAnalysis={results} scans={scans}/>
+            <ComparePanel currentAnalysis={results} scans={scans} />
           </div>
         </div>
       )}
@@ -1015,7 +974,7 @@ export default function Home() {
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 36, color: '#1a1a1a', marginBottom: 12 }}>Ingredient Encyclopedia</h2>
             <p style={{ fontSize: 16, color: '#6b6b6b', fontFamily: "'Inter', sans-serif" }}>Search INCI definitions, clinical data, and skincare terminology.</p>
           </div>
-          
+
           <div style={{ background: 'white', borderRadius: 24, padding: 32, border: '1px solid #e8e4dc', boxShadow: '0 12px 40px rgba(0,0,0,0.06)', marginBottom: 32 }}>
             <div className="flex items-center gap-4 mb-6 pb-4 border-b border-[#e8e4dc]">
               <div className="p-3 bg-[#e8f5e9] rounded-2xl text-[#4caf50]">
@@ -1029,7 +988,7 @@ export default function Home() {
             <form onSubmit={handleSearchEncyclopedia} style={{ display: 'flex', gap: 12, marginBottom: 0 }}>
               <input value={encyclopediaSearch} onChange={e => setEncyclopediaSearch(e.target.value)} placeholder="Enter ingredient name (e.g. Niacinamide)..." style={{ flex: 1, padding: '14px 16px', borderRadius: 12, border: '1px solid #e8e4dc', background: '#faf9f6', outline: 'none', fontFamily: "'Inter', sans-serif", fontSize: 14 }} className="focus:border-[#4caf50] focus:ring-1 focus:ring-[#4caf50] transition" />
               <button type="submit" disabled={encyclopediaLoading} style={{ background: '#2d4a35', color: 'white', border: 'none', borderRadius: 12, padding: '0 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} className="hover:bg-[#43a047] disabled:opacity-60">
-                {encyclopediaLoading ? <Loader2 size={18} className="animate-spin"/> : <Search size={18}/>}
+                {encyclopediaLoading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
               </button>
             </form>
             {encyclopediaResult && (
@@ -1055,7 +1014,7 @@ export default function Home() {
               </div>
             )}
           </div>
-          
+
           <div style={{ background: 'white', borderRadius: 24, padding: 32, border: '1px solid #e8e4dc', boxShadow: '0 12px 40px rgba(0,0,0,0.06)' }}>
             <div className="flex items-center gap-4 mb-6 pb-4 border-b border-[#e8e4dc]">
               <div className="p-3 bg-[#e8f5e9] rounded-2xl text-[#4caf50]">
@@ -1104,7 +1063,7 @@ export default function Home() {
 
           <div className="card" style={{ padding: 32, marginBottom: 32, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #e8e4dc' }}>
             <h3 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 24, color: '#1a1a1a', marginBottom: 20 }}>My Skin Profile</h3>
-            <ProfilePanel profile={profile} onToggle={handleProfileToggle}/>
+            <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
           </div>
 
           <div className="card" style={{ padding: 32, marginBottom: 32, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #e8e4dc' }}>
@@ -1114,7 +1073,7 @@ export default function Home() {
               {allergies.map((a, i) => (
                 <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 50, fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }} className="risk-badge-bad">
                   {a}
-                  <button onClick={() => { const next = allergies.filter((_, idx) => idx !== i); setAllergies(next); saveProfileToBackend(profile, next); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={12}/></button>
+                  <button onClick={() => { const next = allergies.filter((_, idx) => idx !== i); setAllergies(next); saveProfileToBackend(profile, next); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={12} /></button>
                 </span>
               ))}
             </div>
@@ -1142,7 +1101,7 @@ export default function Home() {
                     <div style={{ display: 'flex', gap: 12, marginTop: 'auto' }}>
                       <button onClick={() => { setResults(p.result); setActiveTab('analyze'); }} className="btn-green" style={{ flex: 1, padding: '10px', fontSize: 14 }}>Open</button>
                       <button onClick={() => { const n = savedProducts.filter(x => x.id !== p.id); setSavedProducts(n); if (user) localStorage.setItem(`sg_saved_${user.email}`, JSON.stringify(n)); }} style={{ padding: '10px 14px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', color: '#e53935', display: 'flex', alignItems: 'center' }}>
-                        <X size={16}/>
+                        <X size={16} />
                       </button>
                     </div>
                   </div>
@@ -1171,7 +1130,7 @@ export default function Home() {
                     <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
                       {scan.result && <button onClick={() => { setResults(scan.result); setActiveTab('analyze'); }} className="btn-green" style={{ padding: '10px 20px', fontSize: 14 }}>Open</button>}
                       <button onClick={() => setScans(prev => prev.filter(s => s.id !== scan.id))} style={{ padding: '10px 14px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', color: '#e53935', display: 'flex', alignItems: 'center' }}>
-                        <Trash2 size={16}/>
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
@@ -1193,7 +1152,7 @@ export default function Home() {
 
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '100px 24px 32px', position: 'relative', zIndex: 1 }}>
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12" style={{ paddingBottom: 48, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-            
+
             {/* Brand Col */}
             <div className="col-span-1 md:col-span-4 flex flex-col gap-4">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1266,7 +1225,7 @@ export default function Home() {
           <div className="modal-box">
             <div style={{ background: '#1b4332', padding: '28px 28px 24px', textAlign: 'center', position: 'relative' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                <ShieldCheck size={22} color="white"/>
+                <ShieldCheck size={22} color="white" />
               </div>
               <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: 'white', marginBottom: 4 }}>
                 {authMode === 'login' ? 'Sign in to SkinGuard' : authMode === 'signup' ? 'Create account' : 'Reset password'}
@@ -1275,15 +1234,15 @@ export default function Home() {
                 {authMode === 'login' ? 'Access your scan history and profile.' : authMode === 'signup' ? 'Personalize your skin profile and track products.' : 'Enter your email to receive a reset link.'}
               </p>
               <button onClick={() => { setShowLoginModal(false); setAuthError(null); }} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
-                <X size={14}/>
+                <X size={14} />
               </button>
             </div>
 
             <form onSubmit={handleAuthSubmit} style={{ padding: '24px 28px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               {authError && <div style={{ padding: '10px 14px', background: '#fdeaea', border: '1px solid rgba(229,57,53,0.25)', borderRadius: 8, fontSize: 12, color: '#c62828' }}>{authError}</div>}
-              {authMode === 'signup' && <input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Full name" className="input-field"/>}
-              <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="Email address" className="input-field"/>
-              {authMode !== 'forgot' && <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Password" className="input-field"/>}
+              {authMode === 'signup' && <input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Full name" className="input-field" />}
+              <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="Email address" className="input-field" />
+              {authMode !== 'forgot' && <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Password" className="input-field" />}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                 {authMode === 'login' && <button type="button" onClick={() => setAuthMode('forgot')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2d4a35', fontWeight: 600 }}>Forgot password?</button>}
                 <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2d4a35', fontWeight: 600, marginLeft: 'auto' }}>
