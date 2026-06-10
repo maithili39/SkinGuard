@@ -408,7 +408,7 @@ export default function Home() {
      RENDER
   ══════════════════════════════════════════════════════════════════════════ */
   return (
-    <main style={{ background: '#faf9f6', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+    <main style={{ background: '#faf9f6', minHeight: '100vh', fontFamily: "'Inter', sans-serif", overflowX: 'hidden' }}>
 
       {showCameraScanner && (
         <BarcodeScanner
@@ -418,66 +418,97 @@ export default function Home() {
       )}
 
       {/* ─── Navbar ──────────────────────────────────────────────────────────── */}
-      <header style={{ background: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(0,0,0,0.04)', position: 'sticky', top: 0, zIndex: 50, height: 64 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 2 }}>
+      <header style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderBottom: '1px solid rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 50, height: 76 }}>
+        <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 28px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
 
           {/* Logo */}
-          <button onClick={() => { setResults(null); setExtractedIngredients([]); setActiveTab('home'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-            <img src="/logo.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', background: '#f0ede6' }} />
-            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 24, color: '#1a1a1a', display: 'inline-block', transform: 'translateY(-2px)' }}>SkinGuard</span>
+          <button onClick={() => { setResults(null); setExtractedIngredients([]); setActiveTab('home'); }} style={{ display: 'flex', alignItems: 'center', gap: 11, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+            <img src="/logo.png" alt="SkinGuard logo" style={{ height: 32, width: 'auto' }} />
+            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 23, color: '#1c1917', letterSpacing: '-0.015em' }}>
+              Skin<span style={{ color: '#3d6b45' }}>Guard</span>
+            </span>
           </button>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center' }}>
-            {navItems.map(item => (
-              <button key={item.id} onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); }} className={`nav-tab ${(activeTab === item.id || (item.id === 'home' && activeTab === 'analyze')) ? 'active' : ''}`}>
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          <div className="nav-desktop" style={{ alignItems: 'center', gap: 36 }}>
+            {navItems.map(item => {
+              const isActive = activeTab === item.id || (item.id === 'home' && activeTab === 'analyze');
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#1b4332'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = '#1a1a1a'; }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    fontSize: 14, fontFamily: "'Inter', sans-serif", fontWeight: 600, transition: 'color 0.15s',
+                    color: isActive ? '#2d4a35' : '#5c5045', letterSpacing: '0.02em', textTransform: 'uppercase'
+                  }}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Links & Auth buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <a href="https://github.com/maithili39/SkinGuard" target="_blank" rel="noopener noreferrer" style={{ color: '#1a1a1a', display: 'flex', alignItems: 'center', padding: '8px', borderRadius: '50%', transition: 'background 0.2s' }} className="hover:bg-[#f0ede6]" title="View on GitHub">
-              <Github size={20} />
+          {/* Right side */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <a href="https://github.com/maithili39/SkinGuard" target="_blank" rel="noopener noreferrer"
+              className="nav-desktop"
+              style={{ alignItems: 'center', padding: 9, borderRadius: 10, color: '#5c5045', background: 'none', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(160,120,80,0.1)'; e.currentTarget.style.color = '#2d4a35'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#2d4a35'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#5c5045'; }}
+              title="GitHub">
+              <Github size={18} />
             </a>
-            <div style={{ width: 1, height: 24, background: '#e8e4dc', margin: '0 4px' }} className="hidden md:block" />
-            
             {user ? (
               <>
-                <button onClick={() => setActiveTab('vanity')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: '1.5px solid #e8e4dc', borderRadius: 50, padding: '6px 14px', cursor: 'pointer' }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#4caf50', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+                <button onClick={() => setActiveTab('vanity')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'white', border: '1px solid #e8e4dc', borderRadius: 50, padding: '5px 14px 5px 5px', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', transition: 'box-shadow 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.1)')}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(145deg, #3d6b45, #2d4a35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: 'white', flexShrink: 0 }}>
                     {(user.full_name || user.email)[0].toUpperCase()}
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.full_name || 'User'}</span>
                 </button>
-                <button onClick={handleLogout} title="Sign out" style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#6b6b6b', borderRadius: 8, display: 'flex' }}>
+                <button onClick={handleLogout} title="Sign out" style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#9e9189', borderRadius: 8, display: 'flex' }}>
                   <LogOut size={15} />
                 </button>
               </>
             ) : (
               <>
-                <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="hidden md:block" style={{ background: 'none', border: '1.5px solid #1a1a1a', borderRadius: 50, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a1a1a', padding: '7px 18px' }}>Sign In</button>
-                <button onClick={() => { setAuthMode('signup'); setShowLoginModal(true); }} className="btn-green" style={{ padding: '8px 20px', fontSize: 13 }}>Try Free</button>
+                <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="nav-desktop"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#5c5045', padding: '8px 14px', borderRadius: 10, transition: 'color 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#2d4a35')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#5c5045')}>
+                  Sign In
+                </button>
+                <button onClick={() => { setAuthMode('signup'); setShowLoginModal(true); }}
+                  style={{ background: 'linear-gradient(145deg, #3d6b45, #2d4a35)', color: 'white', border: 'none', borderRadius: 50, cursor: 'pointer', fontSize: 13.5, fontWeight: 700, padding: '9px 22px', boxShadow: '0 4px 14px rgba(45,74,53,0.28)', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(45,74,53,0.36)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(45,74,53,0.28)'; }}>
+                  Get Started
+                </button>
               </>
             )}
-            {/* Mobile hamburger */}
-            <button className="flex md:hidden" onClick={() => setMobileMenuOpen(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1a1a1a', padding: 6 }}>
-              <Menu size={22} />
+            <button onClick={() => setMobileMenuOpen(v => !v)} className="nav-mobile" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5c5045', padding: 6 }}>
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
 
         {/* Mobile slide-down menu */}
         {mobileMenuOpen && (
-          <div className="flex md:hidden" style={{ background: 'white', borderTop: '1px solid #ebebeb', padding: '12px 24px 16px', flexDirection: 'column', gap: 4 }}>
+          <div style={{ background: '#fdf6ee', borderTop: '1px solid rgba(160,120,80,0.12)', padding: '12px 24px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {navItems.map(item => (
-              <button key={item.id} onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); setMobileMenuOpen(false); }} className={`nav-tab ${activeTab === item.id ? 'active' : ''}`} style={{ textAlign: 'left', justifyContent: 'flex-start', padding: '10px 14px' }}>
+              <button key={item.id} onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); setMobileMenuOpen(false); }}
+                style={{ textAlign: 'left', padding: '10px 14px', borderRadius: 10, border: 'none', background: activeTab === item.id ? '#2d4a35' : 'transparent', color: activeTab === item.id ? 'white' : '#5c5045', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                 {item.label}
               </button>
             ))}
             {!user && (
-              <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); setMobileMenuOpen(false); }} style={{ marginTop: 8, padding: '10px 14px', background: 'none', border: '1.5px solid #1a1a1a', borderRadius: 50, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>Sign In</button>
+              <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); setMobileMenuOpen(false); }} style={{ marginTop: 8, padding: '10px 14px', background: 'none', border: '1.5px solid rgba(92,80,69,0.3)', borderRadius: 50, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#5c5045' }}>Sign In</button>
             )}
           </div>
         )}
@@ -490,49 +521,63 @@ export default function Home() {
         <div>
 
           {/* ── HERO ────────────────────────────────────────────────────────── */}
-          <section style={{ background: '#EAE4DA', width: '100%', overflow: 'hidden', position: 'relative', minHeight: 560 }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 48px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center', minHeight: 560 }}>
+          <section style={{ background: 'linear-gradient(135deg, #ede8df 0%, #e2dbd0 100%)', width: '100%', overflow: 'hidden', position: 'relative', minHeight: 620 }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 48px 0', display: 'grid', gridTemplateColumns: '50fr 50fr', gap: 48, alignItems: 'center', minHeight: 620 }}>
 
-              {/* Left */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 26, paddingBottom: 80 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#9e9189', letterSpacing: '2px', textTransform: 'uppercase' }}>
+              {/* ── Left ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 28, paddingBottom: 96 }}>
+
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#a07850', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
                   Ingredient Safety · EU CosIng Database
                 </span>
 
-                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(38px, 4.5vw, 60px)', fontWeight: 700, color: '#1c1917', lineHeight: 1.1, letterSpacing: '-0.01em', margin: 0 }}>
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(40px, 4.8vw, 64px)', fontWeight: 700, color: '#1c1917', lineHeight: 1.08, letterSpacing: '-0.02em', margin: 0 }}>
                   Read what's actually<br />
                   <em style={{ fontStyle: 'italic', color: '#3d6b45' }}>in your skincare.</em>
                 </h1>
 
-                <p style={{ fontSize: 17, color: '#5c5045', lineHeight: 1.72, maxWidth: 460, margin: 0 }}>
+                <p style={{ fontSize: 17, color: '#5c5045', lineHeight: 1.75, maxWidth: 460, margin: 0 }}>
                   Most ingredient lists are written to be ignored. SkinGuard translates every ingredient — flags irritants, allergens, pore-cloggers, and pregnancy risks — matched to your skin type.
                 </p>
 
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
-                  <button onClick={() => setActiveTab('analyze')} className="btn-green" style={{ padding: '14px 32px', fontSize: 15, fontWeight: 700, borderRadius: 10, boxShadow: '0 4px 18px rgba(61,107,69,0.25)' }}>
+                  <button onClick={() => setActiveTab('analyze')} className="btn-green" style={{ padding: '15px 36px', fontSize: 16, fontWeight: 700, borderRadius: 10, boxShadow: '0 6px 20px rgba(61,107,69,0.28)' }}>
                     Check an ingredient list
                   </button>
-                  <button onClick={() => scrollTo('how-it-works')} style={{ padding: '14px 24px', fontSize: 14, fontWeight: 500, background: 'rgba(255,255,255,0.5)', border: '1.5px solid rgba(92,80,69,0.25)', color: '#5c5045', borderRadius: 10, cursor: 'pointer' }}>
+                  <button onClick={() => scrollTo('how-it-works')} style={{ padding: '15px 24px', fontSize: 15, fontWeight: 500, background: 'rgba(255,255,255,0.5)', border: '1.5px solid rgba(92,80,69,0.2)', color: '#5c5045', borderRadius: 10, cursor: 'pointer' }}>
                     How it works
                   </button>
                 </div>
-
-                <p style={{ fontSize: 13, color: '#b0a89e', margin: 0 }}>
-                  Free to use · Sign up to save your scan history
-                </p>
               </div>
 
-              {/* Right — image pushed up via negative margin-top */}
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', marginTop: '-60px', paddingBottom: 0 }}>
-                <img
-                  src="/yuka-mockup.png"
-                  alt="SkinGuard ingredient analysis"
-                  style={{ width: '100%', maxWidth: 480, height: 'auto', objectFit: 'contain', display: 'block' }}
-                />
+              {/* ── Right — Bottle image ── */}
+              <div style={{ position: 'relative', height: 520, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                {/* Soft background glow */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'radial-gradient(circle at 80% 50%, rgba(165,214,167,0.28) 0%, transparent 65%)',
+                  zIndex: 0, pointerEvents: 'none',
+                }} />
+
+                {/* Yuka Report Image — bigger and right aligned */}
+                <div style={{
+                  position: 'absolute', zIndex: 1,
+                  right: '-12vw',
+                  width: '135%',
+                  maxWidth: 800,
+                  filter: 'drop-shadow(0 24px 50px rgba(0,0,0,0.18))',
+                  transform: 'translateY(15px)',
+                }}>
+                  <img
+                    src="/yuka-mockup.png"
+                    alt="Ingredient analysis report"
+                    style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 18 }}
+                  />
+                </div>
               </div>
             </div>
 
-            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, overflow: 'hidden', lineHeight: 0 }}>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, overflow: 'hidden', lineHeight: 0, zIndex: 10 }}>
               <svg viewBox="0 0 1200 60" preserveAspectRatio="none" style={{ display: 'block', width: 'calc(100% + 1.3px)', height: 44 }}>
                 <path d="M0,30 C300,60 600,0 900,40 C1050,55 1150,20 1200,30 L1200,60 L0,60 Z" fill="#faf9f6" />
               </svg>
@@ -540,39 +585,41 @@ export default function Home() {
           </section>
 
           {/* ── ANALYZER SECTION ────────────────────────────────────────────── */}
-          <section id="analyzer" style={{ background: '#faf9f6', padding: '80px 24px 64px', position: 'relative' }}>
-            <div style={{ maxWidth: 760, margin: '0 auto' }}>
-              <div className="section-reveal" style={{ textAlign: 'center', marginBottom: 40 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#4caf50', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: 14 }}>Free Analysis</span>
-                <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(28px,3.5vw,44px)', color: '#1a1a1a', marginBottom: 14, letterSpacing: '-0.01em' }}>Analyze your skincare</h2>
-                <p style={{ fontSize: 17, color: '#6b6b6b', maxWidth: 480, margin: '0 auto', lineHeight: 1.65 }}>Set your skin profile below, then paste or upload your ingredient list.</p>
+          <section id="analyzer" style={{ background: '#faf9f6', padding: '80px 24px 72px', position: 'relative' }}>
+            <div style={{ maxWidth: 780, margin: '0 auto' }}>
+              <div className="section-reveal" style={{ textAlign: 'center', marginBottom: 48 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#2d4a35', letterSpacing: '2.5px', textTransform: 'uppercase', display: 'block', marginBottom: 16 }}>Free Analysis</span>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(30px,3.5vw,46px)', color: '#1a1a1a', marginBottom: 16, letterSpacing: '-0.01em' }}>Analyze your skincare</h2>
+                <p style={{ fontSize: 17, color: '#6b6b6b', maxWidth: 460, margin: '0 auto', lineHeight: 1.7 }}>Set your skin profile, then paste or upload your ingredient list for an instant safety report.</p>
               </div>
 
               {/* Profile chips */}
-              <div className="section-reveal" style={{ marginBottom: 32 }}>
+              <div className="section-reveal" style={{ background: 'white', borderRadius: 16, border: '1px solid #ede8df', padding: '20px 24px', marginBottom: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                 <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
               </div>
 
               {/* Analyzer card */}
-              <div className="section-reveal" style={{ background: 'white', borderRadius: 20, border: '1px solid #e8e4dc', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+              <div className="section-reveal" style={{ background: 'white', borderRadius: 20, border: '1px solid #e8e4dc', boxShadow: '0 8px 32px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
                 {/* Tab row */}
-                <div style={{ display: 'flex', gap: 6, padding: '14px 16px 0', background: 'white' }}>
+                <div style={{ display: 'flex', gap: 4, padding: '16px 20px 0', background: 'white', borderBottom: '1px solid #f0ede8' }}>
                   {[
                     { id: 'paste', label: 'Paste List', icon: <FileText size={13}/> },
                     { id: 'upload', label: 'Photo / OCR', icon: <Upload size={13}/> },
                     { id: 'barcode', label: 'Barcode', icon: <Barcode size={13}/> },
                   ].map(m => (
                     <button key={m.id} onClick={() => { setInputMode(m.id as any); setError(null); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 14, fontFamily: "'Nunito', sans-serif", fontWeight: 600, transition: 'all 0.15s',
-                        background: inputMode === m.id ? '#4caf50' : 'transparent',
-                        color: inputMode === m.id ? 'white' : '#6b6b6b',
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: "'Nunito', sans-serif", fontWeight: 700, transition: 'all 0.15s',
+                        background: inputMode === m.id ? '#2d4a35' : 'transparent',
+                        color: inputMode === m.id ? 'white' : '#9e9e9e',
+                        marginBottom: inputMode === m.id ? -1 : 0,
+                        borderBottom: inputMode === m.id ? '1px solid white' : 'none',
                       }}>
                       {m.icon} {m.label}
                     </button>
                   ))}
                 </div>
 
-                <div style={{ padding: '20px 24px 24px' }}>
+                <div style={{ padding: '24px 28px 28px' }}>
                   {/* Error */}
                   {error && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', background: '#fdeaea', border: '1px solid rgba(229,57,53,0.25)', borderRadius: 10, marginBottom: 16 }}>
@@ -601,7 +648,7 @@ export default function Home() {
                       {!previewUrl ? (
                         <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, border: '2px dashed #e8e4dc', borderRadius: 16, padding: '48px 24px', cursor: 'pointer', background: '#faf9f6', textAlign: 'center' }}>
                           <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Upload size={22} style={{ color: '#4caf50' }} />
+                            <Upload size={22} style={{ color: '#2d4a35' }} />
                           </div>
                           <div>
                             <p style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a' }}>Drop photo here or click to browse</p>
@@ -639,14 +686,14 @@ export default function Home() {
                       </div>
                       {barcodeProduct && (
                         <div style={{ padding: '12px 16px', background: '#e8f5e9', border: '1px solid rgba(76,175,80,0.2)', borderRadius: 10 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: '#388e3c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Product found</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#1b4332', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Product found</span>
                           <p style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginTop: 2 }}>{barcodeProduct.name}</p>
                           {barcodeProduct.brand && <p style={{ fontSize: 12, color: '#6b6b6b' }}>{barcodeProduct.brand}</p>}
                         </div>
                       )}
                       <button onClick={() => setShowCameraScanner(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px', border: '1.5px solid #e8e4dc', borderRadius: 12, background: 'white', cursor: 'pointer', transition: 'all 0.15s' }}>
                         <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Camera size={16} style={{ color: '#4caf50' }} />
+                          <Camera size={16} style={{ color: '#2d4a35' }} />
                         </div>
                         <div style={{ textAlign: 'left' }}>
                           <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>Open Camera Scanner</p>
@@ -658,10 +705,15 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, overflow: 'hidden', lineHeight: 0, zIndex: 10 }}>
+              <svg viewBox="0 0 1200 60" preserveAspectRatio="none" style={{ display: 'block', width: 'calc(100% + 1.3px)', height: 44 }}>
+                <path d="M0,30 C300,60 600,0 900,40 C1050,55 1150,20 1200,30 L1200,60 L0,60 Z" fill="#fdf6ee" />
+              </svg>
+            </div>
           </section>
 
           {/* ── SIX CHECKS ──────────────────────────────────────────────────── */}
-          <section className="section-reveal" style={{ background: '#fdf6ee', padding: '88px 24px 96px', position: 'relative' }}>
+          <section className="section-reveal" style={{ background: '#fdf6ee', padding: '80px 24px 80px', position: 'relative' }}>
             <div style={{ maxWidth: 1100, margin: '0 auto' }}>
               <div style={{ textAlign: 'center', marginBottom: 56 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#a07850', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: 14 }}>Every Scan</span>
@@ -696,45 +748,52 @@ export default function Home() {
                 ))}
               </div>
             </div>
+            {/* Wave out — to stats #f0ede6 */}
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, overflow: 'hidden', lineHeight: 0, zIndex: 10 }}>
+              <svg viewBox="0 0 1200 80" preserveAspectRatio="none" style={{ display: 'block', width: 'calc(100% + 1.3px)', height: 56 }}>
+                <path d="M0,0 C150,60 350,80 600,50 C850,20 1050,70 1200,40 L1200,80 L0,80 Z" fill="#f0ede6"/>
+              </svg>
+            </div>
           </section>
 
           {/* ── STATS ───────────────────────────────────────────────────────── */}
-          <section ref={statsRef} style={{ background: '#2d4a35', padding: '80px 24px', position: 'relative' }}>
-            <div style={{ maxWidth: 960, margin: '0 auto' }}>
-              <div style={{ textAlign: 'center', marginBottom: 52 }}>
-                <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(26px,3vw,38px)', color: 'white', letterSpacing: '-0.01em', marginBottom: 10 }}>Built on real data</h2>
-                <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.55)', margin: 0 }}>Not estimates. Not guesses.</p>
+          <section ref={statsRef} style={{ background: '#f0ede6', padding: '0 24px', position: 'relative' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto', padding: '48px 0 56px' }}>
+              <div style={{ textAlign: 'center', marginBottom: 48 }}>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontWeight: 600, fontSize: 'clamp(32px,4vw,46px)', color: '#1a1a1a', letterSpacing: '-0.02em', marginBottom: 12 }}>Built on real data</h2>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#5c5045', margin: 0, fontWeight: 400, letterSpacing: '0.01em' }}>Not estimates. Not guesses.</p>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 2, marginBottom: 48 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 32, textAlign: 'center', marginBottom: 32 }}>
                 {[
-                  { target: 24000, suffix: '+', label: 'EU CosIng ingredients indexed' },
+                  { target: 4000, suffix: '+', label: 'EU CosIng ingredients indexed' },
                   { target: 275, suffix: '+', label: 'Curated risk flags' },
                   { target: 8, suffix: '', label: 'Routine conflict types detected' },
                 ].map((s, i) => (
-                  <div key={i} style={{ textAlign: 'center', padding: '32px 24px', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
-                    <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 56, color: '#a5d6a7', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                  <div key={i}>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontWeight: 900, fontSize: 56, color: '#1b4332', lineHeight: 1, letterSpacing: '-0.03em' }}>
                       <StatCounter target={s.target} suffix={s.suffix} running={statsRunning}/>
                     </div>
-                    <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', marginTop: 10, lineHeight: 1.4 }}>{s.label}</p>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 500, color: '#5c5045', marginTop: 12, lineHeight: 1.5 }}>{s.label}</p>
                   </div>
                 ))}
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 50, padding: '10px 24px' }}>
-                  <Stars n={5}/>
-                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)' }}>Free forever · No paywall · No ads</span>
+                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 24px', background: 'rgba(160,120,80,0.06)', borderRadius: 50 }}>
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 700, color: '#8a6845', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Free forever · No paywall · No ads</span>
                 </div>
               </div>
             </div>
-            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
-              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
-                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#eff5f2"></path>
+
+            {/* Wave out — to testimonials #eff5f2 */}
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, overflow: 'hidden', lineHeight: 0, zIndex: 10 }}>
+              <svg viewBox="0 0 1200 80" preserveAspectRatio="none" style={{ display: 'block', width: 'calc(100% + 1.3px)', height: 56 }}>
+                <path d="M0,80 L0,50 C200,80 400,20 600,55 C800,90 1000,30 1200,60 L1200,80 Z" fill="#eff5f2"/>
               </svg>
             </div>
           </section>
 
           {/* ── TESTIMONIALS ────────────────────────────────────────────────── */}
-          <section className="section-reveal" style={{ background: '#eff5f2', padding: '80px 24px', position: 'relative', overflow: 'hidden' }}>
+          <section className="section-reveal" style={{ background: '#eff5f2', padding: '64px 24px 80px', position: 'relative', overflow: 'hidden' }}>
             {/* Decorative blobs */}
             <svg style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, pointerEvents: 'none' }} width="200" height="160" viewBox="0 0 200 160">
               <path d="M80,20 C120,5 180,40 170,90 C160,140 100,155 50,135 C0,115 -10,70 20,40 C50,10 40,35 80,20Z" fill="#e8f5e9" opacity="0.5"/>
@@ -765,14 +824,14 @@ export default function Home() {
                 {/* Right Column (Testimonial Cards) */}
                 <div className="col-span-1 md:col-span-7 flex flex-col gap-6 w-full">
                   {[
-                    { initial: 'P', bg: '#4caf50', quote: "I used to spend 20 minutes googling every ingredient. SkinGuard does it instantly and actually explains what the flag means.", name: 'Priya R.' },
+                    { initial: 'P', bg: '#2d4a35', quote: "I used to spend 20 minutes googling every ingredient. SkinGuard does it instantly and actually explains what the flag means.", name: 'Priya R.' },
                     { initial: 'M', bg: '#ef5350', quote: "Found out my 'gentle' cleanser had 3 pore-cloggers. Switched products and my skin finally cleared up.", name: 'Marcus T.' },
                     { initial: 'L', bg: '#42a5f5', quote: "The fungal acne filter is something I've never seen in any other app. This is the tool dermatology Reddit has been asking for.", name: 'Lena K.' },
                   ].map((t, i) => (
                     <div key={i} style={{ background: 'white', borderRadius: 20, border: '1px solid #e8e4dc', padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
                       {/* Quote mark & quote */}
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <svg width="24" height="18" viewBox="0 0 28 22" fill="#4caf50" style={{ flexShrink: 0, marginTop: 4 }}>
+                        <svg width="24" height="18" viewBox="0 0 28 22" fill="#2d4a35" style={{ flexShrink: 0, marginTop: 4 }}>
                           <path d="M0 22V12.5C0 5.5 4.5 1.5 13.5 0l1.5 2.5C10 3.5 7.5 6 7 10H12V22H0zm16 0V12.5C16 5.5 20.5 1.5 29.5 0L31 2.5C26 3.5 23.5 6 23 10H28V22H16z"/>
                         </svg>
                         <p style={{ fontFamily: "'Nunito', sans-serif", fontStyle: 'italic', fontSize: 15, color: '#1a1a1a', lineHeight: 1.5, margin: 0 }}>{t.quote}</p>
@@ -780,7 +839,7 @@ export default function Home() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingLeft: 36 }}>
                         <div style={{ width: 32, height: 32, borderRadius: '50%', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: 'white', flexShrink: 0 }}>{t.initial}</div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <p style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 13, color: '#388e3c', margin: 0 }}>{t.name}</p>
+                          <p style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 13, color: '#1b4332', margin: 0 }}>{t.name}</p>
                           <Stars n={5}/>
                         </div>
                       </div>
@@ -789,15 +848,15 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
+            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 10 }}>
               <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
-                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="white"></path>
+                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#faf9f6"></path>
               </svg>
             </div>
           </section>
 
           {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
-          <section id="how-it-works" className="section-reveal" style={{ background: 'white', padding: '80px 24px', position: 'relative' }}>
+          <section id="how-it-works" className="section-reveal" style={{ background: '#faf9f6', padding: '80px 24px', position: 'relative' }}>
             <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', marginBottom: 12 }}>Three steps to cleaner skincare</h2>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: '#6b6b6b', marginBottom: 60 }}>No account needed to analyze. Sign up only to save your history.</p>
@@ -807,12 +866,12 @@ export default function Home() {
                   {
                     num: '1',
                     icon: (
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#1b4332" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="8" y="4" width="24" height="32" rx="3"/>
                         <line x1="14" y1="13" x2="26" y2="13"/>
                         <line x1="14" y1="19" x2="26" y2="19"/>
                         <line x1="14" y1="25" x2="20" y2="25"/>
-                        <circle cx="28" cy="30" r="6" fill="#e8f5e9" stroke="#388e3c"/>
+                        <circle cx="28" cy="30" r="6" fill="#e8f5e9" stroke="#1b4332"/>
                         <line x1="25" y1="30" x2="31" y2="30"/>
                         <line x1="28" y1="27" x2="28" y2="33"/>
                       </svg>
@@ -823,7 +882,7 @@ export default function Home() {
                   {
                     num: '2',
                     icon: (
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#1b4332" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="6" y="6" width="12" height="12" rx="2"/>
                         <rect x="22" y="6" width="12" height="12" rx="2"/>
                         <rect x="6" y="22" width="12" height="12" rx="2"/>
@@ -836,7 +895,7 @@ export default function Home() {
                   {
                     num: '3',
                     icon: (
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#1b4332" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 4L8 9v10c0 9 5.5 17.5 12 20 6.5-2.5 12-11 12-20V9L20 4z"/>
                         <polyline points="14,20 18,24 26,16"/>
                       </svg>
@@ -852,11 +911,6 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            </div>
-            <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 1 }}>
-              <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
-                <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#ffffff"></path>
-              </svg>
             </div>
           </section>
 
@@ -916,7 +970,7 @@ export default function Home() {
         <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#388e3c', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Safety Report</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#1b4332', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Safety Report</span>
               <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', margin: '6px 0 0' }}>Ingredient Safety Audit</h2>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -974,13 +1028,13 @@ export default function Home() {
             </div>
             <form onSubmit={handleSearchEncyclopedia} style={{ display: 'flex', gap: 12, marginBottom: 0 }}>
               <input value={encyclopediaSearch} onChange={e => setEncyclopediaSearch(e.target.value)} placeholder="Enter ingredient name (e.g. Niacinamide)..." style={{ flex: 1, padding: '14px 16px', borderRadius: 12, border: '1px solid #e8e4dc', background: '#faf9f6', outline: 'none', fontFamily: "'Inter', sans-serif", fontSize: 14 }} className="focus:border-[#4caf50] focus:ring-1 focus:ring-[#4caf50] transition" />
-              <button type="submit" disabled={encyclopediaLoading} style={{ background: '#4caf50', color: 'white', border: 'none', borderRadius: 12, padding: '0 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} className="hover:bg-[#43a047] disabled:opacity-60">
+              <button type="submit" disabled={encyclopediaLoading} style={{ background: '#2d4a35', color: 'white', border: 'none', borderRadius: 12, padding: '0 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} className="hover:bg-[#43a047] disabled:opacity-60">
                 {encyclopediaLoading ? <Loader2 size={18} className="animate-spin"/> : <Search size={18}/>}
               </button>
             </form>
             {encyclopediaResult && (
               <div style={{ marginTop: 24, padding: '24px', background: '#faf9f6', borderRadius: 16, border: '1px solid #e8e4dc' }} className="animate-fade-up">
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#388e3c', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Inter', sans-serif" }}>Registry Profile</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#1b4332', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Inter', sans-serif" }}>Registry Profile</span>
                 <h4 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 24, color: '#1a1a1a', margin: '8px 0 20px' }}>{encyclopediaResult.name}</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {[
@@ -1130,10 +1184,10 @@ export default function Home() {
 
       {/* ─── FOOTER ──────────────────────────────────────────────────────────── */}
       <footer style={{ background: '#1b4332', position: 'relative', overflow: 'hidden' }}>
-        {/* Wave transition from white section above */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, transform: 'rotate(180deg)' }}>
+        {/* Wave transition from #faf9f6 sections above */}
+        <div style={{ position: 'absolute', top: -1, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, transform: 'rotate(180deg)' }}>
           <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ position: 'relative', display: 'block', width: 'calc(100% + 1.3px)', height: 48 }}>
-            <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#ffffff"></path>
+            <path d="M0,0 C150,90 350,120 600,100 C850,80 1050,110 1200,90 L1200,120 L0,120 Z" fill="#faf9f6"></path>
           </svg>
         </div>
 
@@ -1151,7 +1205,7 @@ export default function Home() {
               </p>
               <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                 {[Twitter, Instagram, Github].map((Icon, i) => (
-                  <a key={i} href="#" style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#4caf50'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}>
+                  <a key={i} href="#" style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#2d4a35'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}>
                     <Icon size={18} />
                   </a>
                 ))}
@@ -1184,8 +1238,8 @@ export default function Home() {
                 Join 10,000+ users getting our weekly skincare science digest.
               </p>
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <input type="email" placeholder="Enter your email" style={{ flex: 1, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '14px 18px', color: 'white', fontSize: 15, fontFamily: "'Inter', sans-serif", outline: 'none', transition: 'border 0.2s' }} onFocus={e => e.currentTarget.style.borderColor = '#4caf50'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'} />
-                <button style={{ background: '#4caf50', border: 'none', borderRadius: 12, padding: '0 20px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#43a047'} onMouseLeave={e => e.currentTarget.style.background = '#4caf50'}>
+                <input type="email" placeholder="Enter your email" style={{ flex: 1, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '14px 18px', color: 'white', fontSize: 15, fontFamily: "'Inter', sans-serif", outline: 'none', transition: 'border 0.2s' }} onFocus={e => e.currentTarget.style.borderColor = '#2d4a35'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'} />
+                <button style={{ background: '#2d4a35', border: 'none', borderRadius: 12, padding: '0 20px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#43a047'} onMouseLeave={e => e.currentTarget.style.background = '#2d4a35'}>
                   <ArrowRight size={20} />
                 </button>
               </div>
@@ -1199,7 +1253,7 @@ export default function Home() {
               © 2026 SkinGuard · Not medical advice · Educational use only
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', padding: '8px 16px', borderRadius: 50 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4caf50', boxShadow: '0 0 10px #4caf50' }} />
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#43a047', boxShadow: '0 0 10px rgba(67,160,71,0.6)' }} />
               <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)', fontFamily: "'Inter', sans-serif" }}>Powered by EU CosIng Database</p>
             </div>
           </div>
@@ -1231,8 +1285,8 @@ export default function Home() {
               <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="Email address" className="input-field"/>
               {authMode !== 'forgot' && <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Password" className="input-field"/>}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                {authMode === 'login' && <button type="button" onClick={() => setAuthMode('forgot')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4caf50', fontWeight: 600 }}>Forgot password?</button>}
-                <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4caf50', fontWeight: 600, marginLeft: 'auto' }}>
+                {authMode === 'login' && <button type="button" onClick={() => setAuthMode('forgot')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2d4a35', fontWeight: 600 }}>Forgot password?</button>}
+                <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2d4a35', fontWeight: 600, marginLeft: 'auto' }}>
                   {authMode === 'login' ? 'Create account' : 'Sign in instead'}
                 </button>
               </div>

@@ -25,13 +25,13 @@
   --text-light:   #9e9e9e;
 
   /* Brand greens */
-  --green:           #4caf50;
-  --green-primary:   #388e3c;
-  --green-dark:      #388e3c;
+  --green:           #2d4a35;
+  --green-primary:   #1b4332;
+  --green-dark:      #1b4332;
   --green-mid:       #a5d6a7;
   --green-light:     #e8f5e9;
-  --green-btn:       #4caf50;
-  --green-btn-hover: #388e3c;
+  --green-btn:       #2d4a35;
+  --green-btn-hover: #1b4332;
 
   /* Teal — score badges/result indicators ONLY */
   --teal:            #1a7a74;
@@ -160,6 +160,7 @@
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.5s ease, transform 0.5s ease;
+  will-change: opacity, transform;
 }
 .section-reveal.visible {
   opacity: 1;
@@ -298,6 +299,14 @@ textarea.input-field {
 }
 .ingredient-row:last-child { border-bottom: none; }
 .ingredient-row:hover { background: var(--bg-section); }
+
+/* ─── Navbar responsive ──────────────────────────────────────────────────────── */
+.nav-desktop { display: flex; }
+.nav-mobile  { display: none; }
+@media (max-width: 860px) {
+  .nav-desktop { display: none !important; }
+  .nav-mobile  { display: flex !important; }
+}
 
 /* ─── Nav tab ────────────────────────────────────────────────────────────────── */
 .nav-tab {
