@@ -2,11 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  ShieldCheck, Loader2, AlertTriangle, CheckCircle, XCircle,
-  Heart, Trash2, Search, Plus, X, ArrowRight, Barcode,
-  BookOpen, Layers, Star, ExternalLink, User, Check, LogOut,
-  Upload, Camera, FileText, ChevronDown, ChevronRight, Info,
-  RefreshCw, Minus, FlaskConical, Leaf
+  ShieldCheck, Loader2, AlertTriangle, Heart, Trash2, Search,
+  Plus, X, Barcode, Layers, LogOut, Upload, Camera,
+  FileText, Menu,
 } from 'lucide-react';
 import type { SkinProfile, UserState, AnalysisResult } from '../types';
 import { RoutineAnalyzer } from '../components/RoutineAnalyzer';
@@ -31,6 +29,56 @@ const GLOSSARY_TERMS = [
   { term: "Humectant", definition: "An ingredient that draws moisture from the environment or deeper skin layers into the outer skin. Examples: glycerin, hyaluronic acid." },
 ];
 
+/* ─── Hero illustration ─────────────────────────────────────────────────────── */
+function HeroIllustration() {
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Soft blob behind image */}
+      <div style={{ position: 'absolute', width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, #e8f5e9 0%, #f0ede6 60%, transparent 100%)', zIndex: 0 }} />
+      <img
+        src="/hero-bottle.png"
+        alt="Natural skincare products"
+        className="animate-float"
+        style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 440, objectFit: 'contain', filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.10))' }}
+      />
+    </div>
+  );
+}
+
+/* ─── Stats counter ──────────────────────────────────────────────────────────── */
+function StatCounter({ target, suffix = '', running }: { target: number; suffix?: string; running: boolean }) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!running) return;
+    const start = performance.now();
+    const duration = 1200;
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - (1 - t) * (1 - t);
+      setCount(Math.round(eased * target));
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [running, target]);
+  return <>{count}{suffix}</>;
+}
+
+/* ─── Star row ───────────────────────────────────────────────────────────────── */
+function Stars({ n = 5 }: { n?: number }) {
+  return (
+    <div style={{ display: 'flex', gap: 3 }}>
+      {Array.from({ length: n }).map((_, i) => (
+        <svg key={i} width="14" height="14" viewBox="0 0 14 14" fill="#f9a825">
+          <path d="M7 1l1.54 3.12 3.46.5-2.5 2.44.59 3.44L7 8.77 3.91 10.5l.59-3.44L2 4.62l3.46-.5z"/>
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+══════════════════════════════════════════════════════════════════════════════ */
 export default function Home() {
   const [user, setUser] = useState<UserState | null>(null);
   const [profile, setProfile] = useState<SkinProfile>({
@@ -50,6 +98,7 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState<'home' | 'analyze' | 'routine' | 'compare' | 'learn' | 'vanity'>('home');
   const [inputMode, setInputMode] = useState<'paste' | 'upload' | 'barcode'>('paste');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [pastedIngredients, setPastedIngredients] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -76,8 +125,14 @@ export default function Home() {
   const [encyclopediaLoading, setEncyclopediaLoading] = useState(false);
   const [glossarySearch, setGlossarySearch] = useState('');
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Stats counter trigger
+  const statsRef = useRef<HTMLDivElement>(null);
+  const [statsRunning, setStatsRunning] = useState(false);
 
+  // Section reveal refs
+  const revealRefs = useRef<HTMLElement[]>([]);
+
+  /* ── Lifecycle ─────────────────────────────────────────────────────────────── */
   useEffect(() => {
     const saved = localStorage.getItem(LS_USER_KEY);
     if (saved) {
@@ -100,16 +155,30 @@ export default function Home() {
     } else { setScans([]); setSavedProducts([]); }
   }, [user]);
 
-  useEffect(() => {
-    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
-  }, [previewUrl]);
+  useEffect(() => { return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }; }, [previewUrl]);
 
+  // Stats counter IntersectionObserver
+  useEffect(() => {
+    const el = statsRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setStatsRunning(true); obs.disconnect(); } }, { threshold: 0.3 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  // Section reveal IntersectionObserver
+  useEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>('.section-reveal');
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+    }, { threshold: 0.12 });
+    els.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  });
+
+  /* ── Handlers ──────────────────────────────────────────────────────────────── */
   const handleProfileToggle = (key: keyof SkinProfile) => {
-    setProfile(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      saveProfileToBackend(next, allergies);
-      return next;
-    });
+    setProfile(prev => { const next = { ...prev, [key]: !prev[key] }; saveProfileToBackend(next, allergies); return next; });
   };
 
   const saveProfileToBackend = async (p: SkinProfile, a: string[]) => {
@@ -244,11 +313,14 @@ export default function Home() {
     ...(user ? [{ id: 'vanity', label: 'My Vanity' }] : []),
   ];
 
-  /* ─── Render ─────────────────────────────────────────────────────────── */
-  return (
-    <main style={{ background: 'var(--bg)', minHeight: '100vh', fontFamily: "'Nunito Sans', sans-serif" }}>
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
-      {/* Camera Scanner */}
+  /* ══════════════════════════════════════════════════════════════════════════
+     RENDER
+  ══════════════════════════════════════════════════════════════════════════ */
+  return (
+    <main style={{ background: '#faf9f6', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+
       {showCameraScanner && (
         <BarcodeScanner
           onDetected={code => { setShowCameraScanner(false); setBarcodeInput(code); handleBarcodeLookup(code); }}
@@ -256,694 +328,793 @@ export default function Home() {
         />
       )}
 
-      {/* ─── Header ───────────────────────────────────────────────────────── */}
-      <header style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--header-border)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+      {/* ─── Navbar ──────────────────────────────────────────────────────────── */}
+      <header style={{ background: 'white', borderBottom: '1px solid #ebebeb', position: 'sticky', top: 0, zIndex: 50, height: 64 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
 
           {/* Logo */}
-          <button
-            onClick={() => { setResults(null); setExtractedIngredients([]); setActiveTab('home'); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
-          >
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--green-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ShieldCheck size={17} color="white" />
-            </div>
-            <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: 'var(--text-dark)', letterSpacing: '-0.02em' }}>SkinGuard</span>
+          <button onClick={() => { setResults(null); setExtractedIngredients([]); setActiveTab('home'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+            <img src="/hero-bottle.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', background: '#f0ede6' }} />
+            <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#1b4332', letterSpacing: '-0.02em' }}>SkinGuard</span>
           </button>
 
-          {/* Desktop Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="hidden md:flex">
+          {/* Desktop nav */}
+          <nav className="hidden md:flex" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center' }}>
             {navItems.map(item => (
-              <button
-                key={item.id}
-                onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); }}
-                className={`nav-tab ${(activeTab === item.id || (item.id === 'home' && activeTab === 'analyze')) ? 'active' : ''}`}
-              >
+              <button key={item.id} onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); }} className={`nav-tab ${(activeTab === item.id || (item.id === 'home' && activeTab === 'analyze')) ? 'active' : ''}`}>
                 {item.label}
               </button>
             ))}
           </nav>
 
-          {/* Auth */}
+          {/* Auth buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             {user ? (
               <>
-                <button onClick={() => setActiveTab('vanity')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: '1.5px solid var(--border-dark)', borderRadius: 50, padding: '6px 14px', cursor: 'pointer' }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--green-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+                <button onClick={() => setActiveTab('vanity')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: '1.5px solid #e8e4dc', borderRadius: 50, padding: '6px 14px', cursor: 'pointer' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#4caf50', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white', flexShrink: 0 }}>
                     {(user.full_name || user.email)[0].toUpperCase()}
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-dark)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.full_name || 'User'}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.full_name || 'User'}</span>
                 </button>
-                <button onClick={handleLogout} title="Sign out" style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 8, display: 'flex' }}>
+                <button onClick={handleLogout} title="Sign out" style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#6b6b6b', borderRadius: 8, display: 'flex' }}>
                   <LogOut size={15} />
                 </button>
               </>
             ) : (
               <>
-                <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', padding: '8px 12px', borderRadius: 8 }}>Login</button>
-                <button onClick={() => { setAuthMode('signup'); setShowLoginModal(true); }} className="btn-green" style={{ padding: '9px 20px', fontSize: 13 }}>Sign up</button>
+                <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); }} className="hidden md:block" style={{ background: 'none', border: '1.5px solid #1a1a1a', borderRadius: 50, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a1a1a', padding: '7px 18px' }}>Sign In</button>
+                <button onClick={() => { setAuthMode('signup'); setShowLoginModal(true); }} className="btn-green" style={{ padding: '8px 20px', fontSize: 13 }}>Try Free</button>
               </>
             )}
+            {/* Mobile hamburger */}
+            <button className="flex md:hidden" onClick={() => setMobileMenuOpen(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1a1a1a', padding: 6 }}>
+              <Menu size={22} />
+            </button>
           </div>
         </div>
+
+        {/* Mobile slide-down menu */}
+        {mobileMenuOpen && (
+          <div className="flex md:hidden" style={{ background: 'white', borderTop: '1px solid #ebebeb', padding: '12px 24px 16px', flexDirection: 'column', gap: 4 }}>
+            {navItems.map(item => (
+              <button key={item.id} onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); setMobileMenuOpen(false); }} className={`nav-tab ${activeTab === item.id ? 'active' : ''}`} style={{ textAlign: 'left', justifyContent: 'flex-start', padding: '10px 14px' }}>
+                {item.label}
+              </button>
+            ))}
+            {!user && (
+              <button onClick={() => { setAuthMode('login'); setShowLoginModal(true); setMobileMenuOpen(false); }} style={{ marginTop: 8, padding: '10px 14px', background: 'none', border: '1.5px solid #1a1a1a', borderRadius: 50, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>Sign In</button>
+            )}
+          </div>
+        )}
       </header>
 
-      {/* Mobile nav */}
-      <div className="flex md:hidden" style={{ background: 'white', borderBottom: '1px solid var(--border)', padding: '8px 16px', gap: 6, overflowX: 'auto' }}>
-        {navItems.map(item => (
-          <button key={item.id} onClick={() => { if (item.id === 'home') { setResults(null); setExtractedIngredients([]); } setActiveTab(item.id as any); }} className={`nav-tab ${activeTab === item.id ? 'active' : ''}`} style={{ flexShrink: 0 }}>{item.label}</button>
-        ))}
-      </div>
+      {/* ══════════════════════════════════════════════════════════════════════
+          HOME TAB
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'home' && (
+        <div>
 
-      {/* ─── Content ──────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
+          {/* ── HERO ────────────────────────────────────────────────────────── */}
+          <section style={{ background: 'linear-gradient(135deg, #faf9f6 0%, #f0ede6 100%)', padding: '80px 0 60px', minHeight: '92vh', display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
+            <div style={{ maxWidth: 1400, margin: '0 auto', width: '100%', padding: '0 48px', display: 'grid', gridTemplateColumns: '55fr 45fr', gap: 40, alignItems: 'center' }}>
 
-        {/* ═══════════════════════════════════════════════
-            HOME PAGE
-            ═══════════════════════════════════════════════ */}
-        {activeTab === 'home' && (
-          <div className="animate-fade-up">
-
-            {/* ── EWG-style teal hero banner ── */}
-            <section style={{ background: 'var(--teal-header)', margin: '0 -20px', padding: '52px 20px 80px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-                <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 50, padding: '5px 16px', marginBottom: 20 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Nunito Sans', sans-serif" }}>Cosmetic Safety Database</span>
+              {/* Left column */}
+              <div>
+                {/* Eyebrow pill */}
+                <div style={{ display: 'inline-block', background: '#e8f5e9', color: '#388e3c', borderRadius: 20, padding: '5px 16px', marginBottom: 24, fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 600, letterSpacing: '0.5px' }}>
+                  EU CosIng · 24,000+ ingredients · Free
                 </div>
-                <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(32px, 5vw, 52px)', color: 'white', marginBottom: 20, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
-                  Know what&apos;s in<br />your skincare.
+
+                {/* H1 */}
+                <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 'clamp(36px,5vw,56px)', color: '#1a1a1a', lineHeight: 1.08, marginBottom: 20 }}>
+                  Know what&apos;s really<br />in your skincare.
                 </h1>
-                <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.8)', maxWidth: 480, margin: '0 auto 36px', lineHeight: 1.65, fontFamily: "'Nunito Sans', sans-serif" }}>
-                  Decode ingredient labels. Flag EU-banned substances, allergens, comedogenics, and pregnancy risks — adjusted for your skin profile.
+
+                {/* Subheading */}
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, color: '#6b6b6b', lineHeight: 1.6, marginBottom: 32, maxWidth: 480 }}>
+                  Paste an ingredient list or upload a label photo. We flag irritants, pore-cloggers, and pregnancy risks — backed by EU CosIng data.
                 </p>
 
-                {/* EWG-style search box */}
-                <div style={{ background: 'white', borderRadius: 12, padding: 6, display: 'flex', gap: 6, maxWidth: 560, margin: '0 auto 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
-                  <textarea
-                    value={pastedIngredients}
-                    onChange={e => setPastedIngredients(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleManualInputSubmit(); }}
-                    rows={2}
-                    placeholder="Paste ingredient list here (comma-separated)..."
-                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, fontFamily: "'Nunito Sans', sans-serif", color: 'var(--text-dark)', resize: 'none', padding: '8px 12px', lineHeight: 1.5, background: 'transparent' }}
-                  />
-                  <button onClick={handleManualInputSubmit} className="ewg-search-btn" style={{ alignSelf: 'flex-end', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    Analyze
+                {/* CTA buttons */}
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}>
+                  <button onClick={() => scrollTo('analyzer')} className="btn-green" style={{ padding: '14px 32px', fontSize: 16, borderRadius: 28 }}>
+                    Analyze Ingredients
+                  </button>
+                  <button onClick={() => scrollTo('how-it-works')} style={{ padding: '14px 32px', fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 700, background: 'transparent', border: '2px solid #1a1a1a', color: '#1a1a1a', borderRadius: 28, cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f0ede6'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
+                    How It Works
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <button onClick={handleTryDemo} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '9px 20px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Nunito Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <FlaskConical size={13} /> Try Demo Scan
-                  </button>
-                  <button onClick={() => { setInputMode('barcode'); document.getElementById('scan-widget')?.scrollIntoView({ behavior: 'smooth' }); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '9px 20px', borderRadius: 50, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Nunito Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Barcode size={13} /> Barcode Lookup
-                  </button>
+                {/* Stat pills */}
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {['24,000+ ingredients', '275+ risk flags', 'Free forever'].map(s => (
+                    <span key={s} style={{ background: 'white', border: '1px solid #e8e4dc', borderRadius: 20, padding: '6px 16px', fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 500, color: '#1a1a1a', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>{s}</span>
+                  ))}
                 </div>
               </div>
 
-              {/* Decorative circles (EWG-inspired) */}
-              <div style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', bottom: -80, left: -80, width: 360, height: 360, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-            </section>
-
-            {/* Yuka-style wave separator */}
-            <div style={{ background: 'var(--teal-header)', margin: '0 -20px' }}>
-              <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
-                <path d="M0 0L1440 0L1440 20C1200 60 960 60 720 40C480 20 240 60 0 40L0 0Z" fill="var(--bg)" />
-              </svg>
+              {/* Right column — hero illustration */}
+              <div className="hidden md:flex" style={{ justifyContent: 'center', alignItems: 'center' }}>
+                <HeroIllustration />
+              </div>
             </div>
+          </section>
 
-            {/* ── Skin Profile step ── */}
-            <section style={{ padding: '60px 0', textAlign: 'center' }}>
-              <div style={{ maxWidth: 640, margin: '0 auto' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Step 1</span>
-                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 28, color: 'var(--text-dark)', margin: '10px 0 12px' }}>Set your skin profile</h2>
-                <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: 32, fontFamily: "'Nunito Sans', sans-serif" }}>
-                  Select your skin conditions. Risk scoring adapts to your specific sensitivities.
+          {/* ── INDEPENDENCE ────────────────────────────────────────────────── */}
+          <section className="section-reveal" style={{ background: '#f0ede6', padding: '80px 24px' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
+              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', marginBottom: 48 }}>A 100% independent tool</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 40 }}>
+                {[
+                  {
+                    icon: (
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 3L4 7v7c0 5.5 4.2 10.7 10 12 5.8-1.3 10-6.5 10-12V7L14 3z"/>
+                        <line x1="9" y1="14" x2="19" y2="14"/>
+                        <line x1="14" y1="9" x2="14" y2="14"/>
+                      </svg>
+                    ),
+                    title: 'No brand influence',
+                    body: 'No brand or manufacturer can affect our ingredient scores or recommendations.',
+                  },
+                  {
+                    icon: (
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 6L6 22M6 6l16 16M10 6H4v6M18 22h6v-6"/>
+                      </svg>
+                    ),
+                    title: 'No ads, ever',
+                    body: "We don't sell ad space. No brand can pay to be shown here.",
+                  },
+                  {
+                    icon: (
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="4" y="4" width="20" height="20" rx="3"/>
+                        <line x1="4" y1="10" x2="24" y2="10"/>
+                        <line x1="10" y1="10" x2="10" y2="24"/>
+                      </svg>
+                    ),
+                    title: 'Fully open source',
+                    body: 'Our data sources, methodology, and code are all public on GitHub.',
+                  },
+                ].map((col, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                    <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+                      {col.icon}
+                    </div>
+                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 18, color: '#1a1a1a' }}>{col.title}</h3>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: '#6b6b6b', lineHeight: 1.6, maxWidth: 220, textAlign: 'center' }}>{col.body}</p>
+                  </div>
+                ))}
+              </div>
+              <a href="#" style={{ display: 'inline-block', marginTop: 40, color: '#4caf50', fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 15 }}>
+                Learn about our data sources →
+              </a>
+            </div>
+          </section>
+
+          {/* ── WHAT'S IN EVERY ANALYSIS ────────────────────────────────── */}
+          <section className="section-reveal" style={{ background: 'white', padding: '80px 24px' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 52 }}>
+                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 'clamp(28px,3vw,40px)', color: '#1a1a1a', marginBottom: 14 }}>
+                  Six checks run on every scan
+                </h2>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#6b6b6b', maxWidth: 520, margin: '0 auto' }}>
+                  Paste your ingredient list once — SkinGuard automatically runs all of these for your skin profile.
                 </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+                {[
+                  { dot: '#43a047', bg: '#e8f5e9', title: 'Safety Score', body: 'An overall 0–100 score calculated from flagged ingredients, weighted by severity and adapted to your selected skin conditions.' },
+                  { dot: '#e53935', bg: '#fdeaea', title: 'Irritants & Allergens', body: 'Detects EU SCCS-listed contact allergens, known sensitisers, and ingredients classified as irritants — especially relevant for sensitive skin.' },
+                  { dot: '#f57c00', bg: '#fff3e0', title: 'Comedogenic Rating', body: 'Identifies pore-clogging ingredients rated 3 or higher on the 0–5 comedogenic scale. Automatically flagged when your profile includes acne-prone skin.' },
+                  { dot: '#9c27b0', bg: '#f3e5f5', title: 'Pregnancy Safety', body: 'Warns on retinoids, high-concentration salicylates, and EU-restricted substances. Active only when your pregnancy profile toggle is on.' },
+                  { dot: '#00897b', bg: '#e0f2f1', title: 'Fungal Acne Triggers', body: 'Scans for fatty acids, esters, and oils known to feed Malassezia yeast — the root cause of fungal acne (Malassezia folliculitis).' },
+                  { dot: '#1565c0', bg: '#e3f2fd', title: 'Routine Conflict Checker', body: 'Paste multiple products and detect active-ingredient clashes — e.g. retinol layered with AHAs, or vitamin C with niacinamide at high concentrations.' },
+                ].map((f, i) => (
+                  <div key={i} style={{ background: '#faf9f6', border: '1px solid #e8e4dc', borderRadius: 18, padding: '28px 28px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: 14, height: 14, borderRadius: '50%', background: f.dot }} />
+                      </div>
+                      <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 17, color: '#1a1a1a', margin: 0 }}>{f.title}</h3>
+                    </div>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#6b6b6b', lineHeight: 1.65, margin: 0 }}>{f.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── ANALYZER SECTION ────────────────────────────────────────────── */}
+          <section id="analyzer" style={{ background: '#faf9f6', padding: '80px 24px' }}>
+            <div style={{ maxWidth: 760, margin: '0 auto' }}>
+              <div className="section-reveal" style={{ textAlign: 'center', marginBottom: 32 }}>
+                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 44, color: '#1a1a1a', marginBottom: 12 }}>Analyze your skincare</h2>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: '#6b6b6b' }}>Set your skin profile, then paste or upload your ingredients.</p>
+              </div>
+
+              {/* Profile chips */}
+              <div className="section-reveal" style={{ marginBottom: 32 }}>
                 <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
               </div>
-            </section>
 
-            {/* Wave into section 2 */}
-            <div style={{ margin: '0 -20px' }}>
-              <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
-                <path d="M0 50L1440 50L1440 20C1200 0 960 40 720 20C480 0 240 40 0 20L0 50Z" fill="white" />
-              </svg>
-            </div>
-
-            {/* ── Scan Widget ── */}
-            <section id="scan-widget" style={{ background: 'white', margin: '0 -20px', padding: '60px 20px' }}>
-              <div style={{ maxWidth: 640, margin: '0 auto' }}>
-                <div style={{ textAlign: 'center', marginBottom: 36 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Step 2</span>
-                  <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 28, color: 'var(--text-dark)', margin: '10px 0 10px' }}>Upload or paste ingredients</h2>
-                  <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>Photo of the label, barcode lookup, or paste the list directly.</p>
-                </div>
-
-                {/* Mode selector */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 24, padding: 4, background: 'var(--bg-section)', borderRadius: 12, border: '1px solid var(--border)' }}>
+              {/* Analyzer card */}
+              <div className="section-reveal" style={{ background: 'white', borderRadius: 20, border: '1px solid #e8e4dc', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                {/* Tab row */}
+                <div style={{ display: 'flex', gap: 6, padding: '14px 16px 0', background: 'white' }}>
                   {[
-                    { id: 'paste', label: 'Paste List', icon: <FileText size={13} /> },
-                    { id: 'upload', label: 'Photo / OCR', icon: <Upload size={13} /> },
-                    { id: 'barcode', label: 'Barcode', icon: <Barcode size={13} /> },
+                    { id: 'paste', label: 'Paste List', icon: <FileText size={13}/> },
+                    { id: 'upload', label: 'Photo / OCR', icon: <Upload size={13}/> },
+                    { id: 'barcode', label: 'Barcode', icon: <Barcode size={13}/> },
                   ].map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => { setInputMode(m.id as any); setError(null); }}
-                      style={{
-                        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        padding: '10px 8px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                        fontSize: 12, fontWeight: 700, transition: 'all 0.18s',
-                        background: inputMode === m.id ? 'white' : 'transparent',
-                        color: inputMode === m.id ? 'var(--green-primary)' : 'var(--text-muted)',
-                        boxShadow: inputMode === m.id ? 'var(--shadow-sm)' : 'none',
-                        fontFamily: "'Nunito Sans', sans-serif",
-                      }}
-                    >
+                    <button key={m.id} onClick={() => { setInputMode(m.id as any); setError(null); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 14, fontFamily: "'Nunito', sans-serif", fontWeight: 600, transition: 'all 0.15s',
+                        background: inputMode === m.id ? '#4caf50' : 'transparent',
+                        color: inputMode === m.id ? 'white' : '#6b6b6b',
+                      }}>
                       {m.icon} {m.label}
                     </button>
                   ))}
                 </div>
 
-                {/* Error */}
-                {error && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', background: '#fdeaea', border: '1px solid rgba(232,75,60,0.25)', borderRadius: 10, marginBottom: 16 }}>
-                    <AlertTriangle size={15} style={{ color: '#e84b3c', flexShrink: 0, marginTop: 1 }} />
-                    <span style={{ fontSize: 13, color: '#9a1e18', fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.5 }}>{error}</span>
-                  </div>
-                )}
+                <div style={{ padding: '20px 24px 24px' }}>
+                  {/* Error */}
+                  {error && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', background: '#fdeaea', border: '1px solid rgba(229,57,53,0.25)', borderRadius: 10, marginBottom: 16 }}>
+                      <AlertTriangle size={15} style={{ color: '#e53935', flexShrink: 0, marginTop: 1 }} />
+                      <span style={{ fontSize: 13, color: '#c62828', fontFamily: "'Inter', sans-serif", lineHeight: 1.5 }}>{error}</span>
+                    </div>
+                  )}
 
-                {/* Paste mode */}
-                {inputMode === 'paste' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <textarea
-                      value={pastedIngredients}
-                      onChange={e => setPastedIngredients(e.target.value)}
-                      rows={6}
-                      placeholder="Aqua, Glycerin, Niacinamide, Salicylic Acid, Fragrance, Ceramide NP..."
-                      className="input-field"
-                      style={{ fontSize: 13, fontFamily: "'Nunito Sans', monospace" }}
-                    />
-                    <button onClick={handleManualInputSubmit} className="btn-green" style={{ padding: '13px 24px', fontSize: 14, width: '100%' }}>
-                      <Layers size={15} /> Extract and Analyze Ingredients
-                    </button>
-                  </div>
-                )}
-
-                {/* Upload mode */}
-                {inputMode === 'upload' && (
-                  <div>
-                    {!previewUrl ? (
-                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, border: '2px dashed var(--border-dark)', borderRadius: 16, padding: '48px 24px', cursor: 'pointer', background: 'var(--bg-section)', textAlign: 'center', transition: 'all 0.18s' }}>
-                        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Upload size={22} style={{ color: 'var(--green-primary)' }} />
-                        </div>
-                        <div>
-                          <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', fontFamily: "'Nunito Sans', sans-serif" }}>Drop photo here or click to browse</p>
-                          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontFamily: "'Nunito Sans', sans-serif" }}>AI-powered OCR reads the ingredient block — JPG, PNG, WEBP up to 8MB</p>
-                        </div>
-                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
-                          const f = e.target.files?.[0];
-                          if (f) { setFile(f); if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(URL.createObjectURL(f)); setError(null); }
-                        }} />
-                      </label>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                          <img src={previewUrl} alt="Label preview" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#f8f8f8', display: 'block' }} />
-                          <button onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); setFile(null); setError(null); }}
-                            style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <X size={13} />
-                          </button>
-                        </div>
-                        <button onClick={handleExtractText} disabled={isExtracting} className="btn-green" style={{ padding: '13px 24px', fontSize: 14, width: '100%' }}>
-                          {isExtracting ? <><Loader2 size={15} className="animate-spin" /> Extracting text via OCR...</> : <><FileText size={15} /> Extract Ingredient Text</>}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Barcode mode */}
-                {inputMode === 'barcode' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        value={barcodeInput}
-                        onChange={e => setBarcodeInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleBarcodeLookup(barcodeInput); }}
-                        placeholder="Enter product barcode (e.g. 0748948000214)..."
-                        className="input-field"
-                        style={{ fontFamily: 'monospace', flex: 1 }}
-                      />
-                      <button onClick={() => handleBarcodeLookup(barcodeInput)} disabled={isBarcodeLookingUp} className="btn-green" style={{ padding: '0 20px', flexShrink: 0, fontSize: 13 }}>
-                        {isBarcodeLookingUp ? <Loader2 size={13} className="animate-spin" /> : 'Look up'}
+                  {/* Paste mode */}
+                  {inputMode === 'paste' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <textarea value={pastedIngredients} onChange={e => setPastedIngredients(e.target.value)} rows={6}
+                        placeholder="Aqua, Glycerin, Niacinamide, Salicylic Acid, Fragrance, Ceramide NP..."
+                        className="input-field" style={{ fontSize: 15 }} />
+                      <button onClick={handleManualInputSubmit} className="btn-green" style={{ padding: '16px', fontSize: 17, width: '100%', borderRadius: 28 }}>
+                        <Layers size={16}/> Analyze Ingredients
                       </button>
                     </div>
-                    {barcodeProduct && (
-                      <div style={{ padding: '12px 16px', background: 'var(--green-light)', border: '1px solid rgba(30,122,78,0.2)', borderRadius: 10 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Product found</span>
-                        <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', marginTop: 2, fontFamily: "'Nunito Sans', sans-serif" }}>{barcodeProduct.name}</p>
-                        {barcodeProduct.brand && <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>{barcodeProduct.brand}</p>}
-                      </div>
-                    )}
-                    <div style={{ position: 'relative', textAlign: 'center' }}>
-                      <div style={{ position: 'absolute', inset: '50% 0 auto', height: 1, background: 'var(--border)' }} />
-                      <span style={{ position: 'relative', background: 'white', padding: '0 12px', fontSize: 11, color: 'var(--text-light)', fontFamily: "'Nunito Sans', sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em' }}>or</span>
-                    </div>
-                    <button onClick={() => setShowCameraScanner(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px', border: '1.5px solid var(--border-dark)', borderRadius: 12, background: 'white', cursor: 'pointer', fontFamily: "'Nunito Sans', sans-serif", transition: 'all 0.18s' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Camera size={16} style={{ color: 'var(--green-primary)' }} />
-                      </div>
-                      <div style={{ textAlign: 'left' }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dark)' }}>Open Camera Scanner</p>
-                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Real-time ZXing barcode decoder</p>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </section>
+                  )}
 
-            {/* Wave back to bg */}
-            <div style={{ margin: '0 -20px' }}>
-              <svg viewBox="0 0 1440 50" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
-                <path d="M0 0L1440 0L1440 30C1200 50 960 10 720 30C480 50 240 10 0 30L0 0Z" fill="white" />
-              </svg>
-            </div>
-
-            {/* ── How it works (Yuka-style 3-col) ── */}
-            <section style={{ padding: '60px 0 80px' }}>
-              <div style={{ textAlign: 'center', marginBottom: 48 }}>
-                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 28, color: 'var(--text-dark)' }}>How SkinGuard works</h2>
-                <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 10, fontFamily: "'Nunito Sans', sans-serif" }}>Evidence-based ingredient analysis in three steps.</p>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }} className="stagger">
-                {[
-                  { num: '01', title: 'Match the INCI', body: 'Each ingredient is matched against 24,000+ EU CosIng database entries using fuzzy search and semantic embeddings.' },
-                  { num: '02', title: 'Score by profile', body: 'Risk scoring adapts to your skin type. What is safe for normal skin may be flagged for acne-prone or pregnant skin.' },
-                  { num: '03', title: 'Get the verdict', body: 'Receive a safety score, ingredient-by-ingredient findings, safer alternatives, and sourced citations.' },
-                ].map((step, i) => (
-                  <div key={i} className="card card-hover" style={{ padding: '32px 28px' }}>
-                    <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 48, color: 'var(--green-light)', lineHeight: 1, marginBottom: 16 }}>{step.num}</div>
-                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 10 }}>{step.title}</h3>
-                    <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.7, fontFamily: "'Nunito Sans', sans-serif" }}>{step.body}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* ── Sample analysis preview (Yuka-style card) ── */}
-            <section style={{ padding: '0 0 80px' }}>
-              <div style={{ background: 'white', borderRadius: 20, border: '1px solid var(--border)', padding: '36px', boxShadow: 'var(--shadow-md)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 32, alignItems: 'start' }}>
-                  <div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Sample Analysis — Hydrating Toner</span>
-                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--text-dark)', margin: '8px 0 20px' }}>What a report looks like</h3>
-
-                    {/* Ingredient rows (Yuka style) */}
+                  {/* Upload mode */}
+                  {inputMode === 'upload' && (
                     <div>
-                      {[
-                        { name: 'Niacinamide', desc: 'Brightening active — barrier repair', risk: 'good' },
-                        { name: 'Ceramide NP', desc: 'Skin-identical lipid — barrier support', risk: 'good' },
-                        { name: 'Salicylic Acid', desc: 'BHA exfoliant — pregnancy caution', risk: 'moderate' },
-                        { name: 'Alcohol Denat.', desc: 'Drying solvent — sensitises barrier', risk: 'moderate' },
-                        { name: 'Fragrance', desc: 'Contact allergen — EU SCCS concern', risk: 'bad' },
-                      ].map((ing, i) => (
-                        <div key={i} className="ingredient-row">
-                          <div className={`risk-dot risk-dot-${ing.risk}`} />
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', fontFamily: "'Nunito Sans', sans-serif" }}>{ing.name}</p>
-                            <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>{ing.desc}</p>
+                      {!previewUrl ? (
+                        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, border: '2px dashed #e8e4dc', borderRadius: 16, padding: '48px 24px', cursor: 'pointer', background: '#faf9f6', textAlign: 'center' }}>
+                          <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Upload size={22} style={{ color: '#4caf50' }} />
                           </div>
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 50, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Nunito Sans', sans-serif" }}
-                            className={`risk-badge-${ing.risk}`}>
-                            {ing.risk === 'good' ? 'Low risk' : ing.risk === 'moderate' ? 'Moderate' : 'High risk'}
-                          </span>
+                          <div>
+                            <p style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a' }}>Drop photo here or click to browse</p>
+                            <p style={{ fontSize: 12, color: '#6b6b6b', marginTop: 4 }}>AI-powered OCR reads the ingredient block — JPG, PNG, WEBP up to 8MB</p>
+                          </div>
+                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(URL.createObjectURL(f)); setError(null); } }} />
+                        </label>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e4dc' }}>
+                            <img src={previewUrl} alt="Label preview" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#f8f8f8', display: 'block' }} />
+                            <button onClick={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); setFile(null); setError(null); }} style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <X size={13}/>
+                            </button>
+                          </div>
+                          <button onClick={handleExtractText} disabled={isExtracting} className="btn-green" style={{ padding: '16px', fontSize: 17, width: '100%', borderRadius: 28 }}>
+                            {isExtracting ? <><Loader2 size={15} className="animate-spin"/> Extracting text via OCR...</> : <><FileText size={15}/> Extract Ingredient Text</>}
+                          </button>
                         </div>
-                      ))}
+                      )}
+                    </div>
+                  )}
+
+                  {/* Barcode mode */}
+                  {inputMode === 'barcode' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleBarcodeLookup(barcodeInput); }}
+                          placeholder="Enter product barcode (e.g. 0748948000214)..." className="input-field" style={{ fontFamily: 'monospace', flex: 1 }} />
+                        <button onClick={() => handleBarcodeLookup(barcodeInput)} disabled={isBarcodeLookingUp} className="btn-green" style={{ padding: '0 20px', flexShrink: 0, fontSize: 13 }}>
+                          {isBarcodeLookingUp ? <Loader2 size={13} className="animate-spin"/> : 'Look up'}
+                        </button>
+                      </div>
+                      {barcodeProduct && (
+                        <div style={{ padding: '12px 16px', background: '#e8f5e9', border: '1px solid rgba(76,175,80,0.2)', borderRadius: 10 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#388e3c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Product found</span>
+                          <p style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginTop: 2 }}>{barcodeProduct.name}</p>
+                          {barcodeProduct.brand && <p style={{ fontSize: 12, color: '#6b6b6b' }}>{barcodeProduct.brand}</p>}
+                        </div>
+                      )}
+                      <button onClick={() => setShowCameraScanner(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px', border: '1.5px solid #e8e4dc', borderRadius: 12, background: 'white', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Camera size={16} style={{ color: '#4caf50' }} />
+                        </div>
+                        <div style={{ textAlign: 'left' }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>Open Camera Scanner</p>
+                          <p style={{ fontSize: 11, color: '#6b6b6b' }}>Real-time ZXing barcode decoder</p>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── STATS ───────────────────────────────────────────────────────── */}
+          <section ref={statsRef} style={{ background: '#f0ede6', padding: '64px 24px' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 32, textAlign: 'center', marginBottom: 40 }}>
+                {[
+                  { target: 24000, suffix: '+', label: 'EU CosIng ingredients' },
+                  { target: 275, suffix: '+', label: 'Curated risk flags' },
+                  { target: 8, suffix: '', label: 'Routine conflict types checked' },
+                ].map((s, i) => (
+                  <div key={i}>
+                    <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 52, color: '#1b4332', lineHeight: 1 }}>
+                      <StatCounter target={s.target} suffix={s.suffix} running={statsRunning}/>
+                    </div>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: '#6b6b6b', marginTop: 8 }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{ width: 200, height: 1, background: '#d4c9b8', margin: '0 auto 20px' }}/>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <Stars n={5}/>
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: '#6b6b6b' }}>Free forever · No paywall · No ads</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── TESTIMONIALS ────────────────────────────────────────────────── */}
+          <section className="section-reveal" style={{ background: '#faf9f6', padding: '80px 24px', position: 'relative', overflow: 'hidden' }}>
+            {/* Decorative blobs */}
+            <svg style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, pointerEvents: 'none' }} width="200" height="160" viewBox="0 0 200 160">
+              <path d="M80,20 C120,5 180,40 170,90 C160,140 100,155 50,135 C0,115 -10,70 20,40 C50,10 40,35 80,20Z" fill="#e8f5e9" opacity="0.5"/>
+            </svg>
+            <svg style={{ position: 'absolute', top: -20, right: -20, zIndex: 0, pointerEvents: 'none' }} width="180" height="150" viewBox="0 0 180 150">
+              <path d="M90,15 C130,5 175,35 165,80 C155,130 90,148 45,128 C0,108 -5,65 20,35 C45,5 50,25 90,15Z" fill="#e8f5e9" opacity="0.5"/>
+            </svg>
+
+            <div style={{ maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', textAlign: 'center', marginBottom: 48 }}>What users are saying</h2>
+
+              <div className="testimonials-carousel" style={{ gap: 24 }}>
+                {[
+                  { initial: 'P', bg: '#4caf50', quote: "I used to spend 20 minutes googling every ingredient. SkinGuard does it instantly and actually explains what the flag means.", name: 'Priya R.' },
+                  { initial: 'M', bg: '#ef5350', quote: "Found out my 'gentle' cleanser had 3 pore-cloggers. Switched products and my skin finally cleared up.", name: 'Marcus T.' },
+                  { initial: 'L', bg: '#42a5f5', quote: "The fungal acne filter is something I've never seen in any other app. This is the tool dermatology Reddit has been asking for.", name: 'Lena K.' },
+                ].map((t, i) => (
+                  <div key={i} style={{ background: 'white', borderRadius: 20, border: '1px solid #e8e4dc', padding: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.05)', minWidth: 300, flex: '1 1 300px', maxWidth: 380 }}>
+                    {/* Quote mark */}
+                    <svg width="28" height="22" viewBox="0 0 28 22" fill="#4caf50" style={{ marginBottom: 12 }}>
+                      <path d="M0 22V12.5C0 5.5 4.5 1.5 13.5 0l1.5 2.5C10 3.5 7.5 6 7 10H12V22H0zm16 0V12.5C16 5.5 20.5 1.5 29.5 0L31 2.5C26 3.5 23.5 6 23 10H28V22H16z"/>
+                    </svg>
+                    <p style={{ fontFamily: "'Nunito', sans-serif", fontStyle: 'italic', fontSize: 16, color: '#1a1a1a', lineHeight: 1.6, marginBottom: 20 }}>{t.quote}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 16, color: 'white', flexShrink: 0 }}>{t.initial}</div>
+                      <div>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 14, color: '#388e3c' }}>{t.name}</p>
+                        <Stars n={5}/>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          </section>
 
-                  {/* Score dial */}
-                  <div style={{ textAlign: 'center', minWidth: 140 }}>
-                    <div style={{ position: 'relative', width: 120, height: 120, margin: '0 auto 12px' }}>
-                      <svg viewBox="0 0 120 120" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                        <circle cx="60" cy="60" r="52" className="score-ring-track" strokeWidth="8" />
-                        <circle cx="60" cy="60" r="52" className="score-ring-fill" strokeWidth="8" stroke="#f0a832"
-                          strokeDasharray={2 * Math.PI * 52} strokeDashoffset={2 * Math.PI * 52 * (1 - 0.68)}
-                          style={{ filter: 'drop-shadow(0 0 6px rgba(240,168,50,0.4))' }} />
+          {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
+          <section id="how-it-works" className="section-reveal" style={{ background: 'white', padding: '80px 24px' }}>
+            <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
+              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 40, color: '#1a1a1a', marginBottom: 12 }}>Three steps to cleaner skincare</h2>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: '#6b6b6b', marginBottom: 60 }}>No account needed to analyze. Sign up only to save your history.</p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 0, position: 'relative' }}>
+                {[
+                  {
+                    num: '1',
+                    icon: (
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="8" y="4" width="24" height="32" rx="3"/>
+                        <line x1="14" y1="13" x2="26" y2="13"/>
+                        <line x1="14" y1="19" x2="26" y2="19"/>
+                        <line x1="14" y1="25" x2="20" y2="25"/>
+                        <circle cx="28" cy="30" r="6" fill="#e8f5e9" stroke="#388e3c"/>
+                        <line x1="25" y1="30" x2="31" y2="30"/>
+                        <line x1="28" y1="27" x2="28" y2="33"/>
                       </svg>
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 30, fontWeight: 900, color: 'var(--text-dark)', lineHeight: 1, fontFamily: "'Nunito', sans-serif" }}>68</span>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Nunito Sans', sans-serif" }}>/ 100</span>
-                      </div>
-                    </div>
-                    <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 50, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Nunito Sans', sans-serif" }} className="risk-badge-moderate">Not Great</span>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5, fontFamily: "'Nunito Sans', sans-serif" }}>2 moderate concerns detected</p>
-                    <button onClick={handleTryDemo} className="btn-green" style={{ padding: '9px 18px', fontSize: 12, marginTop: 16, width: '100%' }}>
-                      Run real analysis
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════
-            ANALYZE — VERIFY INGREDIENTS
-            ═══════════════════════════════════════════════ */}
-        {activeTab === 'analyze' && !results && (
-          <div style={{ maxWidth: 700, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
-            <div style={{ marginBottom: 28 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Step 3</span>
-              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', margin: '8px 0 6px' }}>Verify Ingredients</h2>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.6 }}>Review extracted ingredients. Correct any OCR errors or add missing items before running the safety audit.</p>
-            </div>
-
-            {error && (
-              <div style={{ display: 'flex', gap: 10, padding: '12px 16px', background: '#fdeaea', border: '1px solid rgba(232,75,60,0.25)', borderRadius: 10, marginBottom: 16 }}>
-                <AlertTriangle size={15} style={{ color: '#e84b3c', flexShrink: 0, marginTop: 1 }} />
-                <span style={{ fontSize: 13, color: '#9a1e18', fontFamily: "'Nunito Sans', sans-serif" }}>{error}</span>
-              </div>
-            )}
-
-            <div className="card" style={{ padding: '24px', marginBottom: 16 }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                {extractedIngredients.map((ing, idx) => (
-                  <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1.5px solid var(--border-dark)', borderRadius: 50, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: 'var(--text-body)', fontFamily: "'Nunito Sans', sans-serif", cursor: 'default' }}>
-                    {editIndex === idx ? (
-                      <input value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => { const u = [...extractedIngredients]; u[idx] = editValue.trim(); setExtractedIngredients(u); setEditIndex(null); }} onKeyDown={e => { if (e.key === 'Enter') { const u = [...extractedIngredients]; u[idx] = editValue.trim(); setExtractedIngredients(u); setEditIndex(null); } }} autoFocus style={{ border: 'none', outline: 'none', width: 90, fontFamily: "'Nunito Sans', sans-serif", fontSize: 12, background: 'transparent', color: 'var(--text-dark)' }} />
-                    ) : (
-                      <span style={{ cursor: 'pointer' }} onClick={() => { setEditIndex(idx); setEditValue(ing); }}>{ing}</span>
-                    )}
-                    <button onClick={() => setExtractedIngredients(extractedIngredients.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 0, lineHeight: 1 }}>
-                      <X size={11} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input value={addIngredientInput} onChange={e => setAddIngredientInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} placeholder="Add missing ingredient..." className="input-field" style={{ fontSize: 13 }} />
-                <button onClick={() => { if (addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>
-                  <Plus size={13} /> Add
-                </button>
-              </div>
-            </div>
-
-            <button onClick={handleRunAnalysis} disabled={isAnalyzing || extractedIngredients.length === 0} className="btn-green" style={{ padding: '14px 24px', fontSize: 15, width: '100%' }}>
-              {isAnalyzing ? <><Loader2 size={16} className="animate-spin" /> Running safety audit...</> : <><ShieldCheck size={16} /> Run Safety Audit ({extractedIngredients.length} ingredients)</>}
-            </button>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════
-            RESULTS
-            ═══════════════════════════════════════════════ */}
-        {activeTab === 'analyze' && results && (
-          <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Safety Report</span>
-                <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', margin: '6px 0 0' }}>Ingredient Safety Audit</h2>
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => toggleSave(results.summary?.split(' ')[0] || 'Product')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e84b3c' : 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>
-                  <Heart size={13} fill={savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e84b3c' : 'none'} /> Save
-                </button>
-                <button onClick={() => { setResults(null); setActiveTab('home'); }} style={{ padding: '9px 16px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-body)', fontFamily: "'Nunito Sans', sans-serif" }}>
-                  New Scan
-                </button>
-              </div>
-            </div>
-            <ResultsDashboard results={results} onReanalyze={text => { setPastedIngredients(text); const p = text.split(',').map(s => s.trim()).filter(Boolean); setExtractedIngredients(p); setResults(null); setActiveTab('analyze'); }} />
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════
-            ROUTINE LAYERING
-            ═══════════════════════════════════════════════ */}
-        {activeTab === 'routine' && (
-          <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
-            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', marginBottom: 6 }}>Routine Layering Checker</h2>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, fontFamily: "'Nunito Sans', sans-serif" }}>Detect dangerous active ingredient conflicts across your full skincare routine.</p>
-            <div className="card" style={{ padding: 24 }}>
-              <RoutineAnalyzer scans={scans} />
-            </div>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════
-            PRODUCT COMPARE
-            ═══════════════════════════════════════════════ */}
-        {activeTab === 'compare' && (
-          <div style={{ maxWidth: 960, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
-            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', marginBottom: 6 }}>Product Compare</h2>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, fontFamily: "'Nunito Sans', sans-serif" }}>Compare safety scores and ingredient profiles of two products side by side.</p>
-            <ComparePanel currentAnalysis={results} scans={scans} />
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════
-            ENCYCLOPEDIA
-            ═══════════════════════════════════════════════ */}
-        {activeTab === 'learn' && (
-          <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
-            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', marginBottom: 6 }}>Ingredient Encyclopedia</h2>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 32, fontFamily: "'Nunito Sans', sans-serif" }}>Search INCI definitions, clinical data, and skincare terminology.</p>
-
-            {/* INCI search */}
-            <div className="card" style={{ padding: 28, marginBottom: 24 }}>
-              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: 'var(--text-dark)', marginBottom: 16 }}>INCI Registry Lookup</h3>
-              <form onSubmit={handleSearchEncyclopedia} style={{ display: 'flex', gap: 8, marginBottom: 0 }}>
-                <input value={encyclopediaSearch} onChange={e => setEncyclopediaSearch(e.target.value)} placeholder="Enter ingredient name (e.g. Niacinamide, Retinol...)" className="input-field" style={{ fontSize: 13 }} />
-                <button type="submit" disabled={encyclopediaLoading} className="btn-green" style={{ padding: '0 20px', flexShrink: 0, fontSize: 13, height: 46 }}>
-                  {encyclopediaLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                </button>
-              </form>
-              {encyclopediaResult && (
-                <div style={{ marginTop: 20, padding: '20px', background: 'var(--bg-section)', borderRadius: 12, border: '1px solid var(--border)' }} className="animate-fade-up">
-                  <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--green-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Nunito Sans', sans-serif" }}>Registry Profile</span>
-                  <h4 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: 'var(--text-dark)', margin: '6px 0 16px' }}>{encyclopediaResult.name}</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {[
-                      { label: 'What it is', val: encyclopediaResult.description },
-                      { label: 'Primary function', val: encyclopediaResult.benefits },
-                      { label: 'Risks and side effects', val: encyclopediaResult.sideEffects },
-                      { label: 'Suitable skin types', val: encyclopediaResult.types },
-                    ].map((f, i) => (
-                      <div key={i}>
-                        <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, fontFamily: "'Nunito Sans', sans-serif" }}>{f.label}</p>
-                        <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.65, fontFamily: "'Nunito Sans', sans-serif" }}>{f.val}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <p style={{ fontSize: 10, color: 'var(--text-light)', marginTop: 16, fontFamily: "'Nunito Sans', sans-serif" }}>Source: {encyclopediaResult.sources}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Glossary */}
-            <div className="card" style={{ padding: 28 }}>
-              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: 'var(--text-dark)', marginBottom: 16 }}>Skincare Glossary</h3>
-              <div style={{ position: 'relative', marginBottom: 20 }}>
-                <input value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)} placeholder="Search terms..." className="input-field" style={{ paddingRight: 44 }} />
-                <Search size={14} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)', pointerEvents: 'none' }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12, maxHeight: 380, overflowY: 'auto' }} className="custom-scroll">
-                {filteredGlossary.map((item, i) => (
-                  <div key={i} style={{ padding: '14px 16px', background: 'var(--bg-section)', borderRadius: 10, border: '1px solid var(--border)' }}>
-                    <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-dark)', marginBottom: 5, fontFamily: "'Nunito', sans-serif" }}>{item.term}</p>
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.65, fontFamily: "'Nunito Sans', sans-serif" }}>{item.definition}</p>
+                    ),
+                    title: 'Paste or photograph',
+                    body: 'Type, paste, or photograph your product\'s ingredient list.',
+                  },
+                  {
+                    num: '2',
+                    icon: (
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="6" y="6" width="12" height="12" rx="2"/>
+                        <rect x="22" y="6" width="12" height="12" rx="2"/>
+                        <rect x="6" y="22" width="12" height="12" rx="2"/>
+                        <rect x="22" y="22" width="12" height="12" rx="2"/>
+                      </svg>
+                    ),
+                    title: 'Matched against EU data',
+                    body: 'Every ingredient is checked against 24,000+ EU CosIng entries and 275 curated risk flags.',
+                  },
+                  {
+                    num: '3',
+                    icon: (
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#388e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 4L8 9v10c0 9 5.5 17.5 12 20 6.5-2.5 12-11 12-20V9L20 4z"/>
+                        <polyline points="14,20 18,24 26,16"/>
+                      </svg>
+                    ),
+                    title: 'Your personalised verdict',
+                    body: 'Get a safety score, per-ingredient findings, and plain-language explanations tailored to your skin profile.',
+                  },
+                ].map((step, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 24px' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#4caf50', marginBottom: 16 }}>{step.num}</div>
+                    <div style={{ marginBottom: 14 }}>{step.icon}</div>
+                    <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 18, color: '#1a1a1a', marginBottom: 10 }}>{step.title}</h3>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, color: '#6b6b6b', lineHeight: 1.6, maxWidth: 200 }}>{step.body}</p>
                   </div>
                 ))}
               </div>
             </div>
+          </section>
+
+          {/* ── IMPACT BANNER ───────────────────────────────────────────────── */}
+          <section style={{ background: '#4caf50', padding: '64px 24px', position: 'relative', overflow: 'hidden' }}>
+            {/* Decorative leaves */}
+            <svg style={{ position: 'absolute', left: 40, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="80" height="80" viewBox="0 0 80 80">
+              <path d="M20 60 Q40 10 70 20 Q60 50 20 60Z" fill="rgba(255,255,255,0.18)"/>
+              <path d="M10 70 Q35 30 60 40 Q50 65 10 70Z" fill="rgba(255,255,255,0.12)"/>
+              <path d="M30 55 Q55 15 75 30 Q65 55 30 55Z" fill="rgba(255,255,255,0.09)"/>
+            </svg>
+            <svg style={{ position: 'absolute', right: 40, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="60" height="80" viewBox="0 0 60 80">
+              <rect x="25" y="10" width="10" height="50" rx="5" fill="rgba(255,255,255,0.15)"/>
+              <ellipse cx="30" cy="20" rx="16" ry="24" fill="rgba(255,255,255,0.12)"/>
+            </svg>
+
+            <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+              <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 64, color: 'white', lineHeight: 1 }}>1 in 3</div>
+              <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 24, color: 'white', margin: '12px 0 8px' }}>products analyzed contain at least one flagged ingredient</div>
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: 'rgba(255,255,255,0.8)' }}>Based on SkinGuard analyses using EU CosIng data</div>
+            </div>
+          </section>
+
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          ANALYZE TAB — VERIFY INGREDIENTS
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'analyze' && !results && (
+        <div style={{ maxWidth: 700, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
+          <div style={{ marginBottom: 28 }}>
+            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', margin: '8px 0 6px' }}>Verify Ingredients</h2>
+            <p style={{ fontSize: 13, color: '#6b6b6b', lineHeight: 1.6 }}>Review extracted ingredients. Correct any OCR errors or add missing items before running the safety audit.</p>
           </div>
-        )}
 
-        {/* ═══════════════════════════════════════════════
-            MY VANITY
-            ═══════════════════════════════════════════════ */}
-        {activeTab === 'vanity' && (
-          <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 0 60px' }} className="animate-fade-up">
-            <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--text-dark)', marginBottom: 6 }}>My Skincare Vanity</h2>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 32, fontFamily: "'Nunito Sans', sans-serif" }}>Your saved products and safety audit history.</p>
+          {error && (
+            <div style={{ display: 'flex', gap: 10, padding: '12px 16px', background: '#fdeaea', border: '1px solid rgba(229,57,53,0.25)', borderRadius: 10, marginBottom: 16 }}>
+              <AlertTriangle size={15} style={{ color: '#e53935', flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 13, color: '#c62828' }}>{error}</span>
+            </div>
+          )}
 
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
-              {[
-                { label: 'Scans performed', value: scans.length, desc: 'Total safety checks' },
-                { label: 'Saved products', value: savedProducts.length, desc: 'In your cabinet' },
-                { label: 'Flagged scans', value: scans.filter(s => s.safety_score !== null && s.safety_score < 80).length, desc: 'Moderate or worse', alert: true },
-              ].map((stat, i) => (
-                <div key={i} className="card" style={{ padding: '20px 24px' }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'Nunito Sans', sans-serif" }}>{stat.label}</p>
-                  <p style={{ fontSize: 32, fontWeight: 900, color: stat.alert && stat.value > 0 ? 'var(--risk-bad)' : 'var(--text-dark)', lineHeight: 1.1, margin: '4px 0 2px', fontFamily: "'Nunito', sans-serif" }}>{stat.value}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-light)', fontFamily: "'Nunito Sans', sans-serif" }}>{stat.desc}</p>
+          <div className="card" style={{ padding: '24px', marginBottom: 16 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+              {extractedIngredients.map((ing, idx) => (
+                <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1.5px solid #e8e4dc', borderRadius: 50, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#1a1a1a', cursor: 'default' }}>
+                  {editIndex === idx ? (
+                    <input value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => { const u = [...extractedIngredients]; u[idx] = editValue.trim(); setExtractedIngredients(u); setEditIndex(null); }} onKeyDown={e => { if (e.key === 'Enter') { const u = [...extractedIngredients]; u[idx] = editValue.trim(); setExtractedIngredients(u); setEditIndex(null); } }} autoFocus style={{ border: 'none', outline: 'none', width: 90, fontSize: 12, background: 'transparent', color: '#1a1a1a' }} />
+                  ) : (
+                    <span style={{ cursor: 'pointer' }} onClick={() => { setEditIndex(idx); setEditValue(ing); }}>{ing}</span>
+                  )}
+                  <button onClick={() => setExtractedIngredients(extractedIngredients.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b6b6b', display: 'flex', padding: 0 }}>
+                    <X size={11}/>
+                  </button>
                 </div>
               ))}
             </div>
-
-            {/* Skin profile */}
-            <div className="card" style={{ padding: 24, marginBottom: 24 }}>
-              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 16 }}>My Skin Profile</h3>
-              <ProfilePanel profile={profile} onToggle={handleProfileToggle} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={addIngredientInput} onChange={e => setAddIngredientInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} placeholder="Add missing ingredient..." className="input-field" style={{ fontSize: 13 }} />
+              <button onClick={() => { if (addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>
+                <Plus size={13}/> Add
+              </button>
             </div>
+          </div>
 
-            {/* Avoid list */}
-            <div className="card" style={{ padding: 24, marginBottom: 24 }}>
-              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 8 }}>Personal Avoid List</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, fontFamily: "'Nunito Sans', sans-serif" }}>Ingredients flagged in your personal analyses.</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                {allergies.map((a, i) => (
-                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 50, fontSize: 12, fontWeight: 700, fontFamily: "'Nunito Sans', sans-serif" }} className="risk-badge-bad">
-                    {a}
-                    <button onClick={() => { const next = allergies.filter((_, idx) => idx !== i); setAllergies(next); saveProfileToBackend(profile, next); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={10} /></button>
-                  </span>
+          <button onClick={handleRunAnalysis} disabled={isAnalyzing || extractedIngredients.length === 0} className="btn-green" style={{ padding: '14px 24px', fontSize: 15, width: '100%' }}>
+            {isAnalyzing ? <><Loader2 size={16} className="animate-spin"/> Running safety audit...</> : <><ShieldCheck size={16}/> Run Safety Audit ({extractedIngredients.length} ingredients)</>}
+          </button>
+        </div>
+      )}
+
+      {/* ── RESULTS ──────────────────────────────────────────────────────────── */}
+      {activeTab === 'analyze' && results && (
+        <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#388e3c', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Safety Report</span>
+              <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', margin: '6px 0 0' }}>Ingredient Safety Audit</h2>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => toggleSave(results.summary?.split(' ')[0] || 'Product')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e53935' : '#6b6b6b' }}>
+                <Heart size={13} fill={savedProducts.some(p => p.name === results.summary?.split(' ')[0]) ? '#e53935' : 'none'}/> Save
+              </button>
+              <button onClick={() => { setResults(null); setActiveTab('home'); }} style={{ padding: '9px 16px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#1a1a1a' }}>
+                New Scan
+              </button>
+            </div>
+          </div>
+          <ResultsDashboard results={results} onReanalyze={text => { setPastedIngredients(text); const p = text.split(',').map(s => s.trim()).filter(Boolean); setExtractedIngredients(p); setResults(null); setActiveTab('analyze'); }} />
+        </div>
+      )}
+
+      {/* ── ROUTINE ──────────────────────────────────────────────────────────── */}
+      {activeTab === 'routine' && (
+        <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
+          <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', marginBottom: 6 }}>Routine Layering Checker</h2>
+          <p style={{ fontSize: 13, color: '#6b6b6b', marginBottom: 24 }}>Detect dangerous active ingredient conflicts across your full skincare routine.</p>
+          <div className="card" style={{ padding: 24 }}><RoutineAnalyzer scans={scans}/></div>
+        </div>
+      )}
+
+      {/* ── COMPARE ──────────────────────────────────────────────────────────── */}
+      {activeTab === 'compare' && (
+        <div style={{ maxWidth: 960, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
+          <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', marginBottom: 6 }}>Product Compare</h2>
+          <p style={{ fontSize: 13, color: '#6b6b6b', marginBottom: 24 }}>Compare safety scores and ingredient profiles of two products side by side.</p>
+          <ComparePanel currentAnalysis={results} scans={scans}/>
+        </div>
+      )}
+
+      {/* ── ENCYCLOPEDIA ─────────────────────────────────────────────────────── */}
+      {activeTab === 'learn' && (
+        <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
+          <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', marginBottom: 6 }}>Ingredient Encyclopedia</h2>
+          <p style={{ fontSize: 13, color: '#6b6b6b', marginBottom: 32 }}>Search INCI definitions, clinical data, and skincare terminology.</p>
+          <div className="card" style={{ padding: 28, marginBottom: 24 }}>
+            <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: '#1a1a1a', marginBottom: 16 }}>INCI Registry Lookup</h3>
+            <form onSubmit={handleSearchEncyclopedia} style={{ display: 'flex', gap: 8, marginBottom: 0 }}>
+              <input value={encyclopediaSearch} onChange={e => setEncyclopediaSearch(e.target.value)} placeholder="Enter ingredient name (e.g. Niacinamide, Retinol...)" className="input-field" style={{ fontSize: 13 }} />
+              <button type="submit" disabled={encyclopediaLoading} className="btn-green" style={{ padding: '0 20px', flexShrink: 0, fontSize: 13, height: 46 }}>
+                {encyclopediaLoading ? <Loader2 size={14} className="animate-spin"/> : <Search size={14}/>}
+              </button>
+            </form>
+            {encyclopediaResult && (
+              <div style={{ marginTop: 20, padding: '20px', background: '#faf9f6', borderRadius: 12, border: '1px solid #e8e4dc' }} className="animate-fade-up">
+                <span style={{ fontSize: 9, fontWeight: 700, color: '#388e3c', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Registry Profile</span>
+                <h4 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#1a1a1a', margin: '6px 0 16px' }}>{encyclopediaResult.name}</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  {[
+                    { label: 'What it is', val: encyclopediaResult.description },
+                    { label: 'Primary function', val: encyclopediaResult.benefits },
+                    { label: 'Risks and side effects', val: encyclopediaResult.sideEffects },
+                    { label: 'Suitable skin types', val: encyclopediaResult.types },
+                  ].map((f, i) => (
+                    <div key={i}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: '#6b6b6b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{f.label}</p>
+                      <p style={{ fontSize: 13, color: '#1a1a1a', lineHeight: 1.65 }}>{f.val}</p>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 10, color: '#9e9e9e', marginTop: 16 }}>Source: {encyclopediaResult.sources}</p>
+              </div>
+            )}
+          </div>
+          <div className="card" style={{ padding: 28 }}>
+            <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 18, color: '#1a1a1a', marginBottom: 16 }}>Skincare Glossary</h3>
+            <div style={{ position: 'relative', marginBottom: 20 }}>
+              <input value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)} placeholder="Search terms..." className="input-field" style={{ paddingRight: 44 }} />
+              <Search size={14} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: '#9e9e9e', pointerEvents: 'none' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 12, maxHeight: 380, overflowY: 'auto' }} className="custom-scroll">
+              {filteredGlossary.map((item, i) => (
+                <div key={i} style={{ padding: '14px 16px', background: '#faf9f6', borderRadius: 10, border: '1px solid #e8e4dc' }}>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: '#1a1a1a', marginBottom: 5, fontFamily: "'Nunito', sans-serif" }}>{item.term}</p>
+                  <p style={{ fontSize: 12, color: '#6b6b6b', lineHeight: 1.65 }}>{item.definition}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MY VANITY ────────────────────────────────────────────────────────── */}
+      {activeTab === 'vanity' && (
+        <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px 60px' }} className="animate-fade-up">
+          <h2 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 26, color: '#1a1a1a', marginBottom: 6 }}>My Skincare Vanity</h2>
+          <p style={{ fontSize: 13, color: '#6b6b6b', marginBottom: 32 }}>Your saved products and safety audit history.</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 32 }}>
+            {[
+              { label: 'Scans performed', value: scans.length, desc: 'Total safety checks' },
+              { label: 'Saved products', value: savedProducts.length, desc: 'In your cabinet' },
+              { label: 'Flagged scans', value: scans.filter(s => s.safety_score !== null && s.safety_score < 80).length, desc: 'Moderate or worse', alert: true },
+            ].map((stat, i) => (
+              <div key={i} className="card" style={{ padding: '20px 24px' }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: '#6b6b6b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{stat.label}</p>
+                <p style={{ fontFamily: "'Nunito', sans-serif", fontSize: 32, fontWeight: 900, color: stat.alert && stat.value > 0 ? '#e53935' : '#1a1a1a', lineHeight: 1.1, margin: '4px 0 2px' }}>{stat.value}</p>
+                <p style={{ fontSize: 11, color: '#9e9e9e' }}>{stat.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+            <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: '#1a1a1a', marginBottom: 16 }}>My Skin Profile</h3>
+            <ProfilePanel profile={profile} onToggle={handleProfileToggle}/>
+          </div>
+
+          <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+            <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: '#1a1a1a', marginBottom: 8 }}>Personal Avoid List</h3>
+            <p style={{ fontSize: 12, color: '#6b6b6b', marginBottom: 16 }}>Ingredients flagged in your personal analyses.</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {allergies.map((a, i) => (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 50, fontSize: 12, fontWeight: 700 }} className="risk-badge-bad">
+                  {a}
+                  <button onClick={() => { const next = allergies.filter((_, idx) => idx !== i); setAllergies(next); saveProfileToBackend(profile, next); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', padding: 0 }}><X size={10}/></button>
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={newAllergyInput} onChange={e => setNewAllergyInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newAllergyInput.trim()) { const next = [...allergies, newAllergyInput.trim()]; setAllergies(next); saveProfileToBackend(profile, next); setNewAllergyInput(''); } }} placeholder="Add ingredient to avoid..." className="input-field" style={{ fontSize: 13 }} />
+              <button onClick={() => { if (newAllergyInput.trim()) { const next = [...allergies, newAllergyInput.trim()]; setAllergies(next); saveProfileToBackend(profile, next); setNewAllergyInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13 }}>Add</button>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: '#1a1a1a', marginBottom: 14 }}>Saved Products</h3>
+            {savedProducts.length === 0 ? (
+              <div className="card" style={{ padding: '40px 24px', textAlign: 'center' }}>
+                <p style={{ color: '#6b6b6b', fontSize: 13 }}>No saved products yet. Run an analysis and save results here.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 14 }}>
+                {savedProducts.map(p => (
+                  <div key={p.id} className="card card-hover" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <span style={{ fontSize: 10, color: '#9e9e9e' }}>Saved {p.date}</span>
+                      <p style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginTop: 2, fontFamily: "'Nunito', sans-serif" }}>{p.name}</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: p.score >= 80 ? '#43a047' : p.score >= 50 ? '#f57c00' : '#e53935', fontFamily: "'Nunito', sans-serif" }}>Score: {p.score}/100</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => { setResults(p.result); setActiveTab('analyze'); }} className="btn-green" style={{ flex: 1, padding: '8px', fontSize: 12 }}>Open</button>
+                      <button onClick={() => { const n = savedProducts.filter(x => x.id !== p.id); setSavedProducts(n); if (user) localStorage.setItem(`sg_saved_${user.email}`, JSON.stringify(n)); }} style={{ padding: '8px 12px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', color: '#e53935', display: 'flex' }}>
+                        <X size={13}/>
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input value={newAllergyInput} onChange={e => setNewAllergyInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newAllergyInput.trim()) { const next = [...allergies, newAllergyInput.trim()]; setAllergies(next); saveProfileToBackend(profile, next); setNewAllergyInput(''); } }} placeholder="Add ingredient to avoid..." className="input-field" style={{ fontSize: 13 }} />
-                <button onClick={() => { if (newAllergyInput.trim()) { const next = [...allergies, newAllergyInput.trim()]; setAllergies(next); saveProfileToBackend(profile, next); setNewAllergyInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13 }}>Add</button>
-              </div>
-            </div>
+            )}
+          </div>
 
-            {/* Saved products */}
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 14 }}>Saved Products</h3>
-              {savedProducts.length === 0 ? (
-                <div className="card" style={{ padding: '40px 24px', textAlign: 'center' }}>
-                  <p style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: "'Nunito Sans', sans-serif" }}>No saved products yet. Run an analysis and save results here.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
-                  {savedProducts.map(p => (
-                    <div key={p.id} className="card card-hover" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div>
-                        <span style={{ fontSize: 10, color: 'var(--text-light)', fontFamily: "'Nunito Sans', sans-serif" }}>Saved {p.date}</span>
-                        <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-dark)', marginTop: 2, fontFamily: "'Nunito', sans-serif" }}>{p.name}</p>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: p.score >= 80 ? 'var(--risk-good)' : p.score >= 50 ? 'var(--risk-moderate)' : 'var(--risk-bad)', fontFamily: "'Nunito', sans-serif" }}>Score: {p.score}/100</p>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => { setResults(p.result); setActiveTab('analyze'); }} className="btn-green" style={{ flex: 1, padding: '8px', fontSize: 12 }}>Open</button>
-                        <button onClick={() => { const n = savedProducts.filter(x => x.id !== p.id); setSavedProducts(n); if (user) localStorage.setItem(`sg_saved_${user.email}`, JSON.stringify(n)); }} style={{ padding: '8px 12px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', color: 'var(--risk-bad)', display: 'flex' }}>
-                          <X size={13} />
-                        </button>
-                      </div>
+          <div>
+            <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: '#1a1a1a', marginBottom: 14 }}>Analysis History</h3>
+            {scans.length === 0 ? (
+              <div className="card" style={{ padding: '40px 24px', textAlign: 'center' }}>
+                <p style={{ color: '#6b6b6b', fontSize: 13 }}>No analyses performed yet.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {scans.map((scan, idx) => (
+                  <div key={idx} className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: scan.safety_score >= 80 ? '#e8f5e9' : scan.safety_score >= 50 ? '#fff3e0' : '#fdeaea' }}>
+                      <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 16, fontWeight: 900, color: scan.safety_score >= 80 ? '#43a047' : scan.safety_score >= 50 ? '#f57c00' : '#e53935', lineHeight: 1 }}>{scan.safety_score ?? '—'}</span>
+                      <span style={{ fontSize: 8, color: '#6b6b6b' }}>/100</span>
                     </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 700, fontSize: 13, color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Nunito', sans-serif" }}>{scan.summary || 'Ingredient Scan'}</p>
+                      <p style={{ fontSize: 11, color: '#6b6b6b' }}>{new Date(scan.created_at || Date.now()).toLocaleDateString()}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      {scan.result && <button onClick={() => { setResults(scan.result); setActiveTab('analyze'); }} className="btn-green" style={{ padding: '7px 14px', fontSize: 11 }}>Open</button>}
+                      <button onClick={() => setScans(prev => prev.filter(s => s.id !== scan.id))} style={{ padding: '7px 10px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', color: '#e53935', display: 'flex' }}>
+                        <Trash2 size={12}/>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── FOOTER ──────────────────────────────────────────────────────────── */}
+      <footer style={{ background: '#f0ede6', borderTop: '1px solid #e8e4dc' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px 32px' }}>
+          {/* Top row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 48, paddingBottom: 48, borderBottom: '1px solid #e8e4dc' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <img src="/hero-bottle.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover' }} />
+                <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#1b4332' }}>SkinGuard</span>
+              </div>
+              <p style={{ fontSize: 14, color: '#6b6b6b', fontFamily: "'Inter', sans-serif", lineHeight: 1.6, maxWidth: 200 }}>
+                Free ingredient safety analysis backed by EU CosIng data. No ads. No brand influence.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 32 }}>
+              {[
+                { heading: 'Tool', links: ['Purity Check', 'Routine Checker', 'Compare Products', 'Ingredient Encyclopedia'] },
+                { heading: 'Project', links: ['How It Works', 'Our Data Sources', 'Open Source', 'GitHub ↗'] },
+                { heading: 'Legal', links: ['Privacy Policy', 'Terms of Use', 'Data Sources', 'Contact'] },
+              ].map(col => (
+                <div key={col.heading}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16, fontFamily: "'Inter', sans-serif" }}>{col.heading}</p>
+                  {col.links.map(link => (
+                    <a key={link} href="#" style={{ display: 'block', fontSize: 14, color: '#6b6b6b', fontFamily: "'Inter', sans-serif", marginBottom: 12 }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#1b4332')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#6b6b6b')}>
+                      {link}
+                    </a>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Scan history */}
-            <div>
-              <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--text-dark)', marginBottom: 14 }}>Analysis History</h3>
-              {scans.length === 0 ? (
-                <div className="card" style={{ padding: '40px 24px', textAlign: 'center' }}>
-                  <p style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: "'Nunito Sans', sans-serif" }}>No analyses performed yet.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {scans.map((scan, idx) => (
-                    <div key={idx} className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                      <div style={{ width: 48, height: 48, borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: scan.safety_score >= 80 ? 'var(--risk-good-bg)' : scan.safety_score >= 50 ? 'var(--risk-moderate-bg)' : 'var(--risk-bad-bg)' }}>
-                        <span style={{ fontSize: 16, fontWeight: 900, color: scan.safety_score >= 80 ? 'var(--risk-good)' : scan.safety_score >= 50 ? 'var(--risk-moderate)' : 'var(--risk-bad)', fontFamily: "'Nunito', sans-serif", lineHeight: 1 }}>{scan.safety_score ?? '—'}</span>
-                        <span style={{ fontSize: 8, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>/100</span>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Nunito', sans-serif" }}>{scan.summary || 'Ingredient Scan'}</p>
-                        <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'Nunito Sans', sans-serif" }}>{new Date(scan.created_at || Date.now()).toLocaleDateString()}</p>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                        {scan.result && <button onClick={() => { setResults(scan.result); setActiveTab('analyze'); }} className="btn-green" style={{ padding: '7px 14px', fontSize: 11 }}>Open</button>}
-                        <button onClick={() => setScans(prev => prev.filter(s => s.id !== scan.id))} style={{ padding: '7px 10px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', color: 'var(--risk-bad)', display: 'flex' }}>
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* ─── Footer ────────────────────────────────────────────────────────── */}
-      <footer style={{ background: '#1a2e1e', color: 'rgba(255,255,255,0.6)', padding: '40px 20px 32px', marginTop: 40 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 32, alignItems: 'start', flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <ShieldCheck size={18} color="white" />
-                <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 16, color: 'white' }}>SkinGuard</span>
-              </div>
-              <p style={{ fontSize: 12, lineHeight: 1.65, maxWidth: 240, fontFamily: "'Nunito Sans', sans-serif" }}>Evidence-based cosmetic ingredient safety checker using EU CosIng database.</p>
-            </div>
-            <div />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'right' }}>
-              <p style={{ fontSize: 11, fontFamily: "'Nunito Sans', sans-serif" }}>EU CosIng Inventory</p>
-              <p style={{ fontSize: 11, fontFamily: "'Nunito Sans', sans-serif" }}>Dermatology Consensus Data</p>
-              <p style={{ fontSize: 11, fontFamily: "'Nunito Sans', sans-serif" }}>SCCS Scientific Opinions</p>
-            </div>
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 28, paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-            <p style={{ fontSize: 11, fontFamily: "'Nunito Sans', sans-serif" }}>
-              <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Educational use only.</strong> SkinGuard does not constitute medical advice. Consult a dermatologist for personal concerns.
+          {/* Bottom bar */}
+          <div style={{ paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            <p style={{ fontSize: 13, color: '#9e9e9e', fontFamily: "'Inter', sans-serif" }}>
+              © 2025 SkinGuard · Not medical advice · Educational use only
             </p>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <a href="#" style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: "'Nunito Sans', sans-serif" }}>Privacy</a>
-              <a href="#" style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: "'Nunito Sans', sans-serif" }}>Methodology</a>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4caf50' }} />
+              <p style={{ fontSize: 13, color: '#9e9e9e', fontFamily: "'Inter', sans-serif" }}>Built with EU CosIng data</p>
             </div>
           </div>
         </div>
       </footer>
 
-      {/* ─── Auth Modal ────────────────────────────────────────────────────── */}
+      {/* ─── Auth Modal ───────────────────────────────────────────────────────── */}
       {showLoginModal && (
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowLoginModal(false); setAuthError(null); } }}>
           <div className="modal-box">
-            <div style={{ background: 'var(--teal-header)', padding: '28px 28px 24px', textAlign: 'center' }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                <ShieldCheck size={22} color="white" />
+            <div style={{ background: '#1b4332', padding: '28px 28px 24px', textAlign: 'center', position: 'relative' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <ShieldCheck size={22} color="white"/>
               </div>
               <h3 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: 'white', marginBottom: 4 }}>
                 {authMode === 'login' ? 'Sign in to SkinGuard' : authMode === 'signup' ? 'Create account' : 'Reset password'}
               </h3>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: "'Nunito Sans', sans-serif" }}>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: "'Inter', sans-serif" }}>
                 {authMode === 'login' ? 'Access your scan history and profile.' : authMode === 'signup' ? 'Personalize your skin profile and track products.' : 'Enter your email to receive a reset link.'}
               </p>
               <button onClick={() => { setShowLoginModal(false); setAuthError(null); }} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
-                <X size={14} />
+                <X size={14}/>
               </button>
             </div>
 
             <form onSubmit={handleAuthSubmit} style={{ padding: '24px 28px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {authError && <div style={{ padding: '10px 14px', background: '#fdeaea', border: '1px solid rgba(232,75,60,0.25)', borderRadius: 8, fontSize: 12, color: '#9a1e18', fontFamily: "'Nunito Sans', sans-serif" }}>{authError}</div>}
-
-              {authMode === 'signup' && <input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Full name" className="input-field" />}
-              <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="Email address" className="input-field" />
-              {authMode !== 'forgot' && <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Password" className="input-field" />}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontFamily: "'Nunito Sans', sans-serif" }}>
-                {authMode === 'login' && <button type="button" onClick={() => setAuthMode('forgot')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--green-primary)', fontWeight: 600 }}>Forgot password?</button>}
-                <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--green-primary)', fontWeight: 600, marginLeft: 'auto' }}>
+              {authError && <div style={{ padding: '10px 14px', background: '#fdeaea', border: '1px solid rgba(229,57,53,0.25)', borderRadius: 8, fontSize: 12, color: '#c62828' }}>{authError}</div>}
+              {authMode === 'signup' && <input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Full name" className="input-field"/>}
+              <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="Email address" className="input-field"/>
+              {authMode !== 'forgot' && <input type="password" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Password" className="input-field"/>}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                {authMode === 'login' && <button type="button" onClick={() => setAuthMode('forgot')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4caf50', fontWeight: 600 }}>Forgot password?</button>}
+                <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4caf50', fontWeight: 600, marginLeft: 'auto' }}>
                   {authMode === 'login' ? 'Create account' : 'Sign in instead'}
                 </button>
               </div>
-
               <button type="submit" className="btn-green" style={{ padding: '13px 24px', fontSize: 14, width: '100%' }}>
                 {authMode === 'login' ? 'Sign In' : authMode === 'signup' ? 'Create Account' : 'Send Reset Link'}
               </button>
-
               {authMode === 'login' && (
-                <button type="button" onClick={() => handleLoginMock('demo@skinguard.app', 'Demo User')} style={{ padding: '12px 24px', border: '1.5px solid var(--border-dark)', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-body)', fontFamily: "'Nunito Sans', sans-serif" }}>
+                <button type="button" onClick={() => handleLoginMock('demo@skinguard.app', 'Demo User')} style={{ padding: '12px 24px', border: '1.5px solid #e8e4dc', borderRadius: 50, background: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
                   Continue as Demo User
                 </button>
               )}
