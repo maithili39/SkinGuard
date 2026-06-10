@@ -334,7 +334,7 @@ export default function Home() {
 
           {/* Logo */}
           <button onClick={() => { setResults(null); setExtractedIngredients([]); setActiveTab('home'); }} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-            <img src="/hero-bottle.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', background: '#f0ede6' }} />
+            <img src="/logo.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', background: '#f0ede6' }} />
             <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#1b4332', letterSpacing: '-0.02em' }}>SkinGuard</span>
           </button>
 
@@ -1040,7 +1040,7 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 48, paddingBottom: 48, borderBottom: '1px solid #e8e4dc' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <img src="/hero-bottle.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover' }} />
+                <img src="/logo.png" alt="SkinGuard" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover' }} />
                 <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 20, color: '#1b4332' }}>SkinGuard</span>
               </div>
               <p style={{ fontSize: 14, color: '#6b6b6b', fontFamily: "'Inter', sans-serif", lineHeight: 1.6, maxWidth: 200 }}>
