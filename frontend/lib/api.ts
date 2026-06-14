@@ -172,7 +172,7 @@ export type BarcodeResult = z.infer<typeof BarcodeResultSchema>;
 export const RoutineResultSchema = z.object({
   compatible: z.boolean(),
   summary: z.string(),
-  product_actives: z.record(z.record(z.string())),
+  product_actives: z.record(z.string(), z.record(z.string(), z.string())),
   conflicts: z.array(z.object({
     product_a: z.string(),
     product_b: z.string(),
