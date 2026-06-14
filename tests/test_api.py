@@ -145,7 +145,7 @@ def test_register_new_user(client):
     email = f"test_{uuid.uuid4().hex[:8]}@example.com"
     r = client.post(
         "/auth/register",
-        json={"email": email, "password": "securepass123"},
+        json={"email": email, "password": "Securepass123!"},
     )
     assert r.status_code == 201
     data = r.json()
@@ -157,8 +157,8 @@ def test_register_new_user(client):
 
 def test_register_duplicate_email(client):
     email = f"dup_{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/auth/register", json={"email": email, "password": "securepass123"})
-    r = client.post("/auth/register", json={"email": email, "password": "anotherpass456"})
+    client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
+    r = client.post("/auth/register", json={"email": email, "password": "Anotherpass456!"})
     assert r.status_code == 409
 
 
@@ -172,8 +172,8 @@ def test_register_short_password(client):
 
 def test_login_correct_credentials(client):
     email = f"login_{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/auth/register", json={"email": email, "password": "mypassword99"})
-    r = client.post("/auth/login", json={"email": email, "password": "mypassword99"})
+    client.post("/auth/register", json={"email": email, "password": "Mypassword99!"})
+    r = client.post("/auth/login", json={"email": email, "password": "Mypassword99!"})
     assert r.status_code == 200
     # JWT is cookie-only; response body contains email and profile, not access_token.
     assert "access_token" not in r.json()
@@ -182,14 +182,14 @@ def test_login_correct_credentials(client):
 
 def test_login_wrong_password(client):
     email = f"wrongpw_{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/auth/register", json={"email": email, "password": "correct123"})
+    client.post("/auth/register", json={"email": email, "password": "Correct123!"})
     r = client.post("/auth/login", json={"email": email, "password": "wrongpass"})
     assert r.status_code == 401
 
 
 def test_me_authenticated(client):
     email = f"me_{uuid.uuid4().hex[:8]}@example.com"
-    reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
+    reg = client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
     assert reg.status_code == 201, f"Registration failed: {reg.json()}"
     # After register the TestClient holds the HttpOnly cookie — use it directly.
     r = client.get("/auth/me")
@@ -242,7 +242,7 @@ def test_profile_update_requires_auth(client):
 def test_scan_history_and_profile_jwt_authorized(client):
     email = f"jwt_{uuid.uuid4().hex[:8]}@example.com"
     # Register — cookie is set in the TestClient's jar automatically.
-    reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
+    reg = client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
     assert reg.status_code == 201
     # Mint a token directly for Bearer-based assertions (does not hit the API).
     from app.auth import create_token
@@ -297,7 +297,7 @@ def test_scan_saving_null_safety_score(client, test_db_session):
     app.dependency_overrides[get_matcher] = lambda: new_matcher
 
     email = f"jwt_{uuid.uuid4().hex[:8]}@example.com"
-    reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
+    reg = client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
     assert reg.status_code == 201
 
     r = client.post(
@@ -335,6 +335,44 @@ def test_barcode_returns_graceful_404(client, monkeypatch):
     r = client.get("/barcode/1234567890123")
     assert r.status_code == 404
     assert "not found" in r.json()["detail"].lower()
+
+
+def test_barcode_upstream_error_does_not_leak(client, monkeypatch):
+    """An unexpected upstream failure returns a generic 502, not the raw exception."""
+    from app import barcode
+
+    secret_detail = "psycopg2 OperationalError: password=hunter2 host=internal-db"
+
+    def mock_lookup(barcode_str):
+        raise RuntimeError(secret_detail)
+
+    monkeypatch.setattr(barcode, "lookup_barcode", mock_lookup)
+    barcode.cached_lookup_barcode.cache_clear()
+
+    r = client.get("/barcode/9999999999999")
+    assert r.status_code == 502
+    assert secret_detail not in r.json()["detail"]
+    assert "try again" in r.json()["detail"].lower()
+
+
+def test_forgot_password_ignores_untrusted_origin(client, monkeypatch, caplog):
+    """The emailed reset link must use a trusted origin, never the attacker's Origin header."""
+    import logging
+
+    email = f"origin_{uuid.uuid4().hex[:8]}@example.com"
+    client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+
+    with caplog.at_level(logging.WARNING, logger="skinguard.auth"):
+        r = client.post(
+            "/auth/forgot-password",
+            json={"email": email},
+            headers={"origin": "https://evil.example.com"},
+        )
+    assert r.status_code == 200
+    reset_logs = "\n".join(rec.getMessage() for rec in caplog.records)
+    assert "evil.example.com" not in reset_logs
+    assert "http://localhost:3000/reset-password" in reset_logs
 
 
 def test_alternatives_in_findings(client):
@@ -463,7 +501,7 @@ def test_forgot_and_reset_password_flow(client):
     email = f"reset_{uuid.uuid4().hex[:8]}@example.com"
     
     # 1. Register new user
-    client.post("/auth/register", json={"email": email, "password": "oldpassword123"})
+    client.post("/auth/register", json={"email": email, "password": "Oldpassword123!"})
     
     # 2. Call forgot password
     r = client.post("/auth/forgot-password", json={"email": email})
@@ -475,23 +513,23 @@ def test_forgot_and_reset_password_flow(client):
     token = create_reset_token(email)
     
     # 4. Reset password using valid token
-    r = client.post("/auth/reset-password", json={"token": token, "new_password": "newpassword123"})
+    r = client.post("/auth/reset-password", json={"token": token, "new_password": "Newpassword123!"})
     assert r.status_code == 200
     assert "has been reset successfully" in r.json()["detail"]
     
     # 5. Verify we can log in with new password
-    r = client.post("/auth/login", json={"email": email, "password": "newpassword123"})
+    r = client.post("/auth/login", json={"email": email, "password": "Newpassword123!"})
     assert r.status_code == 200
     
     # 6. Verify we cannot log in with old password
-    r = client.post("/auth/login", json={"email": email, "password": "oldpassword123"})
+    r = client.post("/auth/login", json={"email": email, "password": "Oldpassword123!"})
     assert r.status_code == 401
 
 
 def test_scan_history_pagination(client, test_db_session):
     # 1. Register a new user
     email = f"page_{uuid.uuid4().hex[:8]}@example.com"
-    reg = client.post("/auth/register", json={"email": email, "password": "securepass123"})
+    reg = client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
     assert reg.status_code == 201
     
     # 2. Get JWT token
@@ -552,34 +590,35 @@ def test_scan_history_pagination(client, test_db_session):
 
 def test_password_complexity_validator():
     from app.users import validate_password_complexity
-    import sys
     import pytest
 
-    # Temporarily bypass the pytest check to test complexity rules
-    original_pytest = sys.modules.get("pytest")
-    if "pytest" in sys.modules:
-        del sys.modules["pytest"]
-    try:
-        with pytest.raises(ValueError, match="uppercase"):
-            validate_password_complexity("lowercase123!")
-            
-        with pytest.raises(ValueError, match="lowercase"):
-            validate_password_complexity("UPPERCASE123!")
-            
-        with pytest.raises(ValueError, match="digit"):
-            validate_password_complexity("LowercaseAndUpper!")
-            
-        with pytest.raises(ValueError, match="special"):
-            validate_password_complexity("LowercaseAndUpper123")
-            
-        with pytest.raises(ValueError, match="8 characters"):
-            validate_password_complexity("Short1!")
+    with pytest.raises(ValueError, match="uppercase"):
+        validate_password_complexity("lowercase123!")
 
-        # Valid password should pass
-        validate_password_complexity("Valid123!")
-    finally:
-        if original_pytest:
-            sys.modules["pytest"] = original_pytest
+    with pytest.raises(ValueError, match="lowercase"):
+        validate_password_complexity("UPPERCASE123!")
+
+    with pytest.raises(ValueError, match="digit"):
+        validate_password_complexity("LowercaseAndUpper!")
+
+    with pytest.raises(ValueError, match="special"):
+        validate_password_complexity("LowercaseAndUpper123")
+
+    with pytest.raises(ValueError, match="8 characters"):
+        validate_password_complexity("Short1!")
+
+    # Valid password should pass
+    validate_password_complexity("Valid123!")
+
+
+def test_register_rejects_weak_password(client):
+    """A password passing min_length but failing complexity is rejected with 400."""
+    r = client.post(
+        "/auth/register",
+        json={"email": f"weak_{uuid.uuid4().hex[:8]}@example.com", "password": "alllowercase"},
+    )
+    assert r.status_code == 400
+    assert "must contain" in r.json()["detail"].lower()
 
 
 def test_analyze_routine_new_conflicts(client, test_db_session):
@@ -651,6 +690,57 @@ def test_analyze_routine_new_conflicts(client, test_db_session):
     assert data["compatible"] is False
     ferment_aha = next(c for c in data["conflicts"] if c["conflict_type"] == "Fermented + AHA")
     assert ferment_aha["severity"] == "warning"
+
+
+# ── Conflict rule engine (unit-level, no DB) ─────────────────────────────────
+
+def test_detect_conflicts_symmetric_label_is_position_independent():
+    from app.routers.analyze import _detect_conflicts
+
+    # AHA in product 1, Retinol in product 2.
+    c1 = _detect_conflicts("P1", {"AHA": "Glycolic Acid"}, "P2", {"Retinol": "Retinol"})
+    # Retinol in product 1, AHA in product 2 — the label must be unchanged.
+    c2 = _detect_conflicts("P1", {"Retinol": "Retinol"}, "P2", {"AHA": "Glycolic Acid"})
+    assert len(c1) == len(c2) == 1
+    assert c1[0]["conflict_type"] == c2[0]["conflict_type"] == "AHA + Retinol"
+    assert c1[0]["severity"] == "danger"
+    # ingredient_a always belongs to product_a (P1), ingredient_b to product_b (P2).
+    assert c1[0]["ingredient_a"] == "Glycolic Acid" and c1[0]["ingredient_b"] == "Retinol"
+    assert c2[0]["ingredient_a"] == "Retinol" and c2[0]["ingredient_b"] == "Glycolic Acid"
+
+
+def test_detect_conflicts_directional_label_follows_position():
+    from app.routers.analyze import _detect_conflicts
+
+    # Vitamin C in product 1, AHA in product 2 → "Vitamin C + AHA".
+    fwd = _detect_conflicts("P1", {"Vitamin C": "Ascorbic Acid"}, "P2", {"AHA": "Lactic Acid"})
+    assert [c["conflict_type"] for c in fwd] == ["Vitamin C + AHA"]
+    assert "Ascorbic Acid" in fwd[0]["message"] and "Lactic Acid" in fwd[0]["message"]
+
+    # Swapped → "AHA + Vitamin C", same ingredients referenced in the message.
+    rev = _detect_conflicts("P1", {"AHA": "Lactic Acid"}, "P2", {"Vitamin C": "Ascorbic Acid"})
+    assert [c["conflict_type"] for c in rev] == ["AHA + Vitamin C"]
+    assert fwd[0]["message"] == rev[0]["message"]
+
+
+def test_detect_conflicts_peptides_and_double_exfoliation():
+    from app.routers.analyze import _detect_conflicts
+
+    # Peptides + BHA is directional and uses the peptide/acid in the message.
+    pep = _detect_conflicts("P1", {"Peptides": "Copper Tripeptide-1"}, "P2", {"BHA": "Salicylic Acid"})
+    assert [c["conflict_type"] for c in pep] == ["Peptides + BHA"]
+    assert "Copper Tripeptide-1" in pep[0]["message"] and "Salicylic Acid" in pep[0]["message"]
+
+    # Same category in both products → the double-exfoliation rule names both products.
+    dbl = _detect_conflicts("AM Toner", {"AHA": "Glycolic Acid"}, "PM Serum", {"AHA": "Lactic Acid"})
+    assert [c["conflict_type"] for c in dbl] == ["Double AHA Exfoliation"]
+    assert "AM Toner" in dbl[0]["message"] and "PM Serum" in dbl[0]["message"]
+
+
+def test_detect_conflicts_none_when_no_actives():
+    from app.routers.analyze import _detect_conflicts
+
+    assert _detect_conflicts("P1", {}, "P2", {"Niacinamide": "Niacinamide"}) == []
 
 
 

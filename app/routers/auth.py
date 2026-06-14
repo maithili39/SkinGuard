@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import create_reset_token, create_token, decode_reset_token, get_current_user, hash_password, require_user
 from app.database import get_db
-from app.deps import ENV, _limit, limiter
+from app.deps import CORS_ORIGINS, IS_PRODUCTION, _limit, limiter
 from app.models import Scan, User
 from app.schemas import AuthOut, ForgotPasswordIn, LoginIn, RegisterIn, ResetPasswordIn
 from app import users as users_svc
@@ -24,7 +24,7 @@ def _set_auth_cookie(response: Response, token: str) -> None:
         max_age=7 * 86400,
         expires=7 * 86400,
         samesite="lax",
-        secure=(ENV == "production"),
+        secure=IS_PRODUCTION,
         path="/",
     )
 
@@ -81,7 +81,12 @@ def forgot_password(request: Request, payload: ForgotPasswordIn, db: Session = D
         return _generic_response
 
     token = create_reset_token(user.email)
-    origin = request.headers.get("origin") or "http://localhost:3000"
+    # Never trust the client-supplied Origin to build the reset link — an attacker
+    # could point the emailed URL at their own host. Only use it if it is one of
+    # our configured trusted origins, otherwise fall back to the first one.
+    _default_origin = CORS_ORIGINS[0] if CORS_ORIGINS else "http://localhost:3000"
+    request_origin = request.headers.get("origin")
+    origin = request_origin if request_origin in CORS_ORIGINS else _default_origin
     reset_url = f"{origin}/reset-password?token={token}"
 
     resend_api_key = os.environ.get("RESEND_API_KEY")

@@ -30,11 +30,13 @@ logger = logging.getLogger("skinguard.auth")
 # ── Config ────────────────────────────────────────────────────────────────────
 
 _ENV = os.environ.get("ENV", "development").lower()
+# Tolerant of "prod"/"production" so a misspelt ENV never skips this check.
+_IS_PRODUCTION = _ENV.startswith("prod")
 SECRET_KEY: str = os.environ.get("SECRET_KEY", "dev-secret-CHANGE-IN-PRODUCTION!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
-if _ENV == "production":
+if _IS_PRODUCTION:
     if not SECRET_KEY or len(SECRET_KEY) < 32 or SECRET_KEY == "dev-secret-CHANGE-IN-PRODUCTION!":
         raise RuntimeError(
             "SECRET_KEY must be set and at least 32 characters in production mode. "

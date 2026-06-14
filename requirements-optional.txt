@@ -1,0 +1,9 @@
+# Optional production integrations — NOT required to run the app.
+# Both are imported lazily and the app degrades gracefully without them:
+#   - google-cloud-vision: only used when OCR_PROVIDER=google_cloud (falls back to Tesseract).
+#   - sentry-sdk: only initialised when SENTRY_DSN is set.
+# Install with: pip install -r requirements-optional.txt
+-r requirements.txt
+
+google-cloud-vision==3.8.0
+sentry-sdk==2.8.0

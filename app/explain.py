@@ -1,12 +1,15 @@
-"""Plain-language explanations for ingredients + Gemini LLM client.
+"""Plain-language explanations for ingredients + LLM client (Groq or Gemini).
 
 Two explanation modes:
-  1. LLM-enhanced (Gemini 2.5 Pro): explain_ingredient_llm() — grounded on our DB fields.
+  1. LLM-enhanced: explain_ingredient_llm() — grounded on our DB fields.
   2. Template baseline (offline): explain_ingredient() — deterministic, zero API cost.
 
-The Gemini client is lazily initialised; if GEMINI_API_KEY is absent every LLM
-function gracefully falls back to the template path — callers need not know which
-path was taken.
+Provider selection (lazy, at first use):
+  - GROQ_API_KEY set      → Groq (OpenAI-compatible chat, e.g. Llama 3.3 70B).
+  - else GEMINI_API_KEY   → Gemini 2.5 Pro.
+  - else                  → template fallback.
+Set LLM_PROVIDER=groq|gemini to force one when both keys are present. Whichever
+path is taken, callers need not know — every LLM function degrades gracefully.
 """
 
 import json
@@ -18,10 +21,12 @@ from app.models import Ingredient
 
 logger = logging.getLogger("skinguard.explain")
 
-# ── Gemini client setup ───────────────────────────────────────────────────────
+# ── Provider config ───────────────────────────────────────────────────────────
 
+_GROQ_API_KEY: Optional[str] = os.environ.get("GROQ_API_KEY")
+_GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+_GEMINI_API_KEY: Optional[str] = os.environ.get("GEMINI_API_KEY")
 _GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
-_API_KEY: Optional[str] = os.environ.get("GEMINI_API_KEY")
 
 SYSTEM_INSTRUCTION = """You are SkinGuard's ingredient safety assistant.
 
@@ -35,6 +40,22 @@ RULES (strictly enforced):
 6. Never invent ingredient properties, studies, or brand-specific claims.
 """
 
+
+def _resolve_provider() -> Optional[str]:
+    """Decide which LLM backend to use based on env keys (and optional override)."""
+    pref = os.environ.get("LLM_PROVIDER", "").strip().lower()
+    if pref == "groq" and _GROQ_API_KEY:
+        return "groq"
+    if pref == "gemini" and _GEMINI_API_KEY:
+        return "gemini"
+    if _GROQ_API_KEY:
+        return "groq"
+    if _GEMINI_API_KEY:
+        return "gemini"
+    return None
+
+
+_PROVIDER = _resolve_provider()
 _client = None
 
 
@@ -42,25 +63,34 @@ def _get_client():
     global _client
     if _client is not None:
         return _client
-    if not _API_KEY:
-        return None
-    try:
-        from google import genai  # type: ignore[import-untyped]
-        from google.genai import types as genai_types  # type: ignore[import-untyped]
-        client = genai.Client(api_key=_API_KEY)
-        client._sg_model = _GEMINI_MODEL
-        client._sg_config = genai_types.GenerateContentConfig(
-            temperature=0.2,
-            top_p=0.9,
-            max_output_tokens=1024,
-            system_instruction=SYSTEM_INSTRUCTION,
-        )
-        _client = client
-        logger.info("Gemini client initialised with model: %s", _GEMINI_MODEL)
-        return _client
-    except Exception as exc:
-        logger.warning("Failed to initialise Gemini client: %s", exc)
-        return None
+    if _PROVIDER == "groq":
+        try:
+            from groq import Groq  # type: ignore[import-untyped]
+            _client = Groq(api_key=_GROQ_API_KEY)
+            logger.info("Groq client initialised with model: %s", _GROQ_MODEL)
+            return _client
+        except Exception as exc:
+            logger.warning("Failed to initialise Groq client: %s", exc)
+            return None
+    if _PROVIDER == "gemini":
+        try:
+            from google import genai  # type: ignore[import-untyped]
+            from google.genai import types as genai_types  # type: ignore[import-untyped]
+            client = genai.Client(api_key=_GEMINI_API_KEY)
+            client._sg_model = _GEMINI_MODEL
+            client._sg_config = genai_types.GenerateContentConfig(
+                temperature=0.2,
+                top_p=0.9,
+                max_output_tokens=1024,
+                system_instruction=SYSTEM_INSTRUCTION,
+            )
+            _client = client
+            logger.info("Gemini client initialised with model: %s", _GEMINI_MODEL)
+            return _client
+        except Exception as exc:
+            logger.warning("Failed to initialise Gemini client: %s", exc)
+            return None
+    return None
 
 
 def is_available() -> bool:
@@ -68,13 +98,19 @@ def is_available() -> bool:
 
 
 def get_model_name() -> str:
-    return _GEMINI_MODEL if is_available() else "unavailable"
+    if not is_available():
+        return "unavailable"
+    return _GROQ_MODEL if _PROVIDER == "groq" else _GEMINI_MODEL
+
+
+# Multi-word injection phrases only — avoids false positives on bare words.
+_INJECTION_KEYWORDS = ("ignore previous", "system prompt", "forget previous", "you are now")
 
 
 def ask(prompt: str, context: str = "") -> tuple[str, str]:
-    """Send a grounded prompt to Gemini. Returns (answer_text, model_name)."""
+    """Send a grounded prompt to the active LLM. Returns (answer_text, model_name)."""
     prompt = prompt.strip()[:500]
-    if any(kw in prompt.lower() for kw in ["ignore previous", "system prompt", "forget"]):
+    if any(kw in prompt.lower() for kw in _INJECTION_KEYWORDS):
         return (
             "I can only answer questions about skincare ingredients "
             "from the analysed product. Please ask a specific ingredient question.",
@@ -83,23 +119,37 @@ def ask(prompt: str, context: str = "") -> tuple[str, str]:
     client = _get_client()
     if client is None:
         return (
-            "LLM explanations are not available (GEMINI_API_KEY not configured). "
-            "Showing template-based explanation instead.",
+            "LLM explanations are not available (no GROQ_API_KEY or GEMINI_API_KEY "
+            "configured). Showing template-based explanation instead.",
             "template",
         )
     full_prompt = f"{context}\n\n---\nQuestion: {prompt}" if context else prompt
+    model = get_model_name()
     try:
-        response = client.models.generate_content(
-            model=client._sg_model,
-            contents=full_prompt,
-            config=client._sg_config,
-        )
-        text = response.text.strip() if response.text else ""
+        if _PROVIDER == "groq":
+            response = client.chat.completions.create(
+                model=_GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_INSTRUCTION},
+                    {"role": "user", "content": full_prompt},
+                ],
+                temperature=0.2,
+                top_p=0.9,
+                max_tokens=1024,
+            )
+            text = (response.choices[0].message.content or "").strip()
+        else:
+            response = client.models.generate_content(
+                model=client._sg_model,
+                contents=full_prompt,
+                config=client._sg_config,
+            )
+            text = response.text.strip() if response.text else ""
         if not text:
-            return "The model returned an empty response.", _GEMINI_MODEL
-        return text, _GEMINI_MODEL
+            return "The model returned an empty response.", model
+        return text, model
     except Exception as exc:
-        logger.error("Gemini API error: %s", exc)
+        logger.error("LLM API error (%s): %s", _PROVIDER, exc)
         return f"LLM request failed: {exc}", "error"
 
 
@@ -123,12 +173,43 @@ def build_ingredient_context(ingredients: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _parse_batch_json(text: str) -> dict[str, str]:
+    """Parse the {"explanations": [{inci_name, explanation}]} JSON payload."""
+    if not text:
+        return {}
+    parsed = json.loads(text)
+    return {
+        item["inci_name"].strip().upper(): item["explanation"].strip()
+        for item in parsed.get("explanations", [])
+        if item.get("inci_name") and item.get("explanation")
+    }
+
+
 def ask_batch_explanations(prompt: str) -> dict[str, str]:
-    """Batch ingredient explanations via Gemini with JSON schema response."""
+    """Batch ingredient explanations as JSON, via whichever provider is active."""
     client = _get_client()
     if client is None:
         return {}
     try:
+        if _PROVIDER == "groq":
+            instruction = (
+                SYSTEM_INSTRUCTION
+                + '\n\nReturn ONLY valid JSON of the exact form: '
+                + '{"explanations": [{"inci_name": "<name>", "explanation": "<text>"}]}'
+            )
+            response = client.chat.completions.create(
+                model=_GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": instruction},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.2,
+                top_p=0.9,
+                max_tokens=2048,
+                response_format={"type": "json_object"},
+            )
+            return _parse_batch_json((response.choices[0].message.content or "").strip())
+
         from google.genai import types as genai_types
         from pydantic import BaseModel
 
@@ -152,18 +233,9 @@ def ask_batch_explanations(prompt: str) -> dict[str, str]:
             contents=prompt,
             config=config,
         )
-        text = response.text.strip() if response.text else ""
-        if not text:
-            logger.warning("Empty response received in batch explanation")
-            return {}
-        parsed = json.loads(text)
-        return {
-            item["inci_name"].strip().upper(): item["explanation"].strip()
-            for item in parsed.get("explanations", [])
-            if item.get("inci_name") and item.get("explanation")
-        }
+        return _parse_batch_json(response.text.strip() if response.text else "")
     except Exception as exc:
-        logger.error("Gemini API batch explanation error: %s", exc)
+        logger.error("LLM batch explanation error (%s): %s", _PROVIDER, exc)
         return {}
 
 

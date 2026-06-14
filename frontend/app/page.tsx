@@ -31,22 +31,6 @@ const GLOSSARY_TERMS = [
   { term: "Humectant", definition: "An ingredient that draws moisture from the environment or deeper skin layers into the outer skin. Examples: glycerin, hyaluronic acid." },
 ];
 
-/* ─── Hero illustration ─────────────────────────────────────────────────────── */
-function HeroIllustration() {
-  return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Soft blob behind image */}
-      <div style={{ position: 'absolute', width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, #e8f5e9 0%, #f0ede6 60%, transparent 100%)', zIndex: 0 }} />
-      <img
-        src="/hero-bottle.png"
-        alt="Natural skincare products"
-        className="animate-float"
-        style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 440, objectFit: 'contain', filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.10))' }}
-      />
-    </div>
-  );
-}
-
 /* ─── Stats counter ──────────────────────────────────────────────────────────── */
 function StatCounter({ target, suffix = '', running }: { target: number; suffix?: string; running: boolean }) {
   const [count, setCount] = useState(0);
@@ -125,6 +109,9 @@ export default function Home() {
   const [encyclopediaSearch, setEncyclopediaSearch] = useState('');
   const [encyclopediaResult, setEncyclopediaResult] = useState<any | null>(null);
   const [encyclopediaLoading, setEncyclopediaLoading] = useState(false);
+  // Whether the backend has a working LLM (Gemini) configured. null = unknown/loading.
+  // When false, AI-enhanced explanations fall back to concise template text.
+  const [llmAvailable, setLlmAvailable] = useState<boolean | null>(null);
   const [glossarySearch, setGlossarySearch] = useState('');
 
   // Stats counter trigger
@@ -158,6 +145,15 @@ export default function Home() {
   }, [user]);
 
   useEffect(() => { return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }; }, [previewUrl]);
+
+  // Probe backend AI capability once so the UI can tell users when enhanced
+  // (LLM-grounded) explanations are active vs. the concise template fallback.
+  useEffect(() => {
+    fetch('/api/health')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setLlmAvailable(!!d.llm_available); })
+      .catch(() => setLlmAvailable(false));
+  }, []);
 
   // Stats counter IntersectionObserver
   useEffect(() => {
@@ -220,6 +216,30 @@ export default function Home() {
     setUser(u); localStorage.setItem(LS_USER_KEY, JSON.stringify(u)); setShowLoginModal(false); setActiveTab('vanity');
   };
 
+  // Apply a real authenticated session using the profile the BACKEND returns,
+  // so a returning user's saved skin profile + allergies are never overwritten
+  // with UI defaults. (handleLoginMock above is only for the offline demo button.)
+  const applyAuthenticatedUser = (email: string, fullName: string, serverProfile: any) => {
+    const sp = serverProfile || {};
+    const prof: SkinProfile = {
+      pregnant: sp.pregnant ?? false,
+      sensitive_skin: sp.sensitive_skin ?? false,
+      acne_prone: sp.acne_prone ?? false,
+      fungal_acne: sp.fungal_acne ?? false,
+      rosacea: sp.rosacea ?? false,
+      dry_skin: sp.dry_skin ?? false,
+      oily_skin: sp.oily_skin ?? false,
+      combination_skin: sp.combination_skin ?? false,
+      normal_skin: sp.normal_skin ?? false,
+    };
+    const avoid: string[] = sp.avoid_list ?? [];
+    const u: UserState = { email, full_name: fullName, profile: { ...prof, avoid_list: avoid } };
+    setUser(u); localStorage.setItem(LS_USER_KEY, JSON.stringify(u));
+    setProfile(prof);
+    setAllergies(avoid);
+    setShowLoginModal(false); setActiveTab('vanity');
+  };
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setAuthError(null);
     if (!emailInput) { setAuthError('Email is required.'); return; }
@@ -230,7 +250,7 @@ export default function Home() {
       const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Authentication failed'); }
       const d = await res.json();
-      handleLoginMock(d.email, d.full_name || nameInput || 'User');
+      applyAuthenticatedUser(d.email, d.full_name || nameInput || 'User', d.profile);
     } catch (err: any) { setAuthError(err.message || 'An error occurred'); }
   };
 
@@ -457,7 +477,6 @@ export default function Home() {
               className="nav-desktop"
               style={{ alignItems: 'center', padding: 9, borderRadius: 10, color: '#5c5045', background: 'none', transition: 'all 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(160,120,80,0.1)'; e.currentTarget.style.color = '#2d4a35'; }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#2d4a35'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#5c5045'; }}
               title="GitHub">
               <Github size={18} />
@@ -973,6 +992,12 @@ export default function Home() {
           <div className="text-center mb-10">
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 36, color: '#1a1a1a', marginBottom: 12 }}>Ingredient Encyclopedia</h2>
             <p style={{ fontSize: 16, color: '#6b6b6b', fontFamily: "'Inter', sans-serif" }}>Search INCI definitions, clinical data, and skincare terminology.</p>
+            {llmAvailable !== null && (
+              <div style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999, fontSize: 12, fontFamily: "'Inter', sans-serif", background: llmAvailable ? '#e8f5e9' : '#f3f0ea', color: llmAvailable ? '#2d4a35' : '#8a7d6d', border: `1px solid ${llmAvailable ? '#c8e6c9' : '#e8e4dc'}` }}>
+                <Sparkles size={13} />
+                {llmAvailable ? 'AI-enhanced explanations active' : 'Standard mode — concise definitions (AI explanations offline)'}
+              </div>
+            )}
           </div>
 
           <div style={{ background: 'white', borderRadius: 24, padding: 32, border: '1px solid #e8e4dc', boxShadow: '0 12px 40px rgba(0,0,0,0.06)', marginBottom: 32 }}>

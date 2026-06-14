@@ -8,6 +8,8 @@ Existing email-only accounts have hashed_password=None and must register a
 password before they can use the JWT login flow.
 """
 
+import re
+
 from sqlalchemy.orm import Session
 
 from app.auth import hash_password, verify_password
@@ -26,15 +28,7 @@ def get_or_create_user(db: Session, email: str) -> User:
     return user
 
 
-import re
-import sys
-
 def validate_password_complexity(password: str) -> None:
-    if "pytest" in sys.modules:
-        if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters long.")
-        return
-
     if len(password) < 8:
         raise ValueError("Password must be at least 8 characters long.")
     if not any(c.isupper() for c in password):

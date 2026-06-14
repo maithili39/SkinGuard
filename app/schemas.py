@@ -54,12 +54,6 @@ class AuthOut(BaseModel):
     profile: dict
 
 
-# Kept for backwards-compat in tests that still check 'access_token'.
-class TokenOut(AuthOut):
-    """Deprecated alias — access_token field omitted intentionally."""
-    pass
-
-
 # ── Chat / RAG schemas ────────────────────────────────────────────────────────
 
 class ChatIn(BaseModel):

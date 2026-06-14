@@ -99,6 +99,21 @@ RULES: list[Rule] = [
         predicate=lambda i: i.irritant == "yes",
         message=lambda i: f"{i.inci_name} is a known irritant/allergen - may bother sensitive skin.",
     ),
+    # Coverage booster: fragrance and essential oils are the most common cosmetic
+    # contact allergens (dermatology consensus), so flag them by FUNCTION even when
+    # the ingredient lacks a per-row curated irritant flag. Gated to avoid
+    # double-firing with the curated-irritant rule above.
+    Rule(
+        concern="sensitivity",
+        level="warning",
+        kind="advice",
+        profile_gate=lambda p: p.sensitive_skin or p.rosacea,
+        predicate=lambda i: (i.function in ("fragrance", "essential oil")) and i.irritant != "yes",
+        message=lambda i: (
+            f"{i.inci_name} is a {i.function} - fragrance and essential oils are common "
+            f"contact allergens and can irritate sensitive or rosacea-prone skin."
+        ),
+    ),
     # Regulatory facts apply to everyone regardless of profile.
     Rule(
         concern="regulatory",

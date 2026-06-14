@@ -22,6 +22,25 @@ VERSION = Path(__file__).parent.parent.joinpath("VERSION").read_text().strip()
 
 ENV = os.environ.get("ENV", "development").lower()
 
+# Normalised production check — tolerant of "prod", "Production", etc. so a
+# misspelt ENV never silently disables production safety (Secure cookies, etc.).
+IS_PRODUCTION = ENV.startswith("prod")
+
+# ── CORS / trusted origins ────────────────────────────────────────────────────
+# Single source of truth for the browser origins we trust. Used both for the
+# CORS middleware (main.py) and to validate the Origin header when building
+# user-facing links such as password-reset URLs.
+
+def _parse_origins() -> list[str]:
+    raw = os.environ.get(
+        "SKINGUARD_CORS_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    )
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+CORS_ORIGINS = _parse_origins()
+
 # ── Matcher singletons (set by lifespan in main.py) ──────────────────────────
 
 _matcher: Optional[Matcher] = None

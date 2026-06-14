@@ -2,6 +2,8 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.6
 gunicorn==22.0.0
 sqlalchemy==2.0.35
+# Database schema migrations (run via `alembic upgrade head` on container start).
+alembic==1.13.2
 pydantic==2.9.2
 pydantic-settings==2.5.2
 python-multipart==0.0.12
@@ -21,7 +23,11 @@ email-validator==2.2.0
 # Structured JSON logging
 python-json-logger==2.0.7
 # ── AI / ML components ────────────────────────────────────────────────────────
-# Tier 1-A: RAG grounded explanations + Q&A via Gemini 2.5 Pro (new SDK)
+# RAG grounded explanations + Q&A. The app picks a provider at runtime:
+#   GROQ_API_KEY  → Groq (OpenAI-compatible, e.g. Llama 3.3 70B) — default if set
+#   GEMINI_API_KEY → Gemini 2.5 Pro
+# Both are optional; without either, explanations fall back to deterministic templates.
+groq>=0.11.0
 google-genai>=1.0.0
 # Tier 1-B: Sentence-embedding semantic matcher (local, no API key required)
 # CPU-only torch avoids the large GPU bundle; model downloads ~80 MB on first run.
@@ -30,8 +36,11 @@ google-genai>=1.0.0
 # numpy is already a transitive dep of sentence-transformers; pinned for safety
 # numpy>=1.26.0
 pgvector==0.3.1
-google-cloud-vision==3.8.0
 # ── Caching ───────────────────────────────────────────────────────────────────
 # Redis client — app degrades gracefully when Redis is unavailable.
 redis[hiredis]>=5.0.0
-sentry-sdk==2.8.0
+# HTTP client — used for barcode lookups (Open Beauty Facts, UPC Item DB)
+httpx>=0.27.0
+# Optional integrations (Google Cloud Vision OCR, Sentry error tracking) live in
+# requirements-optional.txt — both are lazily imported and degrade gracefully when
+# absent, so local dev and CI can skip them. The Docker image installs them.

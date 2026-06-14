@@ -77,7 +77,9 @@ def barcode_lookup(code: str, request: Request):
     except ProductNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        # Log the real cause for operators, but don't leak internals to clients.
+        logger.exception("Barcode lookup failed for code=%s: %s", code, exc)
+        raise HTTPException(status_code=502, detail="Barcode lookup failed. Please try again later.")
 
     set_cached(_cache_key, result, ttl=86400)
     logger.debug("Cache SET barcode=%s", code)
@@ -138,11 +140,16 @@ def chat(
     if summary:
         context = f"Product summary: {summary}\n\n{context}"
 
-    # Prompt-injection guard.
+    # Prompt-injection guard. The primary defense is that answers are RAG-grounded
+    # on structured ingredient data; this blocklist is a cheap secondary filter.
+    # We match only multi-word phrases that signal an instruction-override attempt —
+    # bare words like "forget" or "act as" are avoided because they fire on
+    # legitimate questions ("I forget which acid…", "does this act as a humectant?").
     _INJECTION_PATTERNS = [
         "ignore previous", "ignore all previous", "ignore above",
-        "disregard previous", "forget previous", "forget", "new instruction",
-        "act as", "you are now", "pretend you are", "pretend to be",
+        "ignore your instructions", "disregard previous", "disregard all previous",
+        "forget previous", "forget all previous", "forget everything",
+        "new instruction", "you are now", "pretend you are", "pretend to be",
         "your new role", "system prompt", "jailbreak",
         "do anything now", "dan mode", "developer mode",
     ]

@@ -40,8 +40,9 @@ if command -v gunicorn &> /dev/null; then
         --workers "$WORKERS" \
         --timeout 120 \
         --bind "0.0.0.0:$PORT" \
+        --forwarded-allow-ips='*' \
         --access-logfile - \
         --error-logfile -
 else
-    exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"
+    exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT" --proxy-headers --forwarded-allow-ips='*'
 fi

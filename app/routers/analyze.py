@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
@@ -46,6 +47,154 @@ _CATEGORIES: dict[str, set[str]] = {
         "saccharomyces ferment", "lactobacillus ferment filtrate"
     },
 }
+
+
+# ── Declarative conflict rules ────────────────────────────────────────────────
+# Each rule pairs two active-ingredient categories. `template` is formatted with
+# {a} = the cat_a ingredient and {b} = the cat_b ingredient. When `directional`
+# is True the conflict_type reflects which product holds which active
+# (e.g. "AHA + Vitamin C" vs "Vitamin C + AHA"); otherwise it is fixed.
+
+@dataclass(frozen=True)
+class PairRule:
+    cat_a: str
+    cat_b: str
+    severity: str
+    template: str
+    name: str | None = None  # fixed conflict_type; defaults to "cat_a + cat_b"
+    directional: bool = False
+
+
+# Cross-category conflicts with a fixed (symmetric) label.
+_PAIR_RULES: list[PairRule] = [
+    PairRule("AHA", "Retinol", "danger",
+             "Alpha Hydroxy Acids (AHAs) like {a} and Retinoids like {b} both speed up "
+             "skin cell turnover. Layering them can disrupt your skin barrier, causing redness, "
+             "dryness, and severe irritation. Tip: Use AHA in the morning (with SPF) and Retinol at night."),
+    PairRule("BHA", "Retinol", "danger",
+             "Beta Hydroxy Acids (BHAs) like {a} exfoliate deep inside pores while Retinoids like {b} "
+             "speed up cell turnover. Combining them can cause severe dryness and over-exfoliation. "
+             "Tip: Use BHA in the morning or alternate nights with Retinol."),
+    PairRule("Benzoyl Peroxide", "Retinol", "danger",
+             "Benzoyl Peroxide oxidizes and deactivates Retinoids like {b} when applied together, "
+             "making the Retinol ineffective and increasing irritation. "
+             "Tip: Use Benzoyl Peroxide in the morning and Retinol at night."),
+    PairRule("AHA", "Benzoyl Peroxide", "danger",
+             "Benzoyl Peroxide is an oxidizing agent that can deactivate AHAs like {a} and vice-versa, "
+             "making both less effective while dramatically increasing dryness and irritation risk. "
+             "Tip: Use AHA at night and Benzoyl Peroxide in the morning, never together."),
+    PairRule("Niacinamide", "Vitamin C", "warning",
+             "Mixing {a} with {b} (Vitamin C) at high concentrations can form nicotinic acid, "
+             "which may cause temporary flushing and reduce the brightening effect of Vitamin C. "
+             "Tip: Use them in separate routines (Vitamin C AM, Niacinamide PM) or ensure "
+             "the Vitamin C serum is fully absorbed before applying Niacinamide."),
+    PairRule("Retinol", "Vitamin C", "warning",
+             "Retinoids like {a} work best at a neutral pH, while Vitamin C forms like {b} require "
+             "a low acidic pH. Layering them can reduce the effectiveness of both and significantly "
+             "increase irritation, especially on sensitive skin. "
+             "Tip: Use Vitamin C in the morning and Retinol at night."),
+    PairRule("AHA", "BHA", "warning",
+             "Layering AHA ({a}) and BHA ({b}) in the same routine increases the risk of over-exfoliation, "
+             "dryness, and breaking your skin's moisture barrier. "
+             "Tip: Alternate their use on different days, or use BHA in the morning and AHA at night.",
+             name="Multiple Exfoliants"),
+    PairRule("Fermented", "AHA", "warning",
+             "Combining fermented ingredients ({a}) with low-pH Alpha Hydroxy Acids ({b}) can cause "
+             "temporary skin irritation, stinging, or redness, as the low pH can alter the active ferment proteins. "
+             "Tip: Use your fermented essence first, wait 15-20 minutes, or apply them in separate routines."),
+    PairRule("Fermented", "BHA", "warning",
+             "Combining fermented ingredients ({a}) with low-pH Beta Hydroxy Acids ({b}) can lead to "
+             "irritation or compromise the soothing benefits of the ferment. "
+             "Tip: Alternate days, or use BHA in the morning and fermented products at night."),
+    PairRule("Fermented", "Vitamin C", "warning",
+             "Combining fermented ingredients ({a}) with highly acidic Vitamin C ({b}) can disrupt "
+             "the stability of both actives and cause skin flushing or irritation. "
+             "Tip: Apply Vitamin C in the morning and fermented ingredients at night."),
+]
+
+# Conflicts whose label depends on which product holds which active.
+_DIRECTIONAL_RULES: list[PairRule] = [
+    PairRule("Vitamin C", "AHA", "warning",
+             "Vitamin C like {a} is highly acidic. Combining it with "
+             "{b} can destabilize the Vitamin C and trigger redness. "
+             "Tip: Use Vitamin C in the morning and exfoliating acids in the evening.",
+             directional=True),
+    PairRule("Peptides", "AHA", "warning",
+             "The low-pH environment created by {b} can break down peptide bonds in "
+             "{a}, significantly reducing its anti-ageing effectiveness. "
+             "Tip: Apply peptides and acids in separate routines, or wait 30 min between applications.",
+             directional=True),
+    PairRule("Vitamin C", "BHA", "warning",
+             "Vitamin C like {a} is highly acidic. Combining it with "
+             "{b} can destabilize the Vitamin C and trigger redness. "
+             "Tip: Use Vitamin C in the morning and exfoliating acids in the evening.",
+             directional=True),
+    PairRule("Peptides", "BHA", "warning",
+             "The low-pH environment created by {b} can break down peptide bonds in "
+             "{a}, significantly reducing its anti-ageing effectiveness. "
+             "Tip: Apply peptides and acids in separate routines, or wait 30 min between applications.",
+             directional=True),
+]
+
+# Conflicts triggered when both products carry the SAME category. The template
+# additionally references {pa}/{pb} — the two product names.
+_SAME_CATEGORY_RULES: list[tuple[str, str, str, str]] = [
+    ("AHA", "Double AHA Exfoliation", "warning",
+     "Both products contain Alpha Hydroxy Acids (AHAs): {a} in {pa} and {b} in {pb}. "
+     "Using multiple AHA products together can cause severe over-exfoliation and barrier damage. "
+     "Tip: Choose only one AHA product per routine, or use them on separate days."),
+    ("BHA", "Double BHA Exfoliation", "warning",
+     "Both products contain Beta Hydroxy Acids (BHAs): {a} in {pa} and {b} in {pb}. "
+     "Layering multiple BHA products can severely dry out your skin and cause irritation. "
+     "Tip: Use only one BHA product in your routine."),
+]
+
+
+def _conflict(pa: str, pb: str, ia: str, ib: str, ctype: str, severity: str, message: str) -> dict:
+    return {
+        "product_a": pa, "product_b": pb,
+        "ingredient_a": ia, "ingredient_b": ib,
+        "conflict_type": ctype, "severity": severity,
+        "message": message,
+    }
+
+
+def _emit_pair_conflicts(
+    rule: PairRule, p1: str, a1: dict, p2: str, a2: dict, out: list[dict]
+) -> None:
+    """Apply one cross-category rule to the ordered product pair (p1, p2)."""
+    ca, cb = rule.cat_a, rule.cat_b
+    fixed = rule.name or f"{ca} + {cb}"
+
+    # Direction 1: p1 holds cat_a, p2 holds cat_b.
+    if ca in a1 and cb in a2:
+        cat_a_ing, cat_b_ing = a1[ca], a2[cb]
+        ctype = f"{ca} + {cb}" if rule.directional else fixed
+        out.append(_conflict(p1, p2, cat_a_ing, cat_b_ing, ctype, rule.severity,
+                             rule.template.format(a=cat_a_ing, b=cat_b_ing)))
+
+    # Direction 2: p1 holds cat_b, p2 holds cat_a.
+    if cb in a1 and ca in a2:
+        cat_a_ing, cat_b_ing = a2[ca], a1[cb]
+        ctype = f"{cb} + {ca}" if rule.directional else fixed
+        out.append(_conflict(p1, p2, a1[cb], a2[ca], ctype, rule.severity,
+                             rule.template.format(a=cat_a_ing, b=cat_b_ing)))
+
+
+def _detect_conflicts(p1: str, a1: dict, p2: str, a2: dict) -> list[dict]:
+    """All layering conflicts between two products, in a stable rule order."""
+    out: list[dict] = []
+    for rule in _PAIR_RULES:
+        _emit_pair_conflicts(rule, p1, a1, p2, a2, out)
+    for cat, ctype, severity, template in _SAME_CATEGORY_RULES:
+        if cat in a1 and cat in a2:
+            out.append(_conflict(
+                p1, p2, a1[cat], a2[cat], ctype, severity,
+                template.format(a=a1[cat], b=a2[cat], pa=p1, pb=p2),
+            ))
+    for rule in _DIRECTIONAL_RULES:
+        _emit_pair_conflicts(rule, p1, a1, p2, a2, out)
+    return out
 
 
 @router.post("/analyze")
@@ -124,175 +273,9 @@ def analyze_routine(
     for i in range(len(prod_names)):
         for j in range(i + 1, len(prod_names)):
             p1, p2 = prod_names[i], prod_names[j]
-            a1, a2 = product_actives[p1], product_actives[p2]
-
-            def _add(cat_a: str, cat_b: str, ctype: str, severity: str, msg_fn):
-                if cat_a in a1 and cat_b in a2:
-                    conflicts.append({
-                        "product_a": p1, "product_b": p2,
-                        "ingredient_a": a1[cat_a], "ingredient_b": a2[cat_b],
-                        "conflict_type": ctype, "severity": severity,
-                        "message": msg_fn(a1[cat_a], a2[cat_b]),
-                    })
-                if cat_b in a1 and cat_a in a2:
-                    conflicts.append({
-                        "product_a": p1, "product_b": p2,
-                        "ingredient_a": a1[cat_b], "ingredient_b": a2[cat_a],
-                        "conflict_type": ctype, "severity": severity,
-                        "message": msg_fn(a2[cat_a], a1[cat_b]),
-                    })
-
-            _add("AHA", "Retinol", "AHA + Retinol", "danger",
-                 lambda a, b: (
-                     f"Alpha Hydroxy Acids (AHAs) like {a} and Retinoids like {b} both speed up "
-                     f"skin cell turnover. Layering them can disrupt your skin barrier, causing redness, "
-                     f"dryness, and severe irritation. Tip: Use AHA in the morning (with SPF) and Retinol at night."
-                 ))
-
-            _add("BHA", "Retinol", "BHA + Retinol", "danger",
-                 lambda a, b: (
-                     f"Beta Hydroxy Acids (BHAs) like {a} exfoliate deep inside pores while Retinoids like {b} "
-                     f"speed up cell turnover. Combining them can cause severe dryness and over-exfoliation. "
-                     f"Tip: Use BHA in the morning or alternate nights with Retinol."
-                 ))
-
-            _add("Benzoyl Peroxide", "Retinol", "Benzoyl Peroxide + Retinol", "danger",
-                 lambda a, b: (
-                     f"Benzoyl Peroxide oxidizes and deactivates Retinoids like {b} when applied together, "
-                     f"making the Retinol ineffective and increasing irritation. "
-                     f"Tip: Use Benzoyl Peroxide in the morning and Retinol at night."
-                 ))
-
-            _add("AHA", "Benzoyl Peroxide", "AHA + Benzoyl Peroxide", "danger",
-                 lambda a, b: (
-                     f"Benzoyl Peroxide is an oxidizing agent that can deactivate AHAs like {a} and vice-versa, "
-                     f"making both less effective while dramatically increasing dryness and irritation risk. "
-                     f"Tip: Use AHA at night and Benzoyl Peroxide in the morning, never together."
-                 ))
-
-            _add("Niacinamide", "Vitamin C", "Niacinamide + Vitamin C", "warning",
-                 lambda a, b: (
-                     f"Mixing {a} with {b} (Vitamin C) at high concentrations can form nicotinic acid, "
-                     f"which may cause temporary flushing and reduce the brightening effect of Vitamin C. "
-                     f"Tip: Use them in separate routines (Vitamin C AM, Niacinamide PM) or ensure "
-                     f"the Vitamin C serum is fully absorbed before applying Niacinamide."
-                 ))
-
-            _add("Retinol", "Vitamin C", "Retinol + Vitamin C", "warning",
-                 lambda a, b: (
-                     f"Retinoids like {a} work best at a neutral pH, while Vitamin C forms like {b} require "
-                     f"a low acidic pH. Layering them can reduce the effectiveness of both and significantly "
-                     f"increase irritation, especially on sensitive skin. "
-                     f"Tip: Use Vitamin C in the morning and Retinol at night."
-                 ))
-
-            # Multiple Exfoliants (AHA + BHA)
-            _add("AHA", "BHA", "Multiple Exfoliants", "warning",
-                 lambda a, b: (
-                     f"Layering AHA ({a}) and BHA ({b}) in the same routine increases the risk of over-exfoliation, "
-                     f"dryness, and breaking your skin's moisture barrier. "
-                     f"Tip: Alternate their use on different days, or use BHA in the morning and AHA at night."
-                 ))
-
-            # Fermented + Low-pH actives (AHA, BHA, Vitamin C)
-            _add("Fermented", "AHA", "Fermented + AHA", "warning",
-                 lambda a, b: (
-                     f"Combining fermented ingredients ({a}) with low-pH Alpha Hydroxy Acids ({b}) can cause "
-                     f"temporary skin irritation, stinging, or redness, as the low pH can alter the active ferment proteins. "
-                     f"Tip: Use your fermented essence first, wait 15-20 minutes, or apply them in separate routines."
-                 ))
-
-            _add("Fermented", "BHA", "Fermented + BHA", "warning",
-                 lambda a, b: (
-                     f"Combining fermented ingredients ({a}) with low-pH Beta Hydroxy Acids ({b}) can lead to "
-                     f"irritation or compromise the soothing benefits of the ferment. "
-                     f"Tip: Alternate days, or use BHA in the morning and fermented products at night."
-                 ))
-
-            _add("Fermented", "Vitamin C", "Fermented + Vitamin C", "warning",
-                 lambda a, b: (
-                     f"Combining fermented ingredients ({a}) with highly acidic Vitamin C ({b}) can disrupt "
-                     f"the stability of both actives and cause skin flushing or irritation. "
-                     f"Tip: Apply Vitamin C in the morning and fermented ingredients at night."
-                 ))
-
-            # Double Exfoliation check (same category across different products)
-            if "AHA" in a1 and "AHA" in a2:
-                conflicts.append({
-                    "product_a": p1, "product_b": p2,
-                    "ingredient_a": a1["AHA"], "ingredient_b": a2["AHA"],
-                    "conflict_type": "Double AHA Exfoliation", "severity": "warning",
-                    "message": (
-                        f"Both products contain Alpha Hydroxy Acids (AHAs): {a1['AHA']} in {p1} and {a2['AHA']} in {p2}. "
-                        f"Using multiple AHA products together can cause severe over-exfoliation and barrier damage. "
-                        f"Tip: Choose only one AHA product per routine, or use them on separate days."
-                    )
-                })
-
-            if "BHA" in a1 and "BHA" in a2:
-                conflicts.append({
-                    "product_a": p1, "product_b": p2,
-                    "ingredient_a": a1["BHA"], "ingredient_b": a2["BHA"],
-                    "conflict_type": "Double BHA Exfoliation", "severity": "warning",
-                    "message": (
-                        f"Both products contain Beta Hydroxy Acids (BHAs): {a1['BHA']} in {p1} and {a2['BHA']} in {p2}. "
-                        f"Layering multiple BHA products can severely dry out your skin and cause irritation. "
-                        f"Tip: Use only one BHA product in your routine."
-                    )
-                })
-
-            # Vitamin C + AHA/BHA (symmetric, written explicitly to avoid lambda capture issues)
-            for acid_cat in ("AHA", "BHA"):
-                if "Vitamin C" in a1 and acid_cat in a2:
-                    acid = a2[acid_cat]
-                    conflicts.append({
-                        "product_a": p1, "product_b": p2,
-                        "ingredient_a": a1["Vitamin C"], "ingredient_b": acid,
-                        "conflict_type": f"Vitamin C + {acid_cat}", "severity": "warning",
-                        "message": (
-                            f"Vitamin C like {a1['Vitamin C']} is highly acidic. Combining it with "
-                            f"{acid} can destabilize the Vitamin C and trigger redness. "
-                            f"Tip: Use Vitamin C in the morning and exfoliating acids in the evening."
-                        ),
-                    })
-                if acid_cat in a1 and "Vitamin C" in a2:
-                    acid = a1[acid_cat]
-                    conflicts.append({
-                        "product_a": p1, "product_b": p2,
-                        "ingredient_a": acid, "ingredient_b": a2["Vitamin C"],
-                        "conflict_type": f"{acid_cat} + Vitamin C", "severity": "warning",
-                        "message": (
-                            f"Vitamin C like {a2['Vitamin C']} is highly acidic. Combining it with "
-                            f"{acid} can destabilize the Vitamin C and trigger redness. "
-                            f"Tip: Use Vitamin C in the morning and exfoliating acids in the evening."
-                        ),
-                    })
-
-                # Peptides + AHA/BHA
-                if "Peptides" in a1 and acid_cat in a2:
-                    acid = a2[acid_cat]
-                    conflicts.append({
-                        "product_a": p1, "product_b": p2,
-                        "ingredient_a": a1["Peptides"], "ingredient_b": acid,
-                        "conflict_type": f"Peptides + {acid_cat}", "severity": "warning",
-                        "message": (
-                            f"The low-pH environment created by {acid} can break down peptide bonds in "
-                            f"{a1['Peptides']}, significantly reducing its anti-ageing effectiveness. "
-                            f"Tip: Apply peptides and acids in separate routines, or wait 30 min between applications."
-                        ),
-                    })
-                if acid_cat in a1 and "Peptides" in a2:
-                    acid = a1[acid_cat]
-                    conflicts.append({
-                        "product_a": p1, "product_b": p2,
-                        "ingredient_a": acid, "ingredient_b": a2["Peptides"],
-                        "conflict_type": f"{acid_cat} + Peptides", "severity": "warning",
-                        "message": (
-                            f"The low-pH environment created by {acid} can break down peptide bonds in "
-                            f"{a2['Peptides']}, significantly reducing its anti-ageing effectiveness. "
-                            f"Tip: Apply peptides and acids in separate routines, or wait 30 min between applications."
-                        ),
-                    })
+            conflicts.extend(
+                _detect_conflicts(p1, product_actives[p1], p2, product_actives[p2])
+            )
 
     if not conflicts:
         summary = "No active ingredient conflicts detected. Your routine layers safely!"

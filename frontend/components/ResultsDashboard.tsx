@@ -264,9 +264,10 @@ export function ResultsDashboard({ results, onReanalyze }: Props) {
             {verdictLabel}
           </span>
           <p style={{ fontSize: 14, color: 'var(--text-body)', lineHeight: 1.65, marginBottom: 16, fontFamily: "'Nunito Sans', sans-serif" }}>{verdictDesc}</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             {[
-              { label: 'Matched', val: `${results.matched_count} / ${results.assessed_count || results.matched_count}` },
+              { label: 'Recognised', val: `${results.matched_count}` },
+              { label: 'Risk data', val: `${results.assessed_count} / ${results.matched_count}` },
               { label: 'Coverage', val: `${results.coverage_percent}%` },
             ].map((s, i) => (
               <div key={i} style={{ padding: '10px 14px', background: 'var(--bg-section)', borderRadius: 8, border: '1px solid var(--border)' }}>
@@ -275,6 +276,13 @@ export function ResultsDashboard({ results, onReanalyze }: Props) {
               </div>
             ))}
           </div>
+          {results.matched_count > 0 && results.assessed_count < results.matched_count && (
+            <p style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.5, fontFamily: "'Nunito Sans', sans-serif" }}>
+              We have curated risk data for <strong>{results.assessed_count} of {results.matched_count}</strong> recognised
+              ingredients ({results.assessment_depth_percent}%). The rest are recognised but not yet assessed — a low score
+              reflects what we know, not a clean bill of health for the whole formula.
+            </p>
+          )}
         </div>
       </div>
 

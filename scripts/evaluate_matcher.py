@@ -220,6 +220,11 @@ def evaluate_real(fuzzy_matcher, embed_matcher, has_embed: bool) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Evaluate SkinGuard matcher accuracy.")
     parser.add_argument("--fuzzy-only", action="store_true", help="Skip EmbeddingMatcher.")
+    parser.add_argument(
+        "--min-f1", type=float, default=None,
+        help="Fail (exit 1) if the RapidFuzz canonical F1 drops below this value. "
+             "Used as a regression gate in CI.",
+    )
     args = parser.parse_args()
 
     print("Loading gold set from curated CSV...")
@@ -282,6 +287,16 @@ def main():
 
         # 2. Evaluate on Real Messy Labels
         evaluate_real(fuzzy_matcher, embed_matcher, has_embed)
+
+        # 3. Regression gate (CI): fail if canonical accuracy has degraded.
+        best_f1 = max(m["f1"] for m in fuzzy_results["threshold_metrics"])
+        if args.min_f1 is not None:
+            print(f"\nRegression gate: best RapidFuzz F1 = {best_f1:.4f} "
+                  f"(minimum required: {args.min_f1:.4f})")
+            if best_f1 < args.min_f1:
+                print("FAIL: matcher accuracy regressed below the required threshold.")
+                sys.exit(1)
+            print("PASS: matcher accuracy within tolerance.")
 
     finally:
         db.close()

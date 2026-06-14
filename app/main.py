@@ -10,7 +10,7 @@ from slowapi import _rate_limit_exceeded_handler
 
 import app.deps as deps
 from app.database import SessionLocal
-from app.deps import ENV, VERSION, get_matcher, limiter  # get_matcher re-exported for test imports
+from app.deps import CORS_ORIGINS, ENV, VERSION, get_matcher, limiter  # get_matcher re-exported for test imports
 from app.routers import auth, users, analyze, misc
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -104,13 +104,7 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-_origins = os.environ.get(
-    "SKINGUARD_CORS_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000",
-)
-_origin_list = [o.strip() for o in _origins.split(",") if o.strip()]
-
-if ENV == "production" and any("localhost" in o or "127.0.0.1" in o for o in _origin_list):
+if ENV == "production" and any("localhost" in o or "127.0.0.1" in o for o in CORS_ORIGINS):
     logger.warning(
         "CORS origins contain localhost addresses in production mode. "
         "Set SKINGUARD_CORS_ORIGINS to your production domain(s)."
@@ -118,7 +112,7 @@ if ENV == "production" and any("localhost" in o or "127.0.0.1" in o for o in _or
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origin_list,
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],

@@ -13,10 +13,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install Python deps first for better layer caching.
-COPY requirements.txt .
+# Install Python deps first for better layer caching. The production image
+# includes the optional integrations (Google Cloud Vision, Sentry).
+COPY requirements.txt requirements-optional.txt ./
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements-optional.txt
 
 
 # Application code.
@@ -25,9 +26,13 @@ COPY data ./data
 COPY app ./app
 COPY scripts ./scripts
 COPY alembic.ini ./alembic.ini
-COPY alembic ./alembic
+COPY migrations ./migrations
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 RUN chmod +x ./docker/entrypoint.sh
+
+# Run as non-root for container security.
+RUN useradd -m -r appuser && chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 8000
 
