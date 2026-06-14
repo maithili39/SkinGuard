@@ -1,62 +1,106 @@
-# Python
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
 .venv/
 venv/
-*.egg-info/
-.pytest_cache/
-*.pyo
+env/
+ENV/
+.python-version
 
-# Node / Frontend
+# ── Testing & Coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+nosetests.xml
+*.cover
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
 node_modules/
 frontend/node_modules/
 frontend/.next/
 frontend/tsconfig.tsbuildinfo
 frontend/next-env.d.ts
+# Playwright test output
+frontend/test-results/
+frontend/playwright-report/
+frontend/.playwright/
 
-
-# Env
+# ── Environment & Secrets ─────────────────────────────────────────────────────
 .env
+.env.local
+.env.*.local
+# Keep .env.example (template — no real secrets)
 
-# Local DB
+# ── Local Databases ───────────────────────────────────────────────────────────
 *.db
+*.sqlite
 *.sqlite3
+ci_migrations.db
+ci_check.db
 
-# Large raw reference data (downloaded, not committed)
-# data/reference/*.csv
-
-# Fetched test fixtures (regenerable via scripts/fetch_test_labels.py)
-data/test/*.jsonl
-data/test/*.json
-
-# ML artefacts — sentence-transformer model cache + embedding index
+# ── ML artefacts ──────────────────────────────────────────────────────────────
+# sentence-transformer model cache + embedding index (large, downloadable)
 *.embed
 *.npy
 *.pt
+*.onnx
 data/embeddings/
+# HuggingFace cache
+.cache/huggingface/
+sentence_transformers_cache/
 
+# ── Data files (downloaded / generated — not committed) ───────────────────────
+# Large raw reference data (download via script)
+data/reference/*.csv
+# Fetched test fixtures (regenerable via scripts/fetch_test_labels.py)
+data/test/*.jsonl
+data/test/*.json
 # Evaluation outputs
 data/evaluation/*.json
 data/evaluation/*.md
 
-# OS
-.DS_Store
-Thumbs.db
+# ── Docker / Infrastructure ───────────────────────────────────────────────────
+nginx/certs/*.pem
+nginx/certs/*.crt
+nginx/certs/*.key
 
-# IDE / tool caches
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── IDE / editor caches ───────────────────────────────────────────────────────
 .claude/
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
 .mypy_cache/
+.ruff_cache/
+.pytype/
+pyrightconfig.json
 
-# Coverage
-.coverage
-.coverage.*
-htmlcov/
-
-# Nginx TLS certificates
-nginx/certs/*.pem
-
-
-
-.vercel
+# ── Misc tooling ──────────────────────────────────────────────────────────────
+# Vercel deployment artefacts
+.vercel/
+# Type-checking
+.dmypy.json
+dmypy.json

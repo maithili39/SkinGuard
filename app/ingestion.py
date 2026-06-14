@@ -24,6 +24,7 @@ from app.database import Base, engine, SessionLocal
 from app.models import Ingredient, Alias
 from app.config import settings
 from app.matching import normalize
+from app.embedding_matcher import get_sentence_transformer
 
 
 CURATED_CSV = os.path.join("data", "curated", "ingredient_flags.csv")
@@ -190,7 +191,7 @@ def seed_alias_embeddings(db):
     """Batch encode all aliases and save vectors to database."""
     print("Pre-computing and seeding alias embeddings...")
     try:
-        from sentence_transformers import SentenceTransformer
+        model = get_sentence_transformer()
     except ImportError:
         print("  (sentence-transformers not installed; skipping embedding seeding.)")
         return
@@ -200,9 +201,6 @@ def seed_alias_embeddings(db):
     if not aliases:
         print("  All aliases already have embeddings.")
         return
-
-    print(f"  Loading sentence-transformer model for encoding...")
-    model = SentenceTransformer("all-MiniLM-L6-v2")
 
     print(f"  Encoding {len(aliases)} alias names...")
     names = [normalize(a.name) for a in aliases]

@@ -119,32 +119,32 @@ def test_load_curated(db_session):
 
 @patch("app.ingestion.settings")
 @patch("app.ingestion.normalize")
-@patch("sentence_transformers.SentenceTransformer")
-def test_seed_alias_embeddings(mock_transformer_cls, mock_normalize, mock_settings, db_session):
+@patch("app.ingestion.get_sentence_transformer")
+def test_seed_alias_embeddings(mock_get_transformer, mock_normalize, mock_settings, db_session):
     mock_settings.database_url = "sqlite:///:memory:"
     mock_normalize.side_effect = lambda x: x.lower()
-    
-    # Mock SentenceTransformer encoding
+
+    # Mock the model returned by get_sentence_transformer
     mock_model = MagicMock()
-    mock_transformer_cls.return_value = mock_model
+    mock_get_transformer.return_value = mock_model
     # Let's say we encode 2 items
     mock_model.encode.return_value = np.array([
         [0.1] * 384,
         [0.2] * 384
     ], dtype=np.float32)
-    
+
     ing = Ingredient(inci_name="Niacinamide")
     db_session.add(ing)
     db_session.flush()
-    
+
     alias1 = Alias(name="Vitamin B3", ingredient=ing)
     alias2 = Alias(name="Nicotinamide", ingredient=ing)
     db_session.add(alias1)
     db_session.add(alias2)
     db_session.commit()
-    
+
     seed_alias_embeddings(db_session)
-    
+
     # Check that embeddings are populated as bytes (on sqlite)
     db_session.refresh(alias1)
     db_session.refresh(alias2)
