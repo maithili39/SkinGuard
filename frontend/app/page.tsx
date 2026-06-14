@@ -14,6 +14,8 @@ import { ComparePanel } from '../components/ComparePanel';
 import { ResultsDashboard } from '../components/ResultsDashboard';
 import { ProfilePanel } from '../components/ProfilePanel';
 import { BarcodeScanner } from '../components/BarcodeScanner';
+// Fix #14: cross-tab profile sync
+import { useProfileSync, broadcastProfileUpdate, broadcastLogout } from '../lib/profile-sync';
 
 const LS_USER_KEY = 'sg_user';
 const DEMO_INGREDIENTS = "Water, Glycerin, Niacinamide, Salicylic Acid, Fragrance, Ceramide NP, Phenoxyethanol, Alcohol Denat.";
@@ -155,6 +157,11 @@ export default function Home() {
       .catch(() => setLlmAvailable(false));
   }, []);
 
+  // Fix #14: sync profile state across tabs whenever localStorage changes
+  // (storage event fires in other tabs; BroadcastChannel fires in this tab too;
+  // visibilitychange catches missed events when tab was backgrounded).
+  useProfileSync(LS_USER_KEY, setUser, setProfile, setAllergies);
+
   // Stats counter IntersectionObserver
   useEffect(() => {
     const el = statsRef.current;
@@ -208,6 +215,7 @@ export default function Home() {
       await fetch(`/api/users/${encodeURIComponent(user.email)}/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...p, avoid_list: a }) });
       const u = { ...user, profile: { ...p, avoid_list: a } };
       setUser(u); localStorage.setItem(LS_USER_KEY, JSON.stringify(u));
+      broadcastProfileUpdate(LS_USER_KEY);  // Fix #14: notify other tabs
     } catch { }
   };
 
@@ -235,6 +243,7 @@ export default function Home() {
     const avoid: string[] = sp.avoid_list ?? [];
     const u: UserState = { email, full_name: fullName, profile: { ...prof, avoid_list: avoid } };
     setUser(u); localStorage.setItem(LS_USER_KEY, JSON.stringify(u));
+    broadcastProfileUpdate(LS_USER_KEY);  // Fix #14: notify other tabs
     setProfile(prof);
     setAllergies(avoid);
     setShowLoginModal(false); setActiveTab('vanity');
@@ -256,6 +265,7 @@ export default function Home() {
 
   const handleLogout = async () => {
     try { await fetch('/api/auth/logout', { method: 'POST' }); } catch { }
+    broadcastLogout();  // Fix #14: tell all other tabs to clear their session
     setUser(null); localStorage.removeItem(LS_USER_KEY); setActiveTab('home');
   };
 

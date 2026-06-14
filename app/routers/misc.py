@@ -94,8 +94,18 @@ def chat(
     db: Session = Depends(get_db),
     matcher: Matcher = Depends(get_matcher),
 ):
-    """RAG-grounded Q&A about a product's ingredients (rate-limited — LLM calls are expensive)."""
-    from app.explain import ask, build_ingredient_context, get_model_name, is_available
+    """RAG-grounded Q&A about a product's ingredients.
+
+    Fix #13: The endpoint now uses the analysis_context payload as the SOLE
+    source of truth for ingredient facts. It no longer re-fetches ingredients
+    from the DB, which could return different data than what the user saw in
+    their saved analysis (e.g. if the DB was updated between scan time and chat).
+
+    The only DB interaction allowed here is fetching a missing *explanation*
+    (free-text summary) for an ingredient — that's display text, not safety
+    data, so it can be regenerated without contradicting the analysis.
+    """
+    from app.explain import ask, build_ingredient_context, explain_ingredient_llm, get_model_name, is_available
 
     found = payload.analysis_context.get("found_ingredients", [])
     grounding = (
@@ -115,36 +125,44 @@ def chat(
             source="template",
         )
 
-    # Augment with fresh DB records.
+    # Fix #13: Build context ENTIRELY from the analysis_context payload.
+    # Do NOT re-fetch ingredient safety flags from the DB — those must match
+    # exactly what the user saw in their analysis.
+    #
+    # We only allow one narrow DB lookup: filling in a missing free-text
+    # *explanation* for display purposes. Explanations are cached, cosmetic
+    # summaries — they don't affect safety flags or score.
     enriched: list[dict] = []
     for item in grounding:
-        name = item.get("matched_name", "")
-        match = matcher.match_token(name)
-        if match.status == "matched":
-            ing = db.get(Ingredient, match.ingredient_id)
-            if ing:
-                enriched.append({
-                    "matched_name": ing.inci_name,
-                    "explanation": item.get("explanation") or explain_ingredient_llm(ing),
-                    "ingredient": {
-                        "function": ing.function,
-                        "comedogenic": bool(ing.comedogenic),
-                        "irritant": ing.irritant,
-                    },
-                })
-                continue
-        enriched.append(item)
+        enriched_item = dict(item)  # shallow copy of what the analysis returned
+
+        # Only fetch an explanation if none was stored in the analysis context.
+        if not enriched_item.get("explanation"):
+            try:
+                match = matcher.match_token(enriched_item.get("matched_name", ""))
+                if match.status == "matched":
+                    ing = db.get(Ingredient, match.ingredient_id)
+                    if ing:
+                        enriched_item["explanation"] = explain_ingredient_llm(ing)
+            except Exception:
+                pass  # explanation is cosmetic — never block on this
+
+        enriched.append(enriched_item)
 
     context = build_ingredient_context(enriched)
     summary = payload.analysis_context.get("summary", "")
+    findings_count = len(payload.analysis_context.get("findings", []))
+    score = payload.analysis_context.get("safety_score")
     if summary:
-        context = f"Product summary: {summary}\n\n{context}"
+        header = f"Product summary: {summary}"
+        if score is not None:
+            header += f" (safety score: {score}/100)"
+        if findings_count:
+            header += f" | {findings_count} finding(s) from the saved analysis."
+        context = f"{header}\n\n{context}"
 
     # Prompt-injection guard. The primary defense is that answers are RAG-grounded
     # on structured ingredient data; this blocklist is a cheap secondary filter.
-    # We match only multi-word phrases that signal an instruction-override attempt —
-    # bare words like "forget" or "act as" are avoided because they fire on
-    # legitimate questions ("I forget which acid…", "does this act as a humectant?").
     _INJECTION_PATTERNS = [
         "ignore previous", "ignore all previous", "ignore above",
         "ignore your instructions", "disregard previous", "disregard all previous",
@@ -166,6 +184,7 @@ def chat(
 
     answer, source = ask(question_clean, context)
     return ChatOut(answer=answer, grounded_on=grounded_on, source=source)
+
 
 
 @router.post("/extract-text")
