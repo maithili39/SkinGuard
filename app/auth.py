@@ -10,6 +10,7 @@ Design decisions:
 - `require_user` is the strict version that raises 401.
 """
 
+import hashlib
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -84,6 +85,16 @@ def create_reset_token(email: str) -> str:
     """Create a signed JWT for password reset that expires in 1 hour."""
     expire = datetime.now(timezone.utc) + timedelta(hours=1)
     return jwt.encode({"sub": email, "purpose": "password_reset", "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def hash_reset_token(token: str) -> str:
+    """Return the SHA-256 hex digest of a reset token for DB storage.
+
+    We store the hash, not the raw token, so a DB leak doesn’t expose
+    live reset links. SHA-256 is sufficient here: the token is already
+    a high-entropy, short-lived JWT — not a password.
+    """
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def decode_reset_token(token: str) -> Optional[str]:

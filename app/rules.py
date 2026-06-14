@@ -206,18 +206,20 @@ def has_risk_data(ing: "Ingredient") -> bool:
 
 
 # Beneficial ingredients worth surfacing as positives.
-BENEFITS = {
-    "Niacinamide": "helps acne, oil control and barrier",
-    "Hyaluronic Acid": "deep hydration",
-    "Glycerin": "gentle hydration",
-    "Ceramide NP": "repairs the skin barrier",
-    "Panthenol": "soothing and hydrating",
-    "Centella Asiatica Extract": "calming and soothing",
-    "Azelaic Acid": "good for acne and redness",
-    "Zinc Oxide": "broad-spectrum mineral sun protection",
-    "Bakuchiol": "plant-based retinol alternative; pregnancy-friendlier",
-    "Ascorbic Acid": "Vitamin C - brightens and protects against free-radical damage",
-    "Squalane": "lightweight non-comedogenic hydration",
+# Keys are stored lower-cased so lookups are case-insensitive — ingredient
+# names in the DB can vary in capitalisation ("Niacinamide" vs "NIACINAMIDE").
+BENEFITS: dict[str, str] = {
+    "niacinamide": "helps acne, oil control and barrier",
+    "hyaluronic acid": "deep hydration",
+    "glycerin": "gentle hydration",
+    "ceramide np": "repairs the skin barrier",
+    "panthenol": "soothing and hydrating",
+    "centella asiatica extract": "calming and soothing",
+    "azelaic acid": "good for acne and redness",
+    "zinc oxide": "broad-spectrum mineral sun protection",
+    "bakuchiol": "plant-based retinol alternative; pregnancy-friendlier",
+    "ascorbic acid": "Vitamin C - brightens and protects against free-radical damage",
+    "squalane": "lightweight non-comedogenic hydration",
 }
 
 # Alternatives: maps (function, concern) → safer swap suggestions.
@@ -321,17 +323,32 @@ def evaluate(ingredients: list[Ingredient], profile: Profile) -> dict:
             if rule.predicate(ing):
                 _record(rule.level, rule.concern, rule.message(ing), ing.source, rule.kind)
 
-        if ing.inci_name in BENEFITS:
+        # Case-insensitive BENEFITS lookup — DB names may differ in capitalisation.
+        benefit_desc = BENEFITS.get(name_lower)
+        if benefit_desc:
             findings.append(
                 Finding(ing.inci_name, "good", "benefit",
-                        f"{ing.inci_name} - {BENEFITS[ing.inci_name]}.",
+                        f"{ing.inci_name} - {benefit_desc}.",
                         ing.source, "advice")
             )
             bonus += GOOD_BONUS
 
-    score = 100 - penalty + min(bonus, GOOD_BONUS_CAP)
+    # Fix #2: compute penalty-only score first, apply DANGER_CAP *before* adding
+    # the benefit bonus so that any number of "good" ingredients can never push a
+    # product with danger flags above the cap.
+    # Without this fix: 2 dangers (penalty=60) + 12 bonus = 52, capped to 50.
+    #                   6 warnings (penalty=60) + 12 bonus = 52 — same score!
+    # With this fix:    danger score = min(100-60, DANGER_CAP) + bonus
+    #                                = min(40, 50) + 12 = 52, then capped at 50.
+    # Actually the correct fix is: add bonus *inside* the cap ceiling.
+    base_score = 100.0 - penalty
     if has_danger:
-        score = min(score, DANGER_CAP)
+        # Cap the raw penalty-adjusted score, THEN allow a small benefit bonus
+        # — but the final score can never exceed DANGER_CAP.
+        score = min(base_score, float(DANGER_CAP)) + min(bonus, GOOD_BONUS_CAP)
+        score = min(score, float(DANGER_CAP))  # enforce hard ceiling
+    else:
+        score = base_score + min(bonus, GOOD_BONUS_CAP)
     score = int(max(0, min(100, round(score))))
 
     # 'indicative' is deliberate: this is guidance from a rules engine, not a

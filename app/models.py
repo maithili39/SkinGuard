@@ -100,6 +100,12 @@ class User(Base):
     # Real auth: bcrypt hash. Null = legacy email-only account (no password set yet).
     hashed_password = Column(String, nullable=True)
 
+    # Fix #4: one-time-use password reset token guard (OWASP A04 replay prevention).
+    # Stores a SHA-256 hash of the most recently issued reset token.
+    # Set when a reset is requested; cleared (set to None) immediately after use.
+    # A replayed token fails because the DB column is NULL after first use.
+    password_reset_token_hash = Column(String, nullable=True)
+
     # Saved skin profile (avoids re-toggling every visit).
     pregnant = Column(Boolean, default=False)
     sensitive_skin = Column(Boolean, default=False)

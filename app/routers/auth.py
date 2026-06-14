@@ -4,7 +4,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
-from app.auth import create_reset_token, create_token, decode_reset_token, get_current_user, hash_password, require_user
+from app.auth import create_reset_token, create_token, decode_reset_token, get_current_user, hash_password, hash_reset_token, require_user
 from app.database import get_db
 from app.deps import CORS_ORIGINS, IS_PRODUCTION, _limit, limiter
 from app.models import Scan, User
@@ -81,6 +81,11 @@ def forgot_password(request: Request, payload: ForgotPasswordIn, db: Session = D
         return _generic_response
 
     token = create_reset_token(user.email)
+    # Fix #4: persist a one-way hash of the token so the reset endpoint can
+    # reject replays. The hash is cleared as soon as the token is consumed.
+    user.password_reset_token_hash = hash_reset_token(token)
+    db.commit()
+
     # Never trust the client-supplied Origin to build the reset link — an attacker
     # could point the emailed URL at their own host. Only use it if it is one of
     # our configured trusted origins, otherwise fall back to the first one.
@@ -134,12 +139,21 @@ def reset_password(request: Request, payload: ResetPasswordIn, db: Session = Dep
     if not user:
         raise HTTPException(status_code=400, detail="User not found.")
 
+    # Fix #4: one-time-use guard — reject replayed tokens.
+    # The stored hash is cleared immediately after first use so a second
+    # request with the same token fails here even if the JWT is still valid.
+    from app.auth import hash_reset_token as _hrt
+    if not user.password_reset_token_hash or user.password_reset_token_hash != _hrt(payload.token):
+        raise HTTPException(status_code=400, detail="Reset token has already been used or was not issued.")
+
     try:
         users_svc.validate_password_complexity(payload.new_password)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
     user.hashed_password = hash_password(payload.new_password)
+    # Consume the token — clears the stored hash so replays are rejected.
+    user.password_reset_token_hash = None
     db.commit()
     logger.info("Password reset successfully for user: %s", user.email)
     return {"detail": "Password has been reset successfully."}

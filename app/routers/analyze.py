@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.analysis import analyze_text
@@ -21,6 +21,8 @@ logger = logging.getLogger("skinguard.analyze")
 router = APIRouter(tags=["analysis"])
 
 # Active ingredients by category — used for routine conflict detection.
+# ALL values are stored lowercase so the comparison in _actives_for is always
+# apples-to-apples (matched_inci.lower() vs lowercase inci_set members).
 _CATEGORIES: dict[str, set[str]] = {
     "AHA": {"glycolic acid", "lactic acid", "mandelic acid", "citric acid", "malic acid", "tartaric acid"},
     "BHA": {"salicylic acid", "betaine salicylate"},
@@ -47,6 +49,9 @@ _CATEGORIES: dict[str, set[str]] = {
         "saccharomyces ferment", "lactobacillus ferment filtrate"
     },
 }
+# Defensive: normalise all inci_set members to lowercase at import time so a
+# future maintainer adding a mixed-case entry won't silently break detection.
+_CATEGORIES = {cat: {n.lower() for n in names} for cat, names in _CATEGORIES.items()}
 
 
 # ── Declarative conflict rules ────────────────────────────────────────────────
@@ -207,13 +212,21 @@ def analyze(
     current_user: Optional[User] = Depends(get_current_user),
 ):
     """Analyze an ingredient list. Rate-limited to 30 req/min per user/IP."""
+    # Fix #3 (partial): pass ALL profile fields — the original code silently
+    # dropped dry_skin, oily_skin, combination_skin, normal_skin and avoid_list,
+    # meaning rules gated on those fields NEVER fired.
     profile = Profile(
         pregnant=payload.profile.pregnant,
         sensitive_skin=payload.profile.sensitive_skin,
         acne_prone=payload.profile.acne_prone,
         fungal_acne=payload.profile.fungal_acne,
         rosacea=payload.profile.rosacea,
-        avoid_list=payload.profile.avoid_list,
+        dry_skin=payload.profile.dry_skin,
+        oily_skin=payload.profile.oily_skin,
+        combination_skin=payload.profile.combination_skin,
+        normal_skin=payload.profile.normal_skin,
+        # Lowercase each entry so avoid_list matching is case-insensitive.
+        avoid_list=[name.lower() for name in (payload.profile.avoid_list or [])],
     )
 
     _cache_key: str | None = None
@@ -229,7 +242,16 @@ def analyze(
             logger.debug("Cache HIT for analyze key=%s", _cache_key)
             return cached
 
-    result = analyze_text(db, payload.text, profile, matcher=matcher)
+    # Fix #7: wrap the core analysis in try/except so that any DB or matcher
+    # error returns a safe JSON 500 instead of exposing a raw Python stack trace.
+    try:
+        result = analyze_text(db, payload.text, profile, matcher=matcher)
+    except Exception as exc:
+        logger.exception("analyze_text failed for user=%s: %s", getattr(current_user, "email", "anon"), exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Analysis failed due to an internal error. Please try again or contact support.",
+        )
 
     save_user = current_user
     if save_user is None and payload.user_email:

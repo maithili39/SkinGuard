@@ -32,11 +32,15 @@ settings = Settings()
 
 # ── Production safety checks ─────────────────────────────────────────────────
 if settings.database_url.startswith("sqlite"):
-    if settings.env == "production":
-        logger.error(
+    if settings.env.startswith("prod"):
+        # Fix #6: hard-fail at startup rather than logging an error and continuing.
+        # SQLite does not support concurrent writes; silently running in production
+        # would cause data corruption under any real load. A RuntimeError here
+        # surfaces the misconfiguration immediately instead of at 2 am.
+        raise RuntimeError(
             "DATABASE_URL is SQLite but ENV=production. "
             "SQLite does not support concurrent writes and is NOT suitable for production. "
-            "Set DATABASE_URL to a PostgreSQL connection string."
+            "Set DATABASE_URL to a PostgreSQL connection string in your environment or .env file."
         )
     else:
         logger.info("Using SQLite database (development mode).")

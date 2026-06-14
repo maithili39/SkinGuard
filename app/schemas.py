@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class ProfileIn(BaseModel):
@@ -12,6 +12,27 @@ class ProfileIn(BaseModel):
     combination_skin: bool = False
     normal_skin: bool = False
     avoid_list: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _no_contradictory_skin_types(self) -> "ProfileIn":
+        """Reject mutually exclusive skin-type combinations.
+
+        Allowing oily_skin=True AND dry_skin=True simultaneously would fire
+        rules for both types on every ingredient, producing misleading advice.
+        Combination skin is the legitimate way to express a mixed condition.
+        """
+        conflicts = [
+            ("oily_skin", "dry_skin"),
+            ("oily_skin", "normal_skin"),
+            ("dry_skin", "normal_skin"),
+        ]
+        for a, b in conflicts:
+            if getattr(self, a) and getattr(self, b):
+                raise ValueError(
+                    f"Contradictory skin types: '{a}' and '{b}' cannot both be True. "
+                    f"Use 'combination_skin' for mixed conditions."
+                )
+        return self
 
 
 class AnalyzeIn(BaseModel):
