@@ -13,7 +13,7 @@ from app.deps import _limit, get_matcher, hybrid_rate_limit_key, limiter
 from app.matching import Matcher
 from app.models import AnonScanEvent, User
 from app.rules import Profile
-from app.schemas import AnalyzeIn, RoutineAnalyzeIn
+from app.schemas import AnalyzeIn, RoutineAnalyzeIn, ParseIn
 from app import users as users_svc
 
 logger = logging.getLogger("skinguard.analyze")
@@ -200,6 +200,37 @@ def _detect_conflicts(p1: str, a1: dict, p2: str, a2: dict) -> list[dict]:
     for rule in _DIRECTIONAL_RULES:
         _emit_pair_conflicts(rule, p1, a1, p2, a2, out)
     return out
+
+
+@router.post("/parse-ingredients")
+@limiter.limit(_limit("30/minute"), key_func=hybrid_rate_limit_key)
+def parse_ingredients(
+    request: Request,
+    payload: ParseIn,
+    matcher: Matcher = Depends(get_matcher),
+):
+    """Clean, split, and run a quick database matching simulation for each token.
+    
+    Returns a list of structured parse results including suggestions for unmatched items.
+    """
+    from app.matching import split_ingredient_list, clean_parsed_token
+    
+    raw_tokens = split_ingredient_list(payload.text)
+    ingredients_out = []
+    
+    for t in raw_tokens:
+        match = matcher.match_token(t)
+        best_candidate = match.best_candidate if (match.status == "unmatched" and match.confidence >= 40) else None
+        
+        ingredients_out.append({
+            "raw": t,
+            "clean": match.matched_inci or clean_parsed_token(t),
+            "matched": match.status == "matched",
+            "best_candidate": best_candidate,
+            "confidence": match.confidence
+        })
+        
+    return {"ingredients": ingredients_out}
 
 
 @router.post("/analyze")

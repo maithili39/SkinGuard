@@ -45,10 +45,38 @@ _JUNK_TOKENS: set[str] = {
 }
 
 
+def clean_parsed_token(token: str) -> str:
+    """Clean up formatting noise from individual ingredient tokens.
+    
+    Handles:
+      - Leading bullet points, list numbers, asterisks, hyphens, and spaces
+        (e.g., '1. Water' -> 'Water', '• Glycerin' -> 'Glycerin')
+      - Percentage declarations (e.g. 'Glycerin 2%' -> 'Glycerin', 'Salicylic Acid 0.5%' -> 'Salicylic Acid')
+      - Trailing punctuation (like asterisks, dots, or spaces)
+    
+    Leaves chemical names like '1,2-Hexanediol' completely intact.
+    """
+    token = token.strip()
+    
+    # Remove percentage declarations, e.g. "2%" or "0.5%" or "10%"
+    token = re.sub(r"\b\d+(?:\.\d+)?\s*%", "", token)
+    
+    # Clean leading list numbers / bullet points / punctuation
+    token = re.sub(r"^(?:\d+(?:\.\d+)?[\s.)\-]+|[^\w\s()]+)+", "", token)
+    
+    # Strip trailing punctuation/junk
+    token = re.sub(r"[^\w\s)]+$", "", token)
+    
+    return token.strip()
+
+
 def normalize(token: str) -> str:
-    token = token.lower()
+    token = token.strip().lower()
+    token = re.sub(r"\b\d+(?:\.\d+)?\s*%", " ", token)
     token = _NOISE.sub(" ", token)
     token = token.replace("/", " ").replace("+", " ")
+    token = re.sub(r"^(?:\d+(?:\.\d+)?[\s.)\-]+|[^\w\s()]+)+", "", token)
+    token = re.sub(r"[^\w\s)]+$", "", token)
     token = re.sub(r"\s+", " ", token).strip()
     return token
 
@@ -67,11 +95,12 @@ def split_ingredient_list(raw_text: str) -> list[str]:
     cleaned = _HTML_ENTITIES.sub(" ", cleaned)
 
     # Labels separate ingredients with commas; also tolerate newlines/semicolons.
-    parts = re.split(r"[,;\n]", cleaned)
+    # We split by semicolon, newline, and comma (but NOT commas between digits, e.g. 1,2-Hexanediol)
+    parts = re.split(r";|\n|,(?!\d)|(?<!\d),", cleaned)
 
     tokens = []
     for p in parts:
-        p = p.strip()
+        p = clean_parsed_token(p)
         if not p:
             continue
         # Pure numbers (e.g. percentages split off from CAS numbers)

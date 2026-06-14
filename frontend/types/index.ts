@@ -95,3 +95,10 @@ export function formatDate(iso: string | null): string {
     month: 'short', day: 'numeric', year: 'numeric',
   });
 }
+
+export interface ParsedIngredient {
+  raw: string;
+  matched: boolean;
+  best_candidate: string | null;
+  confidence: number;
+}

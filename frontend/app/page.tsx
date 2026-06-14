@@ -8,7 +8,7 @@ import {
   Droplets, Baby, Bug, CheckCircle, Activity,
   Twitter, Instagram, Github, ArrowRight
 } from 'lucide-react';
-import type { SkinProfile, UserState, AnalysisResult } from '../types';
+import type { SkinProfile, UserState, AnalysisResult, ParsedIngredient } from '../types';
 import { RoutineAnalyzer } from '../components/RoutineAnalyzer';
 import { ComparePanel } from '../components/ComparePanel';
 import { ResultsDashboard } from '../components/ResultsDashboard';
@@ -97,7 +97,7 @@ export default function Home() {
   const [barcodeProduct, setBarcodeProduct] = useState<{ name: string; brand: string } | null>(null);
 
   const [isExtracting, setIsExtracting] = useState(false);
-  const [extractedIngredients, setExtractedIngredients] = useState<string[]>([]);
+  const [extractedIngredients, setExtractedIngredients] = useState<ParsedIngredient[]>([]);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
   const [addIngredientInput, setAddIngredientInput] = useState('');
@@ -279,8 +279,16 @@ export default function Home() {
       const data = await res.json();
       const text = data.text || '';
       if (!text.trim()) throw new Error('No text detected in image. Ensure the ingredient list is clearly visible and try again.');
-      const parsed = text.split(/,|\n/).map((s: string) => s.trim().replace(/[.*]/g, '')).filter(Boolean);
-      setExtractedIngredients(parsed); setResults(null); setActiveTab('analyze');
+      
+      const parseRes = await fetch('/api/parse-ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (!parseRes.ok) throw new Error('Ingredient parsing failed');
+      const parseData = await parseRes.json();
+      
+      setExtractedIngredients(parseData.ingredients); setResults(null); setActiveTab('analyze');
     } catch (err: any) { setError(err.message); }
     finally { setIsExtracting(false); }
   };
@@ -296,25 +304,48 @@ export default function Home() {
       setBarcodeProduct({ name: data.product_name || 'Unknown Product', brand: data.brands || '' });
       const ingText = data.ingredients_text || '';
       if (!ingText) throw new Error('Product found but has no ingredient list. Try uploading a photo of the label instead.');
-      const parsed = ingText.split(',').map((s: string) => s.trim()).filter(Boolean);
-      setExtractedIngredients(parsed); setResults(null); setActiveTab('analyze');
+      
+      const parseRes = await fetch('/api/parse-ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: ingText })
+      });
+      if (!parseRes.ok) throw new Error('Ingredient parsing failed');
+      const parseData = await parseRes.json();
+      
+      setExtractedIngredients(parseData.ingredients); setResults(null); setActiveTab('analyze');
     } catch (err: any) { setError(err.message); }
     finally { setIsBarcodeLookingUp(false); }
   };
 
-  const handleManualInputSubmit = () => {
+  const handleManualInputSubmit = async () => {
     if (!pastedIngredients.trim()) return;
     if (pastedIngredients.length > 5000) { setError('Input too long — limit is 5,000 characters.'); return; }
+    setIsExtracting(true); setError(null);
     const sanitized = pastedIngredients.replace(/<[^>]*>/g, '');
-    const parsed = sanitized.split(',').map(s => s.trim().replace(/[.*]/g, '')).filter(Boolean);
-    if (parsed.length <= 1) { setError('Please paste the full ingredient list separated by commas.'); return; }
-    setExtractedIngredients(parsed); setResults(null); setError(null); setActiveTab('analyze');
+    try {
+      const res = await fetch('/api/parse-ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: sanitized })
+      });
+      if (!res.ok) throw new Error('Ingredient parsing failed');
+      const data = await res.json();
+      if (data.ingredients.length === 0) {
+        throw new Error('No ingredients detected. Please paste the full ingredient list separated by commas.');
+      }
+      setExtractedIngredients(data.ingredients); setResults(null); setActiveTab('analyze');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   const handleRunAnalysis = async () => {
     if (extractedIngredients.length === 0) return;
     setIsAnalyzing(true); setError(null);
-    const textToAnalyze = extractedIngredients.join(', ');
+    const textToAnalyze = extractedIngredients.map(ing => ing.raw).join(', ');
     try {
       const res = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textToAnalyze, profile: { ...profile, avoid_list: allergies }, user_email: user?.email || null }) });
       if (!res.ok) throw new Error('Analysis failed');
@@ -327,9 +358,22 @@ export default function Home() {
     finally { setIsAnalyzing(false); }
   };
 
-  const handleTryDemo = () => {
-    const parsed = DEMO_INGREDIENTS.split(',').map(s => s.trim()).filter(Boolean);
-    setExtractedIngredients(parsed); setResults(null); setActiveTab('analyze');
+  const handleTryDemo = async () => {
+    setIsExtracting(true); setError(null);
+    try {
+      const res = await fetch('/api/parse-ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: DEMO_INGREDIENTS })
+      });
+      if (!res.ok) throw new Error('Demo parsing failed');
+      const data = await res.json();
+      setExtractedIngredients(data.ingredients); setResults(null); setActiveTab('analyze');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   const handleHeroAnalyze = async () => {
@@ -344,7 +388,7 @@ export default function Home() {
     setError(null);
     setIsAnalyzing(true);
     setActiveTab('analyze');
-    setExtractedIngredients(parsed);
+    setExtractedIngredients(parsed.map(p => ({ raw: p, matched: true, best_candidate: null, confidence: 100 })));
     const textToAnalyze = parsed.join(', ');
     try {
       const res = await fetch('/api/analyze', {
@@ -367,7 +411,7 @@ export default function Home() {
 
   const handleHeroDemo = async () => {
     const parsed = DEMO_INGREDIENTS.split(',').map(s => s.trim()).filter(Boolean);
-    setExtractedIngredients(parsed);
+    setExtractedIngredients(parsed.map(p => ({ raw: p, matched: true, best_candidate: null, confidence: 100 })));
     setError(null);
     setIsAnalyzing(true);
     setActiveTab('analyze');
@@ -924,14 +968,66 @@ export default function Home() {
             </div>
           )}
 
+          {/* Low count warning */}
+          {extractedIngredients.length < 3 && extractedIngredients.length > 0 && (
+            <div style={{ display: 'flex', gap: 10, padding: '12px 16px', background: '#fff9e6', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, marginBottom: 16 }} className="animate-fade-in">
+              <AlertTriangle size={15} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 13, color: '#b45309', lineHeight: 1.5 }}>
+                <strong>Low ingredient count:</strong> Skincare products typically contain at least 5 to 30 ingredients. Make sure the list was parsed correctly.
+              </span>
+            </div>
+          )}
+
+          {/* Stats summary header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, color: '#6b6b6b', marginBottom: 10, padding: '0 4px' }}>
+            <span>Parsed: <strong>{extractedIngredients.length}</strong> ingredients</span>
+            <span>Status: <strong style={{ color: extractedIngredients.filter(x => !x.matched).length > 0 ? '#b45309' : '#2d4a35' }}>
+              {extractedIngredients.filter(x => x.matched).length} matched, {extractedIngredients.filter(x => !x.matched).length} warning(s)
+            </strong></span>
+          </div>
+
           <div className="card" style={{ padding: '24px', marginBottom: 16 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
               {extractedIngredients.map((ing, idx) => (
-                <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', border: '1.5px solid #e8e4dc', borderRadius: 50, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#1a1a1a', cursor: 'default' }}>
+                <div key={idx} style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: ing.matched ? 'white' : '#fef5e7',
+                  border: ing.matched ? '1.5px solid #e8e4dc' : '1.5px solid #f5b041',
+                  borderRadius: 50,
+                  padding: '5px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#1a1a1a',
+                  cursor: 'default'
+                }}>
+                  {!ing.matched && (
+                    <AlertTriangle size={11} style={{ color: '#d97706', flexShrink: 0 }} />
+                  )}
                   {editIndex === idx ? (
-                    <input value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => { const u = [...extractedIngredients]; u[idx] = editValue.trim(); setExtractedIngredients(u); setEditIndex(null); }} onKeyDown={e => { if (e.key === 'Enter') { const u = [...extractedIngredients]; u[idx] = editValue.trim(); setExtractedIngredients(u); setEditIndex(null); } }} autoFocus style={{ border: 'none', outline: 'none', width: 90, fontSize: 12, background: 'transparent', color: '#1a1a1a' }} />
+                    <input
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      onBlur={() => {
+                        const u = [...extractedIngredients];
+                        u[idx] = { ...u[idx], raw: editValue.trim(), matched: true, best_candidate: null };
+                        setExtractedIngredients(u);
+                        setEditIndex(null);
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          const u = [...extractedIngredients];
+                          u[idx] = { ...u[idx], raw: editValue.trim(), matched: true, best_candidate: null };
+                          setExtractedIngredients(u);
+                          setEditIndex(null);
+                        }
+                      }}
+                      autoFocus
+                      style={{ border: 'none', outline: 'none', width: 90, fontSize: 12, background: 'transparent', color: '#1a1a1a' }}
+                    />
                   ) : (
-                    <span style={{ cursor: 'pointer' }} onClick={() => { setEditIndex(idx); setEditValue(ing); }}>{ing}</span>
+                    <span style={{ cursor: 'pointer' }} onClick={() => { setEditIndex(idx); setEditValue(ing.raw); }}>{ing.raw}</span>
                   )}
                   <button onClick={() => setExtractedIngredients(extractedIngredients.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b6b6b', display: 'flex', padding: 0 }}>
                     <X size={11} />
@@ -940,12 +1036,49 @@ export default function Home() {
               ))}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input value={addIngredientInput} onChange={e => setAddIngredientInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} placeholder="Add missing ingredient..." className="input-field" style={{ fontSize: 13 }} />
-              <button onClick={() => { if (addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, addIngredientInput.trim()]); setAddIngredientInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>
+              <input value={addIngredientInput} onChange={e => setAddIngredientInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, { raw: addIngredientInput.trim(), matched: true, best_candidate: null, confidence: 100 }]); setAddIngredientInput(''); } }} placeholder="Add missing ingredient..." className="input-field" style={{ fontSize: 13 }} />
+              <button onClick={() => { if (addIngredientInput.trim()) { setExtractedIngredients([...extractedIngredients, { raw: addIngredientInput.trim(), matched: true, best_candidate: null, confidence: 100 }]); setAddIngredientInput(''); } }} className="btn-outline" style={{ padding: '0 18px', flexShrink: 0, fontSize: 13, fontWeight: 700 }}>
                 <Plus size={13} /> Add
               </button>
             </div>
           </div>
+
+          {/* Match Suggestions Panel */}
+          {extractedIngredients.filter(ing => !ing.matched && ing.best_candidate).length > 0 && (
+            <div style={{ background: '#fdf6ee', border: '1px solid rgba(160,120,80,0.15)', borderRadius: 16, padding: '16px 20px', marginBottom: 16 }} className="animate-fade-in">
+              <h4 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 14, color: '#8a5e38', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={14} style={{ color: '#d48d3b' }} /> Spelling Suggestions ({extractedIngredients.filter(ing => !ing.matched && ing.best_candidate).length})
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {extractedIngredients.filter(ing => !ing.matched && ing.best_candidate).map((ing, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', padding: '8px 14px', borderRadius: 8, border: '1px solid #ede8df' }}>
+                    <span style={{ fontSize: 13, color: '#6b6b6b' }}>
+                      Replace <code style={{ background: '#faf9f6', padding: '2px 6px', borderRadius: 4, color: '#e53935', fontSize: 12 }}>{ing.raw}</code> with <strong style={{ color: '#2d4a35' }}>{ing.best_candidate}</strong>?
+                    </span>
+                    <button
+                      onClick={() => {
+                        const updated = [...extractedIngredients];
+                        const itemIdx = extractedIngredients.findIndex(x => x.raw === ing.raw);
+                        if (itemIdx !== -1) {
+                          updated[itemIdx] = {
+                            raw: ing.best_candidate!,
+                            matched: true,
+                            best_candidate: null,
+                            confidence: 100
+                          };
+                          setExtractedIngredients(updated);
+                        }
+                      }}
+                      className="btn-outline"
+                      style={{ padding: '4px 10px', fontSize: 11, fontWeight: 700 }}
+                    >
+                      Accept
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button onClick={handleRunAnalysis} disabled={isAnalyzing || extractedIngredients.length === 0} className="btn-green" style={{ padding: '14px 24px', fontSize: 15, width: '100%' }}>
             {isAnalyzing ? <><Loader2 size={16} className="animate-spin" /> Running safety audit...</> : <><ShieldCheck size={16} /> Run Safety Audit ({extractedIngredients.length} ingredients)</>}
@@ -970,7 +1103,7 @@ export default function Home() {
               </button>
             </div>
           </div>
-          <ResultsDashboard results={results} onReanalyze={text => { setPastedIngredients(text); const p = text.split(',').map(s => s.trim()).filter(Boolean); setExtractedIngredients(p); setResults(null); setActiveTab('analyze'); }} />
+          <ResultsDashboard results={results} onReanalyze={text => { setPastedIngredients(text); const p = text.split(',').map(s => s.trim()).filter(Boolean); setExtractedIngredients(p.map(s => ({ raw: s, matched: true, best_candidate: null, confidence: 100 }))); setResults(null); setActiveTab('analyze'); }} />
         </div>
       )}
 

@@ -187,8 +187,11 @@ def _summary(
 ) -> str:
     # Build a more natural language recommendation based on findings and profile
     has_pregnancy_danger = any(f.concern == 'pregnancy' and f.level == 'danger' for f in findings)
+    has_pregnancy_warning = any(f.concern == 'pregnancy' and f.level == 'warning' for f in findings)
     has_acne_warning = any(f.concern == 'acne' for f in findings)
     has_irritant = any(f.concern == 'sensitivity' for f in findings)
+    has_rosacea_warning = any(f.concern == 'rosacea' for f in findings)
+    has_fungal_warning = any(f.concern == 'fungal_acne' for f in findings)
 
     if score is None:
         base = "Risk assessment unavailable"
@@ -207,18 +210,36 @@ def _summary(
     if getattr(profile, "oily_skin", False): skin_types.append("oily")
     if getattr(profile, "combination_skin", False): skin_types.append("combination")
     if getattr(profile, "normal_skin", False): skin_types.append("normal")
+    if getattr(profile, "rosacea", False): skin_types.append("rosacea-prone")
 
     if skin_types and score is not None:
         base += f" for {', '.join(skin_types)} skin"
 
     parts = [base]
 
+    warnings_parts = []
     if has_pregnancy_danger and profile.pregnant:
-        parts.append("but strictly NOT recommended during pregnancy")
-    elif has_acne_warning and (profile.acne_prone or getattr(profile, "oily_skin", False) or getattr(profile, "combination_skin", False)):
-        parts.append("but contains pore-clogging ingredients")
-    elif has_irritant and profile.sensitive_skin:
-        parts.append("but contains known irritants")
+        warnings_parts.append("is strictly NOT recommended during pregnancy")
+    elif has_pregnancy_warning and profile.pregnant:
+        warnings_parts.append("requires caution during pregnancy")
+
+    if has_acne_warning and (profile.acne_prone or getattr(profile, "oily_skin", False) or getattr(profile, "combination_skin", False)):
+        warnings_parts.append("contains pore-clogging ingredients")
+
+    if has_irritant and profile.sensitive_skin:
+        warnings_parts.append("contains known skin irritants")
+
+    if has_rosacea_warning and getattr(profile, "rosacea", False):
+        warnings_parts.append("contains rosacea triggers (drying alcohols or irritants)")
+
+    if has_fungal_warning and profile.fungal_acne:
+        warnings_parts.append("contains fungal acne triggers")
+
+    if warnings_parts:
+        if len(warnings_parts) == 1:
+            parts.append(f"but it {warnings_parts[0]}")
+        else:
+            parts.append(f"but it {', '.join(warnings_parts[:-1])}, and {warnings_parts[-1]}")
 
     sentence = " ".join(parts) + "."
 

@@ -140,3 +140,19 @@ def test_rosacea_not_triggered_without_profile(db):
     res = analyze_text(db, text, Profile(rosacea=False))
     assert not any(f["concern"] == "rosacea" for f in res["findings"])
 
+
+def test_clean_parsed_token_robustness():
+    from app.matching import clean_parsed_token
+    assert clean_parsed_token("1. Water") == "Water"
+    assert clean_parsed_token("• Glycerin") == "Glycerin"
+    assert clean_parsed_token("Glycerin 2%") == "Glycerin"
+    assert clean_parsed_token("Salicylic Acid 0.5 %") == "Salicylic Acid"
+    assert clean_parsed_token("1,2-Hexanediol") == "1,2-Hexanediol"
+    assert clean_parsed_token("* Phenoxyethanol") == "Phenoxyethanol"
+    assert clean_parsed_token("Water (Aqua)") == "Water (Aqua)"
+
+
+def test_split_list_dirty_input():
+    out = split_ingredient_list("1. Aqua, • Glycerin 2%, * Niacinamide, 1,2-Hexanediol")
+    assert out == ["Aqua", "Glycerin", "Niacinamide", "1,2-Hexanediol"]
+

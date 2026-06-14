@@ -145,7 +145,7 @@ def test_register_new_user(client):
     email = f"test_{uuid.uuid4().hex[:8]}@example.com"
     r = client.post(
         "/auth/register",
-        json={"email": email, "password": "Securepass123!"},
+        json={"email": email, "password": "SG_SecurePass_2026_##"},
     )
     assert r.status_code == 201
     data = r.json()
@@ -157,8 +157,8 @@ def test_register_new_user(client):
 
 def test_register_duplicate_email(client):
     email = f"dup_{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
-    r = client.post("/auth/register", json={"email": email, "password": "Anotherpass456!"})
+    client.post("/auth/register", json={"email": email, "password": "SG_SecurePass_2026_##"})
+    r = client.post("/auth/register", json={"email": email, "password": "SG_AnotherPass_2026_##"})
     assert r.status_code == 409
 
 
@@ -172,8 +172,8 @@ def test_register_short_password(client):
 
 def test_login_correct_credentials(client):
     email = f"login_{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/auth/register", json={"email": email, "password": "Mypassword99!"})
-    r = client.post("/auth/login", json={"email": email, "password": "Mypassword99!"})
+    client.post("/auth/register", json={"email": email, "password": "SG_MyPassword_2026_##"})
+    r = client.post("/auth/login", json={"email": email, "password": "SG_MyPassword_2026_##"})
     assert r.status_code == 200
     # JWT is cookie-only; response body contains email and profile, not access_token.
     assert "access_token" not in r.json()
@@ -182,14 +182,14 @@ def test_login_correct_credentials(client):
 
 def test_login_wrong_password(client):
     email = f"wrongpw_{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/auth/register", json={"email": email, "password": "Correct123!"})
+    client.post("/auth/register", json={"email": email, "password": "SG_Correct_2026_##"})
     r = client.post("/auth/login", json={"email": email, "password": "wrongpass"})
     assert r.status_code == 401
 
 
 def test_me_authenticated(client):
     email = f"me_{uuid.uuid4().hex[:8]}@example.com"
-    reg = client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
+    reg = client.post("/auth/register", json={"email": email, "password": "SG_SecurePass_2026_##"})
     assert reg.status_code == 201, f"Registration failed: {reg.json()}"
     # After register the TestClient holds the HttpOnly cookie — use it directly.
     r = client.get("/auth/me")
@@ -242,7 +242,7 @@ def test_profile_update_requires_auth(client):
 def test_scan_history_and_profile_jwt_authorized(client):
     email = f"jwt_{uuid.uuid4().hex[:8]}@example.com"
     # Register — cookie is set in the TestClient's jar automatically.
-    reg = client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
+    reg = client.post("/auth/register", json={"email": email, "password": "SG_SecurePass_2026_##"})
     assert reg.status_code == 201
     # Mint a token directly for Bearer-based assertions (does not hit the API).
     from app.auth import create_token
@@ -297,7 +297,7 @@ def test_scan_saving_null_safety_score(client, test_db_session):
     app.dependency_overrides[get_matcher] = lambda: new_matcher
 
     email = f"jwt_{uuid.uuid4().hex[:8]}@example.com"
-    reg = client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
+    reg = client.post("/auth/register", json={"email": email, "password": "SG_SecurePass_2026_##"})
     assert reg.status_code == 201
 
     r = client.post(
@@ -360,7 +360,7 @@ def test_forgot_password_ignores_untrusted_origin(client, monkeypatch, caplog):
     import logging
 
     email = f"origin_{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
+    client.post("/auth/register", json={"email": email, "password": "SG_SecurePass_2026_##"})
     monkeypatch.delenv("RESEND_API_KEY", raising=False)
 
     with caplog.at_level(logging.WARNING, logger="skinguard.auth"):
@@ -501,7 +501,7 @@ def test_forgot_and_reset_password_flow(client):
     email = f"reset_{uuid.uuid4().hex[:8]}@example.com"
     
     # 1. Register new user
-    client.post("/auth/register", json={"email": email, "password": "Oldpassword123!"})
+    client.post("/auth/register", json={"email": email, "password": "SG_OldPassword_2026_##"})
     
     # 2. Call forgot password
     r = client.post("/auth/forgot-password", json={"email": email})
@@ -513,23 +513,23 @@ def test_forgot_and_reset_password_flow(client):
     token = create_reset_token(email)
     
     # 4. Reset password using valid token
-    r = client.post("/auth/reset-password", json={"token": token, "new_password": "Newpassword123!"})
+    r = client.post("/auth/reset-password", json={"token": token, "new_password": "SG_NewPassword_2026_##"})
     assert r.status_code == 200
     assert "has been reset successfully" in r.json()["detail"]
     
     # 5. Verify we can log in with new password
-    r = client.post("/auth/login", json={"email": email, "password": "Newpassword123!"})
+    r = client.post("/auth/login", json={"email": email, "password": "SG_NewPassword_2026_##"})
     assert r.status_code == 200
     
     # 6. Verify we cannot log in with old password
-    r = client.post("/auth/login", json={"email": email, "password": "Oldpassword123!"})
+    r = client.post("/auth/login", json={"email": email, "password": "SG_OldPassword_2026_##"})
     assert r.status_code == 401
 
 
 def test_scan_history_pagination(client, test_db_session):
     # 1. Register a new user
     email = f"page_{uuid.uuid4().hex[:8]}@example.com"
-    reg = client.post("/auth/register", json={"email": email, "password": "Securepass123!"})
+    reg = client.post("/auth/register", json={"email": email, "password": "SG_SecurePass_2026_##"})
     assert reg.status_code == 201
     
     # 2. Get JWT token
@@ -741,6 +741,45 @@ def test_detect_conflicts_none_when_no_actives():
     from app.routers.analyze import _detect_conflicts
 
     assert _detect_conflicts("P1", {}, "P2", {"Niacinamide": "Niacinamide"}) == []
+
+
+def test_parse_ingredients_endpoint(client):
+    r = client.post(
+        "/parse-ingredients",
+        json={"text": "1. Aqua, • Glycerin 2%, * Niacinmide, Zxqwerty"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "ingredients" in data
+    items = data["ingredients"]
+    assert len(items) == 4
+    assert items[0]["raw"] == "Aqua"
+    assert items[0]["matched"] is True
+    assert items[2]["raw"] == "Niacinmide"
+    assert items[2]["matched"] is True
+    assert items[2]["clean"] == "Niacinamide"
+    assert items[3]["raw"] == "Zxqwerty"
+    assert items[3]["matched"] is False
+
+
+def test_multi_concern_summary_concatenation(client):
+    r = client.post(
+        "/analyze",
+        json={
+            "text": "Aqua, Retinol, Coconut Oil, Parfum",
+            "profile": {
+                "pregnant": True,
+                "acne_prone": True,
+                "sensitive_skin": True
+            }
+        }
+    )
+    assert r.status_code == 200
+    data = r.json()
+    summary = data["summary"]
+    assert "is strictly NOT recommended during pregnancy" in summary
+    assert "contains pore-clogging ingredients" in summary
+    assert "contains known skin irritants" in summary
 
 
 

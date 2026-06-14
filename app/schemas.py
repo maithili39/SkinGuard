@@ -57,6 +57,10 @@ class ProfileIn(BaseModel):
         return self
 
 
+class ParseIn(BaseModel):
+    text: str = Field(..., max_length=50_000)
+
+
 class AnalyzeIn(BaseModel):
     # Raw ingredient text — capped at 50,000 chars.
     text: str = Field(..., max_length=50_000)
