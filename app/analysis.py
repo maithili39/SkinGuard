@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.explain import explain_ingredient
 from app.matching import Matcher
 from app.models import Ingredient
-from app.rules import Profile, evaluate, get_alternatives, has_risk_data
+from app.rules import KNOWN_FILLERS, Profile, evaluate, get_alternatives, has_risk_data
 import re
 
 DISCLAIMER = (
@@ -49,7 +49,25 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
 
     total = len(matches) or 1
     matched_count = len(matched)
-    coverage = round(100 * matched_count / total)
+
+    # Fix #11: Fillers (water, aqua, glycerin …) are almost always recognised
+    # because they’re in every database, but they carry zero risk data.
+    # Counting them inflates coverage % while the *meaningful* ingredient
+    # assessment depth stays low. Exclude them from both numerator and denominator
+    # so coverage reflects the proportion of *substantive* ingredients understood.
+    filler_matched = sum(
+        1 for m in matched
+        if m.matched_inci and m.matched_inci.lower() in KNOWN_FILLERS
+    )
+    substantive_total = total - filler_matched
+    substantive_matched = matched_count - filler_matched
+    if substantive_total > 0:
+        coverage = round(100 * substantive_matched / substantive_total)
+    elif total > 0:
+        # Label is all fillers — treat as 100% coverage (nothing substantive to miss)
+        coverage = 100
+    else:
+        coverage = 0
 
     # Assessment depth: how many recognised ingredients have curated risk data?
     # "Recognised" (CosIng-only) ≠ "Assessed" (has at least one risk flag).
@@ -87,6 +105,8 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
     return {
         "safety_score": safety_score,
         "score_basis": result.get("score_basis", "indicative"),
+        # Fix #8: expose the human-readable reasons behind the score.
+        "score_reasons": result.get("score_reasons", []),
         "coverage_percent": coverage,
         "matched_count": matched_count,
         "assessed_count": assessed_count,
@@ -124,6 +144,10 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
                 "raw": m.raw,
                 "best_confidence": m.confidence,
                 "best_candidate": m.best_candidate,
+                # Fix #12: surface "did you mean?" suggestions for tokens that
+                # almost matched (OCR typos, variant spellings). Only show when
+                # confidence is meaningful (>= 40) to avoid noise.
+                "did_you_mean": m.best_candidate if (m.best_candidate and m.confidence >= 40) else None,
                 "category": categorize_unmatched(m.raw, m.best_candidate, m.confidence)
             }
             for m in unmatched
@@ -140,7 +164,14 @@ def analyze_text(db: Session, raw_text: str, profile: Profile, matcher: Matcher 
             for f in result["findings"] if f.concern == 'sensitivity'
         ],
         "pregnancy_alerts": [
-            {"matched_name": f.inci_name} for f in result["findings"] if f.concern == 'pregnancy'
+            {
+                "matched_name": f.inci_name,
+                # Fix #9: pass through the full message so frontend can distinguish
+                # all-trimester danger vs 1st-trimester caution vs general caution.
+                "level": f.level,
+                "message": f.message,
+            }
+            for f in result["findings"] if f.concern == 'pregnancy'
         ]
     }
 

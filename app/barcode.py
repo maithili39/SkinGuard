@@ -7,6 +7,7 @@ Strategy (three-tier fallback):
 """
 
 import httpx
+import re as _re
 from functools import lru_cache
 from typing import Dict, Any
 from pathlib import Path
@@ -18,6 +19,19 @@ except Exception:
 
 _USER_AGENT = f"SkinGuard/{_VERSION} (+https://github.com/maithili39/SkinGuard)"
 _TIMEOUT = 10.0
+
+# Fix #15: strip HTML/script tags from third-party product data (XSS prevention).
+# Open Beauty Facts product names can contain arbitrary HTML submitted by users.
+_TAG_RE = _re.compile(r"<[^>]+>")
+_MAX_FIELD_LEN = 500  # reasonable cap on product name / brand length
+
+
+def _sanitize(value: str | None, max_len: int = _MAX_FIELD_LEN) -> str:
+    """Strip HTML tags and truncate a string from an untrusted external source."""
+    if not value:
+        return ""
+    clean = _TAG_RE.sub("", value).strip()
+    return clean[:max_len]
 
 
 class ProductNotFound(Exception):
@@ -57,11 +71,14 @@ def _lookup_from(base_url: str, barcode: str) -> Dict[str, Any]:
         raise ProductNotFound(f"Product {barcode} found but has no ingredients list.")
 
     image_url = product.get("image_front_url") or product.get("image_url")
+    # Sanitize the image URL: only allow http/https to block javascript: URIs.
+    if image_url and not str(image_url).lower().startswith(("http://", "https://")):
+        image_url = None
 
     return {
-        "product_name": product.get("product_name") or "Unknown Product",
-        "brands": product.get("brands") or "Unknown Brand",
-        "ingredients_text": ingredients_text,
+        "product_name": _sanitize(product.get("product_name")) or "Unknown Product",
+        "brands": _sanitize(product.get("brands")) or "Unknown Brand",
+        "ingredients_text": _sanitize(ingredients_text, max_len=50_000),
         "image_url": image_url,
         "source": base_url.split("//")[1].split(".org")[0],  # e.g. "world.openbeautyfacts"
     }

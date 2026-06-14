@@ -15,12 +15,7 @@ class ProfileIn(BaseModel):
 
     @model_validator(mode="after")
     def _no_contradictory_skin_types(self) -> "ProfileIn":
-        """Reject mutually exclusive skin-type combinations.
-
-        Allowing oily_skin=True AND dry_skin=True simultaneously would fire
-        rules for both types on every ingredient, producing misleading advice.
-        Combination skin is the legitimate way to express a mixed condition.
-        """
+        """Reject mutually exclusive skin-type combinations."""
         conflicts = [
             ("oily_skin", "dry_skin"),
             ("oily_skin", "normal_skin"),
@@ -32,6 +27,33 @@ class ProfileIn(BaseModel):
                     f"Contradictory skin types: '{a}' and '{b}' cannot both be True. "
                     f"Use 'combination_skin' for mixed conditions."
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _no_filler_in_avoid_list(self) -> "ProfileIn":
+        """Reject ubiquitous fillers in the personal avoid list (fix #10).
+
+        Water, Aqua, Glycerin and similar base ingredients appear in virtually
+        every cosmetic product. Adding them to an avoid list causes every product
+        to fail — which is meaningless and confusing. Users who are genuinely
+        sensitive to glycerin should consult a dermatologist; the avoid list is
+        not the right tool for a universal filler.
+        """
+        # Mirror the set used by the scoring engine so the sets stay in sync.
+        _FILLER_NAMES = {
+            "water", "aqua", "eau", "purified water", "deionized water",
+            "distilled water", "glycerin", "glycerol",
+        }
+        bad = [
+            name for name in self.avoid_list
+            if name.strip().lower() in _FILLER_NAMES
+        ]
+        if bad:
+            raise ValueError(
+                f"Avoid list contains ubiquitous filler ingredient(s): "
+                f"{', '.join(bad)!r}. These appear in virtually every product "
+                f"and cannot meaningfully be avoided. Remove them from your avoid list."
+            )
         return self
 
 

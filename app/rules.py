@@ -65,7 +65,23 @@ RULES: list[Rule] = [
         kind="advice",
         profile_gate=lambda p: p.pregnant,
         predicate=lambda i: i.pregnancy_safe == "no",
-        message=lambda i: f"{i.inci_name} - Avoid entirely (all trimesters): contraindicated due to potential teratogenic or developmental risks.",
+        message=lambda i: (
+            f"{i.inci_name} \u2014 Avoid entirely (all trimesters): contraindicated due to "
+            f"potential teratogenic or developmental risks."
+        ),
+    ),
+    # Fix #9: distinguish "all-trimester avoid" from "1st-trimester caution" vs "general caution".
+    # pregnancy_safe="trim1" = avoid specifically in 1st trimester only (e.g. salicylic acid at high %)
+    Rule(
+        concern="pregnancy",
+        level="danger",
+        kind="advice",
+        profile_gate=lambda p: p.pregnant,
+        predicate=lambda i: i.pregnancy_safe == "trim1",
+        message=lambda i: (
+            f"{i.inci_name} \u2014 Avoid in 1st trimester: higher risk during organogenesis. "
+            f"Discuss with your doctor before continuing use."
+        ),
     ),
     Rule(
         concern="pregnancy",
@@ -73,7 +89,10 @@ RULES: list[Rule] = [
         kind="advice",
         profile_gate=lambda p: p.pregnant,
         predicate=lambda i: i.pregnancy_safe == "caution",
-        message=lambda i: f"{i.inci_name} - Limited data: consult doctor (especially during 1st trimester) before using.",
+        message=lambda i: (
+            f"{i.inci_name} \u2014 Limited data: consult your doctor, especially during "
+            f"the 1st trimester, before using this ingredient."
+        ),
     ),
     Rule(
         concern="fungal_acne",
@@ -336,21 +355,54 @@ def evaluate(ingredients: list[Ingredient], profile: Profile) -> dict:
     # Fix #2: compute penalty-only score first, apply DANGER_CAP *before* adding
     # the benefit bonus so that any number of "good" ingredients can never push a
     # product with danger flags above the cap.
-    # Without this fix: 2 dangers (penalty=60) + 12 bonus = 52, capped to 50.
-    #                   6 warnings (penalty=60) + 12 bonus = 52 — same score!
-    # With this fix:    danger score = min(100-60, DANGER_CAP) + bonus
-    #                                = min(40, 50) + 12 = 52, then capped at 50.
-    # Actually the correct fix is: add bonus *inside* the cap ceiling.
     base_score = 100.0 - penalty
     if has_danger:
         # Cap the raw penalty-adjusted score, THEN allow a small benefit bonus
-        # — but the final score can never exceed DANGER_CAP.
+        # \u2014 but the final score can never exceed DANGER_CAP.
         score = min(base_score, float(DANGER_CAP)) + min(bonus, GOOD_BONUS_CAP)
         score = min(score, float(DANGER_CAP))  # enforce hard ceiling
     else:
         score = base_score + min(bonus, GOOD_BONUS_CAP)
     score = int(max(0, min(100, round(score))))
 
+    # Fix #8: build a human-readable list of score drivers so the UI can show
+    # *why* a product scored 73/100 instead of just displaying the number.
+    score_reasons: list[str] = []
+    danger_findings = [f for f in findings if f.level == "danger" and f.concern != "personal"]
+    warning_findings = [f for f in findings if f.level == "warning"]
+    good_findings = [f for f in findings if f.level == "good"]
+    personal_findings = [f for f in findings if f.concern == "personal"]
+
+    if personal_findings:
+        names = ", ".join(f.inci_name for f in personal_findings)
+        score_reasons.append(f"Contains ingredient(s) on your personal avoid list: {names}.")
+    if danger_findings:
+        names = ", ".join(dict.fromkeys(f.inci_name for f in danger_findings))  # dedup, preserve order
+        score_reasons.append(
+            f"{len(danger_findings)} danger flag(s) found "
+            f"({'EU-banned' if any(f.concern == 'regulatory' for f in danger_findings) else 'safety concern'}): {names}."
+        )
+    if warning_findings:
+        by_concern: dict[str, list[str]] = {}
+        for f in warning_findings:
+            by_concern.setdefault(f.concern, []).append(f.inci_name)
+        for concern, names_list in by_concern.items():
+            unique = list(dict.fromkeys(names_list))
+            label = concern.replace("_", " ")
+            score_reasons.append(f"{len(unique)} {label} warning(s): {', '.join(unique)}.")
+    if good_findings:
+        score_reasons.append(
+            f"{len(good_findings)} beneficial ingredient(s) boosted the score: "
+            f"{', '.join(dict.fromkeys(f.inci_name for f in good_findings))}."
+        )
+    if not score_reasons:
+        score_reasons.append("No flags found for your profile \u2014 score reflects clean label.")
+
     # 'indicative' is deliberate: this is guidance from a rules engine, not a
     # clinical measurement of concentration.
-    return {"score": score, "score_basis": "indicative", "findings": findings}
+    return {
+        "score": score,
+        "score_basis": "indicative",
+        "findings": findings,
+        "score_reasons": score_reasons,
+    }
