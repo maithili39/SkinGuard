@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import create_reset_token, create_token, decode_reset_token, get_current_user, hash_password, hash_reset_token, require_user
 from app.database import get_db
-from app.deps import CORS_ORIGINS, IS_PRODUCTION, _limit, limiter
+from app.deps import CORS_ORIGINS, IS_PRODUCTION, _limit, hybrid_rate_limit_key, limiter
 from app.models import Scan, User
 from app.schemas import AuthOut, ForgotPasswordIn, LoginIn, RegisterIn, ResetPasswordIn
 from app import users as users_svc
@@ -30,7 +30,7 @@ def _set_auth_cookie(response: Response, token: str) -> None:
 
 
 @router.post("/register", status_code=201)
-@limiter.limit(_limit("5/minute"))
+@limiter.limit(_limit("5/minute"), key_func=hybrid_rate_limit_key)
 def register(request: Request, payload: RegisterIn, response: Response, db: Session = Depends(get_db)):
     """Register a new account. Sets an HttpOnly session cookie — JWT is NOT in the body."""
     try:
@@ -45,7 +45,7 @@ def register(request: Request, payload: RegisterIn, response: Response, db: Sess
 
 
 @router.post("/login")
-@limiter.limit(_limit("10/minute"))
+@limiter.limit(_limit("10/minute"), key_func=hybrid_rate_limit_key)
 def login(request: Request, payload: LoginIn, response: Response, db: Session = Depends(get_db)):
     """Authenticate with email + password. Sets an HttpOnly session cookie."""
     user = users_svc.authenticate_user(db, payload.email, payload.password)
@@ -69,7 +69,7 @@ def me(user: User = Depends(require_user)):
 
 
 @router.post("/forgot-password")
-@limiter.limit(_limit("5/minute"))
+@limiter.limit(_limit("5/minute"), key_func=hybrid_rate_limit_key)
 def forgot_password(request: Request, payload: ForgotPasswordIn, db: Session = Depends(get_db)):
     """Generate a signed reset token and send email (or log reset link in dev)."""
     email_clean = payload.email.strip().lower()
@@ -128,7 +128,7 @@ def forgot_password(request: Request, payload: ForgotPasswordIn, db: Session = D
 
 
 @router.post("/reset-password")
-@limiter.limit(_limit("5/minute"))
+@limiter.limit(_limit("5/minute"), key_func=hybrid_rate_limit_key)
 def reset_password(request: Request, payload: ResetPasswordIn, db: Session = Depends(get_db)):
     """Validate reset token and update password."""
     email = decode_reset_token(payload.token)
@@ -154,6 +154,9 @@ def reset_password(request: Request, payload: ResetPasswordIn, db: Session = Dep
     user.hashed_password = hash_password(payload.new_password)
     # Consume the token — clears the stored hash so replays are rejected.
     user.password_reset_token_hash = None
+    # T3-1: Audit trail.
+    from app.users import record_audit as _audit
+    _audit(db, user, "password.reset")
     db.commit()
     logger.info("Password reset successfully for user: %s", user.email)
     return {"detail": "Password has been reset successfully."}

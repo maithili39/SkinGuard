@@ -42,6 +42,8 @@ export interface ScanSummary {
 export interface AnalysisResult {
   safety_score: number | null;
   score_basis: string;
+  /** T2-#8: Human-readable list of score drivers. */
+  score_reasons?: string[];
   coverage_percent: number;
   matched_count: number;
   assessed_count: number;
@@ -49,7 +51,8 @@ export interface AnalysisResult {
   summary: string;
   findings: Finding[];
   matched: { raw: string; ingredient: string; confidence: number }[];
-  unmatched: { raw: string; best_confidence: number; best_candidate?: string; category: string }[];
+  /** T2-#12: did_you_mean added for OCR correction hints. */
+  unmatched: { raw: string; best_confidence: number; best_candidate?: string; did_you_mean?: string | null; category: string }[];
   found_ingredients: {
     matched_name: string;
     confidence: number;
@@ -58,7 +61,8 @@ export interface AnalysisResult {
   }[];
   comedogenic_alerts: { ingredient: string; message: string }[];
   irritant_alerts: { ingredient: string; message: string }[];
-  pregnancy_alerts: { matched_name: string }[];
+  /** T2-#9: level and message now included to distinguish trimester-specific risks. */
+  pregnancy_alerts: { matched_name: string; level?: 'danger' | 'warning'; message?: string }[];
   disclaimer: string;
   original_text: string;
 }

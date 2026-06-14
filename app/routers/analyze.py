@@ -11,7 +11,7 @@ from app.cache import get_cached, hash_text, make_key, set_cached
 from app.database import get_db
 from app.deps import _limit, get_matcher, hybrid_rate_limit_key, limiter
 from app.matching import Matcher
-from app.models import User
+from app.models import AnonScanEvent, User
 from app.rules import Profile
 from app.schemas import AnalyzeIn, RoutineAnalyzeIn
 from app import users as users_svc
@@ -263,6 +263,30 @@ def analyze(
     elif _cache_key:
         set_cached(_cache_key, result, ttl=300)
         logger.debug("Cache SET analyze key=%s", _cache_key)
+
+    # T3-5: Log anonymous scan analytics (no PII, non-blocking).
+    if save_user is None:
+        try:
+            score = result.get("safety_score")
+            if score is None:
+                band = "none"
+            elif score >= 80:
+                band = "high"
+            elif score >= 50:
+                band = "mid"
+            else:
+                band = "low"
+            findings = result.get("findings", [])
+            db.add(AnonScanEvent(
+                score_band=band,
+                matched_count=result.get("matched_count"),
+                coverage_percent=result.get("coverage_percent"),
+                has_danger=any(f.get("level") == "danger" for f in findings),
+                has_warning=any(f.get("level") == "warning" for f in findings),
+            ))
+            db.commit()
+        except Exception as exc:
+            logger.warning("Anon scan analytics write failed (non-blocking): %s", exc)
 
     return result
 

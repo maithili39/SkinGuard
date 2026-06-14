@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     JSON,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -118,6 +119,16 @@ class User(Base):
     normal_skin = Column(Boolean, default=False)
     avoid_list = Column(JSON, default=list)
 
+    # T3-1: Soft delete support.
+    # NULL = active account. Non-null = account deleted (GDPR erasure requested).
+    # Hard-delete is deferred so analytics/audit trails can be anonymised first.
+    deleted_at = Column(DateTime, nullable=True, default=None)
+
+    # T3-1: GDPR audit trail stored as a JSON list of event dicts.
+    # Each entry: {"ts": ISO-8601, "action": str, "meta": dict}.
+    # Written by audit_log() helper; never overwritten — only appended.
+    gdpr_audit = Column(JSON, nullable=False, default=list)
+
     scans = relationship(
         "Scan", back_populates="user", cascade="all, delete-orphan",
         order_by="Scan.created_at.desc()",
@@ -139,4 +150,58 @@ class Scan(Base):
     summary = Column(String, nullable=True)
     result = Column(JSON, nullable=True)  # full analysis payload snapshot
 
+    # T3-1: Soft delete — set when user requests scan deletion.
+    deleted_at = Column(DateTime, nullable=True, default=None)
+
     user = relationship("User", back_populates="scans")
+
+
+# T3-1: Dedicated GDPR audit log table.
+# Stores an immutable, append-only record of every privacy-relevant action
+# (account creation, password reset, data export, deletion request, etc.).
+# Kept separate from gdpr_audit JSON column for queryability.
+class AuditLog(Base):
+    """Immutable GDPR / security audit log.
+
+    One row per privacy-relevant event. Never updated or deleted — only inserted.
+    Rows are retained for the legally required period (typically 6-12 months)
+    and can be hard-deleted by a scheduled job after that window.
+    """
+
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True)
+    # user_id may be NULL for anonymous events (e.g. failed login attempts).
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    occurred_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
+    # Action slug, e.g. "account.created", "password.reset", "account.deleted",
+    # "profile.updated", "scan.deleted", "data.export"
+    action = Column(String, nullable=False, index=True)
+    # Arbitrary metadata — keep PII-free (store email hash, not plain email).
+    meta = Column(JSON, nullable=True)
+
+
+# T3-5: Anonymous scan analytics.
+# Logged for every /analyze call that is NOT tied to a registered user.
+# Captures aggregate metrics — no PII, no ingredient text, no IP address.
+class AnonScanEvent(Base):
+    """Anonymous scan event for product analytics (T3-5).
+
+    Written for every un-authenticated /analyze request.
+    Never contains PII — just aggregate metrics that help us understand
+    how the product is being used (score distribution, coverage, flag rates).
+    """
+
+    __tablename__ = "anon_scan_events"
+
+    id = Column(Integer, primary_key=True)
+    occurred_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
+    # Score bin (None, 0-49, 50-79, 80-100) — not the exact score.
+    score_band = Column(String, nullable=True)   # "none" | "low" | "mid" | "high"
+    matched_count = Column(Integer, nullable=True)
+    coverage_percent = Column(Integer, nullable=True)
+    has_danger = Column(Boolean, nullable=False, default=False)
+    has_warning = Column(Boolean, nullable=False, default=False)
+    # How the input arrived: "paste" | "ocr" | "barcode"
+    input_mode = Column(String, nullable=True)
+

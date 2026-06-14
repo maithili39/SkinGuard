@@ -1,10 +1,13 @@
 import logging
 import os
 import sys
+import uuid
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 
@@ -13,22 +16,48 @@ from app.database import SessionLocal
 from app.deps import CORS_ORIGINS, ENV, VERSION, get_matcher, limiter  # get_matcher re-exported for test imports
 from app.routers import auth, users, analyze, misc
 
+# ── T3-2: Request-ID context var ─────────────────────────────────────────────
+# Injected per-request so any logger.info() call anywhere in the stack
+# automatically carries the same request_id for correlation.
+_request_id_ctx: ContextVar[str] = ContextVar("request_id", default="-")
+
+
+def get_request_id() -> str:
+    return _request_id_ctx.get()
+
 # ── Logging ───────────────────────────────────────────────────────────────────
+
+class _RequestIdFilter(logging.Filter):
+    """T3-2: Inject request_id into every LogRecord for structured logging."""
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = _request_id_ctx.get("-")
+        return True
+
+
+_request_id_filter = _RequestIdFilter()
 
 if ENV == "production":
     try:
         from pythonjsonlogger import jsonlogger
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(jsonlogger.JsonFormatter(
-            "%(asctime)s %(levelname)s %(name)s %(message)s",
-            rename_fields={"asctime": "timestamp", "levelname": "level"},
+            "%(asctime)s %(levelname)s %(name)s %(request_id)s %(message)s",
+            rename_fields={
+                "asctime": "timestamp",
+                "levelname": "level",
+                "name": "logger",
+                "request_id": "request_id",
+            },
         ))
+        handler.addFilter(_request_id_filter)
         logging.root.handlers = [handler]
         logging.root.setLevel(logging.INFO)
     except ImportError:
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s [%(request_id)s]: %(message)s")
+        logging.root.addFilter(_request_id_filter)
 else:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s [%(request_id)s]: %(message)s")
+    logging.root.addFilter(_request_id_filter)
 
 logger = logging.getLogger("skinguard")
 
@@ -103,6 +132,29 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# T3-2: Request-ID middleware — injects UUID per request, logs method+path+status.
+class _RequestIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next) -> Response:
+        req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        token = _request_id_ctx.set(req_id)
+        try:
+            response: Response = await call_next(request)
+            response.headers["X-Request-ID"] = req_id
+            logger.info(
+                "%s %s -> %s",
+                request.method,
+                request.url.path,
+                response.status_code,
+                extra={"method": request.method, "path": request.url.path,
+                       "status": response.status_code, "request_id": req_id},
+            )
+            return response
+        finally:
+            _request_id_ctx.reset(token)
+
+
+app.add_middleware(_RequestIdMiddleware)
 
 if ENV == "production" and any("localhost" in o or "127.0.0.1" in o for o in CORS_ORIGINS):
     logger.warning(

@@ -70,3 +70,21 @@ def scan_history(
             for s in scans
         ],
     }
+
+
+@router.delete("/{email}", status_code=204)
+def delete_account(
+    email: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    """T3-1 GDPR erasure: soft-delete the account and anonymise all PII.
+
+    Only the account owner can delete their own account.
+    Sets deleted_at, anonymises email/name, clears avoid list.
+    Scans are soft-deleted but retained until the retention window expires.
+    """
+    if current_user.email.strip().lower() != email.strip().lower():
+        raise HTTPException(status_code=403, detail="Forbidden: You can only delete your own account.")
+    users_svc.soft_delete_user(db, current_user)
+    return  # 204 No Content
